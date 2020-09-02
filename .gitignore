@@ -1,0 +1,12 @@
+*.pyc
+*.pickle
+*.cache
+*.dly
+*.csv
+*.png
+*.swp
+*.tar.gz
+.pytest_cache
+.idea/
+.pytest_cache
+__pycache__/
