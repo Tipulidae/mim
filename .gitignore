@@ -8,5 +8,5 @@
 *.tar.gz
 .pytest_cache
 .idea/
-.pytest_cache
+data/
 __pycache__/
