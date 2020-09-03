@@ -35,10 +35,7 @@ class TroponinExtractor:
             )
         if 'ordinal' in spec:
             ordinals = pd.DataFrame.from_records(data, columns=spec['ordinal'])
-            features.append(pd.DataFrame(
-                OrdinalEncoder().fit_transform(ordinals),
-                columns=spec['ordinal']
-            ))
+            features.append(encode_ordinal(ordinals))
 
         return pd.concat(features, axis=1)
 
@@ -46,7 +43,15 @@ class TroponinExtractor:
         target_name = self.specification['labels']['target']
         labels = pd.DataFrame.from_records(
             data, columns=[target_name])
-        return labels.rename(columns={target_name: 'y'})
+        labels = labels.rename(columns={target_name: 'y'})
+        return encode_ordinal(labels)
+
+
+def encode_ordinal(df):
+    return pd.DataFrame(
+        OrdinalEncoder().fit_transform(df),
+        columns=df.columns
+    )
 
 
 def extract_tnt_features(tnts):
