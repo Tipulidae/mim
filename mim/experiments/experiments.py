@@ -34,11 +34,13 @@ class Experiment(NamedTuple):
         to conform with a different type of experiment in which a different
         data set is generated for validation.
         """
-        X, y = self.extractor(
-            index_spec=self.index,
-            feature_spec=self.features,
-            label_spec=self.labels,
-            processing_spec=self.post_processing).get_data()
+        specification = {
+            'index': self.index,
+            'features': self.features,
+            'labels': self.labels,
+            'processing': self.post_processing
+        }
+        X, y = self.extractor(specification=specification).get_data()
 
         X_validate = None
         return X, X_validate, y

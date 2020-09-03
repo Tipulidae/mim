@@ -89,6 +89,12 @@ class ExtraTreesClassifier(Model):
                          random_state=random_state, **kwargs)
 
 
+class GradientBoostingClassifier(Model):
+    def __init__(self, *args, random_state=125, **kwargs):
+        super().__init__(ensemble.GradientBoostingClassifier, *args,
+                         random_state=random_state, **kwargs)
+
+
 class LogisticRegression(Model):
     def __init__(self, *args, random_state=125, **kwargs):
         super().__init__(linear_model.LogisticRegression, *args,
