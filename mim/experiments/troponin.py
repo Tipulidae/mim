@@ -22,9 +22,9 @@ class MyocardialInfarction(Experiment, Enum):
             'subsample': 0.5
         },
         features={
-            'troponin': ['tnt', 'tnt_repeat', 'tnt_diff'],
-            'numerical': ['age'],
-            'ordinal': ['gender']
+            'troponin',
+            'age',
+            'gender'
         },
         labels={'target': 'label-index-mi'},
         index={'source': 'two_tnt_gen-all.json'},
@@ -38,4 +38,14 @@ class MyocardialInfarction(Experiment, Enum):
         description='Replaces gradient boosting with random forest',
         algorithm=RandomForestClassifier,
         params={'n_estimators': 1000}
+    )
+
+    FOO = THAN_RF._replace(
+        description='Classifies index MI using additional features',
+        features={
+            'troponin',
+            'previous_conditions',
+            'age',
+            'gender'
+        },
     )

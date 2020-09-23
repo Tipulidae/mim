@@ -3,6 +3,40 @@ import json
 import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
 
+CHARLSON_FEATURES = [
+    "Charlson-AcuteMyocardialInfarction",
+    "Charlson-CongestiveHeartFailure",
+    "Charlson-PeripheralVascularDisease",
+    "Charlson-CerebralVascularAccident",
+    "Charlson-Dementia",
+    "Charlson-PulmonaryDisease",
+    "Charlson-ConnectiveTissueDisorder",
+    "Charlson-PepticUlcer",
+    "Charlson-LiverDisease",
+    "Charlson-Diabetes",
+    "Charlson-DiabetesComplications",
+    "Charlson-Parapelgia",
+    "Charlson-RenalDisease",
+    "Charlson-Cancer",
+    "Charlson-MetstaticCancer",
+    "Charlson-SevereLiverDisease",
+    "Charlson-HIV",
+    "Charlson-Score"
+]
+PREVIOUS_CONDITIONS = [
+    "prev5y-AMI",
+    "prev5y-COPD",
+    "prev5y-Diabetes",
+    "prev5y-Heartfail",
+    "prev5y-Hypertens",
+    "prev5y-Renal",
+    "prev5y-PAD",
+    "prev5y-UA",
+    "prev5y-CABG",
+    "prev5y-PCI",
+]
+ORDINAL_FEATURES = CHARLSON_FEATURES[:-1] + PREVIOUS_CONDITIONS + ['gender']
+
 
 class TroponinExtractor:
     def __init__(self, specification):
@@ -28,16 +62,29 @@ class TroponinExtractor:
         if 'troponin' in spec:
             tnts = pd.DataFrame.from_records(data, columns=['tnts'])
             troponin_features = extract_tnt_features(tnts.tnts)
-            features.append(troponin_features.loc[:, spec['troponin']])
-        if 'numerical' in spec:
+            features.append(troponin_features)
+        if 'age' in spec:
             features.append(
-                pd.DataFrame.from_records(data, columns=spec['numerical'])
+                pd.DataFrame.from_records(data, columns=['age'])
             )
-        if 'ordinal' in spec:
-            ordinals = pd.DataFrame.from_records(data, columns=spec['ordinal'])
-            features.append(encode_ordinal(ordinals))
+        if 'gender' in spec:
+            features.append(
+                pd.DataFrame.from_records(data, columns=['gender'])
+            )
+        if 'charlson' in spec:
+            features.append(
+                pd.DataFrame.from_records(data, columns=CHARLSON_FEATURES)
+            )
+        if 'previous_conditions' in spec:
+            features.append(
+                pd.DataFrame.from_records(data, columns=PREVIOUS_CONDITIONS)
+            )
 
-        return pd.concat(features, axis=1)
+        df = pd.concat(features, axis=1)
+        df = df.fillna(0)
+        used_ordinals = list(set(ORDINAL_FEATURES) & set(df.columns))
+        df[used_ordinals] = OrdinalEncoder().fit_transform(df[used_ordinals])
+        return df
 
     def _extract_labels(self, data):
         target_name = self.specification['labels']['target']

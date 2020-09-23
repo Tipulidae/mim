@@ -9,4 +9,5 @@
 .pytest_cache
 .idea/
 data/
+notebooks/
 __pycache__/
