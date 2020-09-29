@@ -7,4 +7,6 @@ dependencies:
   - pandas
   - tqdm
   - scikit-learn=0.23
+  - pytest
+  - freezegun
 
