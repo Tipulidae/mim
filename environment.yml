@@ -9,4 +9,9 @@ dependencies:
   - scikit-learn=0.23
   - pytest
   - freezegun
+  - jupyterlab
+  - ipython
+  - pip
+  - pip:
+    - wfdb
 
