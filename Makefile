@@ -9,3 +9,7 @@ setup: .scripts/setup.sh
 
 pep:
 	autopep8 -i -r mim/
+
+conda:
+	conda env update --name mim --file environment.yml --prune ;
+	conda env update --name mim-gpu --file environment_gpu.yml --prune
