@@ -1,4 +1,7 @@
 [flake8]
 exclude =
 	.git,
+	data,
+	.scripts,
+	notebooks,
 	__pycache__,
