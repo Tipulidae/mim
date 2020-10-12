@@ -2,7 +2,9 @@ from enum import Enum
 
 from sklearn.model_selection import KFold
 
-from mim.fakes.fake_extractors import FakeExtractor
+from mim.fakes.fake_extractors import FakeExtractor, MnistExtractor
+from mim.fakes.fake_classifiers import Ann
+from mim.metric_wrapper import sparse_categorical_accuracy
 from mim.experiments.experiments import Experiment
 from mim.experiments.run import run_one_experiment
 
@@ -16,6 +18,16 @@ class SmallTestExperiment(Experiment, Enum):
         params={
             'n_estimators': 10,
         },
+    )
+
+    test_keras_mnist = Experiment(
+        description='Test Keras using mnist data',
+        extractor=MnistExtractor,
+        cv=KFold,
+        cv_args={'n_splits': 2},
+        algorithm=Ann,
+        params={},
+        scoring=sparse_categorical_accuracy,
     )
 
 
@@ -32,3 +44,9 @@ class TestRunOneExperiment:
         assert 'score_time' in res
         assert 'targets' in res
         assert 'history' in res
+
+    def test_keras_mnist(self):
+        res = run_one_experiment(
+            SmallTestExperiment.test_keras_mnist
+        )
+        assert res['test_score'].mean() > 0.8

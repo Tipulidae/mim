@@ -53,7 +53,7 @@ class Model:
         result['prediction'] = pd.DataFrame(prediction, index=X.index)
         return result
 
-    def fit(self, X, y):
+    def fit(self, X, y, **kwargs):
         y = y.values
         if self.transformer:
             self.transformer.fit(y)
@@ -62,7 +62,7 @@ class Model:
         if isinstance(X, pd.DataFrame):
             X = X.values
 
-        self.model.fit(X, y.ravel())
+        self.model.fit(X, y.ravel(), **kwargs)
 
     @property
     def only_last_prediction_column_is_used(self):

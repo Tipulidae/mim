@@ -39,7 +39,7 @@ def run_one_experiment(experiment):
     testing sets according to the prescribed cross-validation technique,
     train the model and save all the results in a dictionary.
 
-    :param experiment: An experiment from urd, of type Experiment or
+    :param experiment: An experiment from mim, of type Experiment or
     Robustness.
     :return: dictionary containing results of the cross-validation. Contains
     times taken for training and prediction in each step, train and test
