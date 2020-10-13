@@ -54,37 +54,31 @@ class RandomRegressor(Model):
                 return self.r.rand(len(X))
 
 
-class Ann(Model):
-    def __init__(self, *args, **kwargs):
-        inputs = keras.Input(shape=(784,), name="digits")
-        x = layers.Dense(64, activation="relu", name="dense_1")(inputs)
-        x = layers.Dense(64, activation="relu", name="dense_2")(x)
-        outputs = layers.Dense(10, activation="softmax", name="predictions")(x)
-
-        super().__init__(keras.Model, inputs=inputs, outputs=outputs)
-        self.model.compile(
-            keras.optimizers.RMSprop(),
-            loss=keras.losses.SparseCategoricalCrossentropy(),
-            metrics=[keras.metrics.SparseCategoricalAccuracy()],
+class Ann(keras.Sequential):
+    def __init__(self):
+        super().__init__(
+            layers=[
+                layers.Flatten(input_shape=(784,), name='digits'),
+                layers.Dense(64, activation='relu', name='dense_1'),
+                layers.Dense(64, activation='relu', name='dense_2'),
+                layers.Dense(10, activation='softmax', name='predictions')
+            ]
         )
-        self._history = None
 
-    def fit(self, X, y, validation_data=None):
-        self._history = self.model.fit(
-            X.values,
-            y.values.ravel(),
-            validation_data=validation_data,
+    def compile(self, **kwargs):
+        super().compile(
+            optimizer='rmsprop',
+            loss='sparse_categorical_crossentropy',
+            metrics=['accuracy'],
+            **kwargs
+        )
+
+    def fit(self, **kwargs):
+        return super().fit(
             batch_size=64,
             epochs=2,
+            # callbacks=[
+            #     keras.callbacks.TensorBoard(log_dir=PATH_TO_TEST_RESULTS)
+            # ],
+            **kwargs
         )
-
-    @property
-    def history(self):
-        return self._history.history
-
-    @property
-    def only_last_prediction_column_is_used(self):
-        return False
-
-    def _prediction(self, X):
-        return self.model.predict(X.values)

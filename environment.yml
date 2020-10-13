@@ -12,10 +12,9 @@ dependencies:
   - jupyterlab
   - ipython
   - pip
+  - tensorflow
   - keras
   - autopep8
   - flake8
   - pip:
     - wfdb
-    - tensorflow==2.3.1
-

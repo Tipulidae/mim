@@ -4,6 +4,7 @@ from sklearn.model_selection import KFold
 
 from mim.fakes.fake_extractors import FakeExtractor, MnistExtractor
 from mim.fakes.fake_classifiers import Ann
+from mim.model_wrapper import KerasWrapper
 from mim.metric_wrapper import sparse_categorical_accuracy
 from mim.experiments.experiments import Experiment
 from mim.experiments.run import run_one_experiment
@@ -25,8 +26,8 @@ class SmallTestExperiment(Experiment, Enum):
         extractor=MnistExtractor,
         cv=KFold,
         cv_args={'n_splits': 2},
-        algorithm=Ann,
-        params={},
+        algorithm=KerasWrapper,
+        params={'model': Ann},
         scoring=sparse_categorical_accuracy,
     )
 

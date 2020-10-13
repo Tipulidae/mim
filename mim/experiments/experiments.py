@@ -64,6 +64,9 @@ class Experiment(NamedTuple):
         if self.wrapper is not None:
             ps['wrapper'] = self.wrapper
 
+        if 'random_state' not in ps:
+            ps['random_state'] = 123
+
         return self.algorithm(**ps)
 
     @property
