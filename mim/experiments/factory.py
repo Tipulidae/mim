@@ -13,4 +13,4 @@ def experiment_from_name(name):
     elif name == 'ptbxlmi':
         return PtbxlMi
     else:
-        raise ValueError('No Experiment with name %s ' % name)
+        raise ValueError(f'No Experiment with name {name}')

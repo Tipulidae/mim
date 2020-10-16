@@ -38,7 +38,7 @@ PREVIOUS_CONDITIONS = [
 ORDINAL_FEATURES = CHARLSON_FEATURES[:-1] + PREVIOUS_CONDITIONS + ['gender']
 
 
-class TroponinExtractor:
+class Expect:
     def __init__(self, specification):
         self.specification = specification
 

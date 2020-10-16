@@ -4,13 +4,18 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
-from mim.model_wrapper import GradientBoostingClassifier, \
-    RandomForestClassifier
-from mim.ecg.troponin import TroponinExtractor
+from mim.model_wrapper import (
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+    KerasWrapper,
+)
+from mim.extractors.expect import Expect
+from mim.extractors.ptbxl import PTBXL
+from mim.models.cnn import BasicCNN
 
 
 class MyocardialInfarction(Experiment, Enum):
-    THAN_GB = Experiment(
+    THAN_EXPECT_GB = Experiment(
         description='Gradient Boosting Classifier similar to that of '
                     'Than et. al, Circulation 2019',
         algorithm=GradientBoostingClassifier,
@@ -31,16 +36,16 @@ class MyocardialInfarction(Experiment, Enum):
         cv=KFold,
         cv_args={'n_splits': 5},
         scoring=roc_auc_score,
-        extractor=TroponinExtractor
+        extractor=Expect
     )
 
-    THAN_RF = THAN_GB._replace(
+    THAN_EXPECT_RF = THAN_EXPECT_GB._replace(
         description='Replaces gradient boosting with random forest',
         algorithm=RandomForestClassifier,
         params={'n_estimators': 1000}
     )
 
-    FOO = THAN_RF._replace(
+    THAN_EXPECT_RF2 = THAN_EXPECT_RF._replace(
         description='Classifies index MI using additional features',
         features={
             'troponin',
@@ -48,4 +53,15 @@ class MyocardialInfarction(Experiment, Enum):
             'age',
             'gender'
         },
+    )
+
+    PTBXL_SMALL = Experiment(
+        description='Small experiment using a CNN with PTBXL',
+        algorithm=KerasWrapper,
+        params={'model': BasicCNN},
+        extractor=PTBXL,
+        index={'size': 'XS'},
+        cv=KFold,
+        cv_args={'n_splits': 2},
+        scoring=roc_auc_score,
     )
