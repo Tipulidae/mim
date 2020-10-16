@@ -1,4 +1,5 @@
 from mim.experiments.troponin import MyocardialInfarction
+from mim.experiments.ptbxl import PtbxlMi
 
 
 def experiment_from_name(name):
@@ -9,5 +10,7 @@ def experiment_from_name(name):
     name = name.lower()
     if name == 'myocardialinfarction':
         return MyocardialInfarction
+    elif name == 'ptbxlmi':
+        return PtbxlMi
     else:
         raise ValueError('No Experiment with name %s ' % name)

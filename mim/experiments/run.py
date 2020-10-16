@@ -54,6 +54,7 @@ def run_one_experiment(experiment):
 
     data = experiment.get_data()
     cross_validation = experiment.cross_validation
+    feature_names = data[0].columns if isinstance(data[0], pd.DataFrame) else None
 
     results = {
         'fit_time': [],
@@ -62,12 +63,12 @@ def run_one_experiment(experiment):
         'feature_importance': [],
         'predictions': [],
         'targets': [],
-        'feature_names': data[0].columns,
+        'feature_names': feature_names,
         'train_score': [],
         'history': []
     }
 
-    for split in tqdm(cross_validation.split(data[0].index)):
+    for split in tqdm(cross_validation.split(data[0])):
         data_fold = _create_fold(data, split, experiment.predict_only)
         result = _validate(
             data_fold,
@@ -87,35 +88,42 @@ def run_one_experiment(experiment):
 
 def _create_fold(data, split, predict_only=False):
     train, test = split
-    X, X_validate, y = data
-    X_train = X.iloc[train, :]
+    x, x_val, y = data
+    x_train = _slice(x, train)
 
-    if X_validate is None:
-        X_test = X.iloc[test, :]
+    if x_val is None:
+        x_test = _slice(x, test)
     else:
-        X_test = X_validate.iloc[test, :]
+        x_test = _slice(x_val, test)
 
-    y_train = y.iloc[train]
+    y_train = _slice(y, train)
     if predict_only:
         y_test = None
     else:
-        y_test = y.iloc[test]
+        y_test = _slice(y, test)
 
-    return X_train, X_test, y_train, y_test
+    return x_train, x_test, y_train, y_test
+
+
+def _slice(array, index):
+    if isinstance(array, pd.DataFrame):
+        return array.iloc[index]
+    else:
+        return array[index]
 
 
 def _validate(data_fold, model, predict_only, scoring):
-    X_train, X_test, y_train, y_test = data_fold
+    x_train, x_test, y_train, y_test = data_fold
     t0 = time()
     log.debug('\n\nFitting classifier...')
 
-    model.fit(X_train, y_train)
+    model.fit(x_train, y_train)
     fit_time = time() - t0
 
-    prediction = model.predict(X_test)
+    prediction = model.predict(x_test)
 
     score_time = time() - fit_time - t0
-    train_score = scoring(y_train, model.predict(X_train)['prediction'])
+    train_score = scoring(y_train, model.predict(x_train)['prediction'])
 
     if predict_only:
         test_score = None
@@ -126,7 +134,6 @@ def _validate(data_fold, model, predict_only, scoring):
     try:
         feature_importance = model.model.feature_importances_
     except AttributeError:
-        log.debug("Model doesn't have feature_importances_!")
         feature_importance = None
 
     return {

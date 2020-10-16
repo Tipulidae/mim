@@ -42,6 +42,11 @@ class Model:
 
     def predict(self, x):
         result = {}
+        if isinstance(x, pd.DataFrame):
+            index = x.index
+            x = x.values
+        else:
+            index = None
 
         prediction = self._prediction(x)
 
@@ -52,17 +57,16 @@ class Model:
             prediction = self.transformer.inverse_transform(
                 prediction.reshape(-1, 1))
 
-        result['prediction'] = pd.DataFrame(prediction, index=x.index)
+        result['prediction'] = pd.DataFrame(prediction, index=index)
         return result
 
     def fit(self, x, y, **kwargs):
-        y = y.values
+        y = _numpy(y)
+        x = _numpy(x)
+
         if self.transformer:
             self.transformer.fit(y)
             y = self.transformer.transform(y)
-
-        if isinstance(x, pd.DataFrame):
-            x = x.values
 
         self.model.fit(x, y.ravel(), **kwargs)
 
@@ -75,8 +79,15 @@ class Model:
     def history(self):
         return None
 
-    def _prediction(self, X):
-        return self.model.predict_proba(X.values)
+    def _prediction(self, x):
+        return self.model.predict_proba(x)
+
+
+def _numpy(array):
+    if isinstance(array, (pd.DataFrame, pd.Series)):
+        return array.values
+    else:
+        return array
 
 
 class RandomForestClassifier(Model):
@@ -109,8 +120,8 @@ class LinearRegression(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(linear_model.LinearRegression, *args, **kwargs)
 
-    def _prediction(self, X):
-        return self.model.predict(X)
+    def _prediction(self, x):
+        return self.model.predict(x)
 
 
 class RandomForestRegressor(Model):
@@ -120,8 +131,8 @@ class RandomForestRegressor(Model):
         super().__init__(ensemble.RandomForestRegressor, *args,
                          random_state=random_state, **kwargs)
 
-    def _prediction(self, X):
-        return self.model.predict(X)
+    def _prediction(self, x):
+        return self.model.predict(x)
 
 
 class NullModel:
@@ -130,10 +141,10 @@ class NullModel:
     def __init__(self, *args, **kwargs):
         pass
 
-    def fit(self, X, y):
+    def fit(self, x, y):
         pass
 
-    def predict_proba(self, X):
+    def predict_proba(self, x):
         return None
 
 
@@ -152,8 +163,8 @@ class KerasWrapper(Model):
 
     def fit(self, x, y, validation_data=None):
         self._history = self.model.fit(
-            x=x.values,
-            y=y.values.ravel(),
+            x=x,
+            y=y,
             validation_data=validation_data,
         )
 
@@ -166,4 +177,4 @@ class KerasWrapper(Model):
         return False
 
     def _prediction(self, x):
-        return self.model.predict(x.values)
+        return self.model.predict(x)
