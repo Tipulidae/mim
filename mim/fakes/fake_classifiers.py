@@ -1,6 +1,4 @@
 import numpy as np
-from tensorflow import keras
-from tensorflow.keras import layers
 
 from mim.model_wrapper import Model, ModelTypes
 
@@ -52,33 +50,3 @@ class RandomRegressor(Model):
                 return self.r.choice(self.y, size=len(X), replace=True)
             else:
                 return self.r.rand(len(X))
-
-
-class Ann(keras.Sequential):
-    def __init__(self):
-        super().__init__(
-            layers=[
-                layers.Flatten(input_shape=(784,), name='digits'),
-                layers.Dense(64, activation='relu', name='dense_1'),
-                layers.Dense(64, activation='relu', name='dense_2'),
-                layers.Dense(10, activation='softmax', name='predictions')
-            ]
-        )
-
-    def compile(self, **kwargs):
-        super().compile(
-            optimizer='rmsprop',
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy'],
-            **kwargs
-        )
-
-    def fit(self, **kwargs):
-        return super().fit(
-            batch_size=64,
-            epochs=2,
-            # callbacks=[
-            #     keras.callbacks.TensorBoard(log_dir=PATH_TO_TEST_RESULTS)
-            # ],
-            **kwargs
-        )

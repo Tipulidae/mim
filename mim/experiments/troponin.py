@@ -11,7 +11,7 @@ from mim.model_wrapper import (
 )
 from mim.extractors.expect import Expect
 from mim.extractors.ptbxl import PTBXL
-from mim.models.cnn import BasicCNN
+from mim.models.simple_nn import BasicCNN
 
 
 class MyocardialInfarction(Experiment, Enum):
