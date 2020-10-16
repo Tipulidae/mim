@@ -16,5 +16,6 @@ dependencies:
   - keras
   - autopep8
   - flake8
+  - seaborn
   - pip:
     - wfdb
