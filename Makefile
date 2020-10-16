@@ -1,3 +1,5 @@
+all: githooks setup conda
+
 githooks: .hooks
 	chmod +x .hooks/*
 	CWD=`pwd`; for FILEPATH in .hooks/* ; do FILENAME=$${FILEPATH##*/}; ln -sf $$CWD/.hooks/$$FILENAME $$CWD/.git/hooks/$$FILENAME ; done
@@ -9,3 +11,6 @@ setup: .scripts/setup.sh
 
 pep:
 	autopep8 -i -r mim/
+
+conda: .scripts/conda.sh
+	./.scripts/conda.sh

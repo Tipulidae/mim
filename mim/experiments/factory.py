@@ -10,4 +10,4 @@ def experiment_from_name(name):
     if name == 'myocardialinfarction':
         return MyocardialInfarction
     else:
-        raise ValueError('No Experiment with name %s ' % name)
+        raise ValueError(f'No Experiment with name {name}')
