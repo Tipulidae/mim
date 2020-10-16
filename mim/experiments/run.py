@@ -54,7 +54,9 @@ def run_one_experiment(experiment):
 
     data = experiment.get_data()
     cross_validation = experiment.cross_validation
-    feature_names = data[0].columns if isinstance(data[0], pd.DataFrame) else None
+    feature_names = None
+    if isinstance(data[0], pd.DataFrame):
+        feature_names = data[0].columns
 
     results = {
         'fit_time': [],
