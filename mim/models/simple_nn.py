@@ -38,19 +38,12 @@ class BasicCNN(keras.Sequential):
             **kwargs
         )
 
-    def fit(self, **kwargs):
-        return super().fit(
-            batch_size=64,
-            epochs=5,
-            **kwargs
-        )
-
 
 class BasicFF(keras.Sequential):
     def __init__(self):
         super().__init__(
             layers=[
-                Flatten(input_shape=(128,), name='digits'),
+                Flatten(input_shape=(128, ), name='digits'),
                 Dense(32, activation='relu', name='hidden'),
                 Dense(10, activation='softmax', name='predictions')
             ]
@@ -61,12 +54,5 @@ class BasicFF(keras.Sequential):
             optimizer='rmsprop',
             loss='sparse_categorical_crossentropy',
             metrics=['accuracy'],
-            **kwargs
-        )
-
-    def fit(self, **kwargs):
-        return super().fit(
-            batch_size=64,
-            epochs=2,
             **kwargs
         )

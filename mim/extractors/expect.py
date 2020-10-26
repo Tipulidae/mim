@@ -1,7 +1,11 @@
 import json
 
+import h5py
 import pandas as pd
+from tensorflow import float32, float64
 from sklearn.preprocessing import OrdinalEncoder
+
+from mim.extractors.extractor import Data, Container
 
 CHARLSON_FEATURES = [
     "Charlson-AcuteMyocardialInfarction",
@@ -44,9 +48,19 @@ class Expect:
 
     def get_data(self):
         data = self._parse_json()
-        X = self._extract_features(data)
+        x = self._extract_features(data)
         y = self._extract_labels(data)
-        return X, y
+
+        index = x.index
+        data = Container(
+            {
+                'y': Data(y.values, index=index),
+                'x': Data(x.values, index=index, dtype=float64)
+            },
+            index=index
+        )
+
+        return data
 
     def _parse_json(self):
         path = '/home/sapfo/andersb/ekg_share/json_data/12tnt/hbg+lund-split/'
@@ -111,3 +125,16 @@ def extract_tnt_features(tnts):
         zip(tnt1.tnt, tnt2.tnt, (tnt2.tnt - tnt1.tnt) / dt),
         columns=['tnt', 'tnt_repeat', 'tnt_diff']
     )
+
+
+class ECGData(Data):
+    def __init__(self, *args, ecg_index=None, dtype=float32, **kwargs):
+        super().__init__(*args, dtype=dtype, **kwargs)
+        if ecg_index is None:
+            self.ecg_index = self.index
+        else:
+            self.ecg_index = ecg_index
+
+    def __getitem__(self, item):
+        with h5py.File(self.data, 'r') as f:
+            return f['raw'][self.ecg_index[item]]

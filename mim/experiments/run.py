@@ -22,11 +22,15 @@ def run_experiments(experiments, continue_on_error=False):
     """
     for experiment in experiments:
         try:
-            pd.to_pickle(run_one_experiment(experiment),
-                         experiment.result_path)
+            pd.to_pickle(
+                run_one_experiment(experiment),
+                experiment.result_path
+            )
         except Exception as e:
-            log.error(f'Something went wrong with task {experiment.name}! '
-                      f'Oh no! :(')
+            log.error(
+                f'Something went wrong with task {experiment.name}! '
+                f'Oh no! :('
+            )
             if not continue_on_error:
                 raise e
 
@@ -55,8 +59,6 @@ def run_one_experiment(experiment):
     data = experiment.get_data()
     cross_validation = experiment.cross_validation
     feature_names = None
-    if isinstance(data[0], pd.DataFrame):
-        feature_names = data[0].columns
 
     results = {
         'fit_time': [],
@@ -70,12 +72,10 @@ def run_one_experiment(experiment):
         'history': []
     }
 
-    for split in tqdm(cross_validation.split(data[0])):
-        data_fold = _create_fold(data, split, experiment.predict_only)
+    for train, validation in tqdm(cross_validation.split(data.index)):
         result = _validate(
-            data_fold,
+            data.split(train, validation),
             experiment.classifier,
-            experiment.predict_only,
             experiment.scoring)
 
         _update_results(results, result)
@@ -114,24 +114,25 @@ def _slice(array, index):
         return array[index]
 
 
-def _validate(data_fold, model, predict_only, scoring):
-    x_train, x_test, y_train, y_test = data_fold
+def _validate(data, model, scoring):
+    train, val = data
+
     t0 = time()
     log.debug('\n\nFitting classifier...')
-
-    model.fit(x_train, y_train)
+    model.fit(train)
     fit_time = time() - t0
 
-    prediction = model.predict(x_test)
-
+    prediction = model.predict(val['x'])
     score_time = time() - fit_time - t0
-    train_score = scoring(y_train, model.predict(x_train)['prediction'])
 
-    if predict_only:
-        test_score = None
-    else:
-        test_score = scoring(y_test, prediction['prediction'])
-        log.debug(f'test score: {test_score}, train score: {train_score}')
+    train_score = scoring(
+        train['y'].as_numpy,
+        model.predict(train['x'])['prediction']
+    )
+
+    y_val = val['y'].as_numpy
+    test_score = scoring(y_val, prediction['prediction'])
+    log.debug(f'test score: {test_score}, train score: {train_score}')
 
     try:
         feature_importance = model.model.feature_importances_
@@ -145,7 +146,7 @@ def _validate(data_fold, model, predict_only, scoring):
         'feature_importance': feature_importance,
         'fit_time': fit_time,
         'score_time': score_time,
-        'targets': y_test,
+        'targets': y_val,
         'history': model.history
     }
 

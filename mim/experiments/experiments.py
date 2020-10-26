@@ -29,10 +29,7 @@ class Experiment(NamedTuple):
         Uses the extractor and specifications to create the X and y data
         set.
 
-        :return: Tuple X, X_validate, y, where X, y comes from the
-        extractor. The X_validate is None, but is needed in the return value
-        to conform with a different type of experiment in which a different
-        data set is generated for validation.
+        :return: Data object
         """
         specification = {
             'index': self.index,
@@ -40,10 +37,7 @@ class Experiment(NamedTuple):
             'labels': self.labels,
             'processing': self.post_processing
         }
-        X, y = self.extractor(specification=specification).get_data()
-
-        X_validate = None
-        return X, X_validate, y
+        return self.extractor(specification=specification).get_data()
 
     @property
     def cross_validation(self):

@@ -1,7 +1,5 @@
 from enum import Enum
 
-from sklearn.multiclass import OneVsRestClassifier
-
 from mim.experiments.experiments import Experiment
 from mim.config import HyperParams
 from mim.model_wrapper import RandomForestClassifier, LogisticRegression
@@ -29,11 +27,6 @@ class FakeExperiment(Experiment, Enum):
         description='Test that util.HyperParams enum can be used for params.',
         params=HyperParams.P1)
 
-    uses_wrapper = Experiment(
-        description='Test that a wrapper algorithm can be used to wrap the '
-                    'basic classifier',
-        wrapper=OneVsRestClassifier)
-
 
 class TestExperiment:
     def test_description(self):
@@ -57,8 +50,3 @@ class TestExperiment:
         assert HyperParams.P1 == xp.params
         assert 1000 == xp.classifier.model.n_estimators
         assert 5 == xp.classifier.model.max_features
-
-    def test_wrapper_wraps_classifier(self):
-        xp = FakeExperiment.uses_wrapper
-        assert isinstance(xp.classifier, RandomForestClassifier)
-        assert isinstance(xp.classifier.model, OneVsRestClassifier)

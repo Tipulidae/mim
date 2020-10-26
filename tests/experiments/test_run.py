@@ -32,7 +32,11 @@ class SmallTestExperiment(Experiment, Enum):
         cv=KFold,
         cv_args={'n_splits': 2},
         algorithm=KerasWrapper,
-        params={'model': BasicFF},
+        params={
+            'model': BasicFF,
+            'batch_size': 32,
+            'epochs': 2
+        },
         scoring=sparse_categorical_accuracy,
     )
 

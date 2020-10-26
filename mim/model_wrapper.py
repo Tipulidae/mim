@@ -27,48 +27,32 @@ class Model:
             self,
             model,
             *args,
-            transformer=None,
-            transformer_args=None,
-            wrapper=None,
+            can_use_tf_dataset=True,
             **kwargs):
-        if transformer:
-            self.transformer = transformer(**transformer_args)
-        else:
-            self.transformer = None
-
+        self.can_use_tf_dataset = can_use_tf_dataset
         self.model = model(*args, **kwargs)
-        if wrapper is not None:
-            self.model = wrapper(self.model)
 
     def predict(self, x):
         result = {}
-        if isinstance(x, pd.DataFrame):
-            index = x.index
-            x = x.values
+        if self.can_use_tf_dataset:
+            x = x.as_dataset
         else:
-            index = None
-
+            x = x.as_numpy
         prediction = self._prediction(x)
 
         if self.only_last_prediction_column_is_used:
             prediction = prediction[:, 1]
 
-        if self.transformer:
-            prediction = self.transformer.inverse_transform(
-                prediction.reshape(-1, 1))
-
-        result['prediction'] = pd.DataFrame(prediction, index=index)
+        result['prediction'] = pd.DataFrame(prediction)
         return result
 
-    def fit(self, x, y, **kwargs):
-        y = _numpy(y)
-        x = _numpy(x)
-
-        if self.transformer:
-            self.transformer.fit(y)
-            y = self.transformer.transform(y)
-
-        self.model.fit(x, y.ravel(), **kwargs)
+    def fit(self, data, **kwargs):
+        if self.can_use_tf_dataset:
+            self.model.fit(data.as_dataset, **kwargs)
+        else:
+            x = data['x'].as_numpy
+            y = data['y'].as_numpy
+            self.model.fit(x, y, **kwargs)
 
     @property
     def only_last_prediction_column_is_used(self):
@@ -92,8 +76,13 @@ def _numpy(array):
 
 class RandomForestClassifier(Model):
     def __init__(self, *args, random_state=123, **kwargs):
-        super().__init__(ensemble.RandomForestClassifier, *args,
-                         random_state=random_state, **kwargs)
+        super().__init__(
+            ensemble.RandomForestClassifier,
+            *args,
+            can_use_tf_dataset=False,
+            random_state=random_state,
+            **kwargs
+        )
 
 
 class ExtraTreesClassifier(Model):
@@ -154,18 +143,26 @@ class KerasWrapper(Model):
             model,
             *args,
             random_state=42,
+            batch_size=16,
+            epochs=2,
             **kwargs):
         np.random.seed(random_state)
         tf.random.set_seed(random_state)
+
         super().__init__(model, *args, **kwargs)
         self.model.compile()
         self._history = None
+        self.batch_size = batch_size
+        self.epochs = epochs
 
-    def fit(self, x, y, validation_data=None):
+    def fit(self, data, validation_data=None):
+        x = data['x'].as_dataset
+        y = data['y'].as_dataset
+
         self._history = self.model.fit(
-            x=x,
-            y=y,
+            x=tf.data.Dataset.zip((x, y)).batch(self.batch_size),
             validation_data=validation_data,
+            epochs=self.epochs
         )
 
     @property
@@ -177,4 +174,4 @@ class KerasWrapper(Model):
         return False
 
     def _prediction(self, x):
-        return self.model.predict(x)
+        return self.model.predict(x.batch(self.batch_size))
