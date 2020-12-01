@@ -10,13 +10,14 @@ dependencies:
   - pytest
   - freezegun
   - jupyterlab
+  - jupyter_contrib_nbextensions
   - ipython
   - pip
-  - keras
   - autopep8
   - flake8
   - seaborn
+  - tensorflow>=2.3
   - pip:
     - wfdb
-    - tensorflow>=2.3
     - tensorflow_datasets
+
