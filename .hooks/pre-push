@@ -2,7 +2,7 @@
 
 if [ "" == "$(git diff)" ]
 then
-	python -m pytest tests
+	python -m pytest
 else
 	echo "Pre-push hook error: can't push with unstaged changes in tracked files. Use git stash first if you want to push currently staged changes."
 	exit 1
