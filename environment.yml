@@ -15,9 +15,9 @@ dependencies:
   - autopep8
   - flake8
   - seaborn
+  - tensorflow-gpu >= 2.2.0
   - pip:
     - wfdb
-    - tensorflow-gpu >= 2.3.0
     - tensorflow_datasets
     - jupyter_contrib_nbextensions
 
