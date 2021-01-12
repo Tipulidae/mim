@@ -12,11 +12,12 @@ dependencies:
   - jupyterlab
   - ipython
   - pip
-  - keras
   - autopep8
   - flake8
   - seaborn
+  - tensorflow-gpu >= 2.2.0
+  - jupyter_contrib_nbextensions
   - pip:
     - wfdb
-    - tensorflow>=2.3
     - tensorflow_datasets
+

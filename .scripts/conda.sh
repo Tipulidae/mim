@@ -7,11 +7,11 @@ read answer
 
 if [[ $answer = 1 ]]
 then
-  conda env update --name mim --file environment.yml --prune
+  conda env update --name mim-cpu --file environment_cpu.yml --prune
 elif [[ $answer = 2 ]]
 then
-  conda env update --name mim-gpu --file environment_gpu.yml --prune
-else
   conda env update --name mim --file environment.yml --prune
-  conda env update --name mim-gpu --file environment_gpu.yml --prune
+else
+  conda env update --name mim-cpu --file environment_cpu.yml --prune
+  conda env update --name mim --file environment.yml --prune
 fi
