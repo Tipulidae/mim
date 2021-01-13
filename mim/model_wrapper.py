@@ -94,7 +94,8 @@ class ExtraTreesClassifier(Model):
 class GradientBoostingClassifier(Model):
     def __init__(self, *args, random_state=125, **kwargs):
         super().__init__(ensemble.GradientBoostingClassifier, *args,
-                         random_state=random_state, **kwargs)
+                         random_state=random_state, can_use_tf_dataset=False,
+                         **kwargs)
 
 
 class LogisticRegression(Model):
