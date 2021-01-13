@@ -27,7 +27,7 @@ class Model:
             self,
             model,
             *args,
-            can_use_tf_dataset=True,
+            can_use_tf_dataset=False,
             **kwargs):
         self.can_use_tf_dataset = can_use_tf_dataset
         self.model = model(*args, **kwargs)
@@ -51,7 +51,7 @@ class Model:
             self.model.fit(data.as_dataset, **kwargs)
         else:
             x = data['x'].as_numpy
-            y = data['y'].as_numpy
+            y = data['y'].as_numpy.ravel()
             self.model.fit(x, y, **kwargs)
 
     @property
@@ -149,7 +149,7 @@ class KerasWrapper(Model):
         np.random.seed(random_state)
         tf.random.set_seed(random_state)
 
-        super().__init__(model, *args, **kwargs)
+        super().__init__(model, *args, can_use_tf_dataset=True, **kwargs)
         self.model.compile()
         self._history = None
         self.batch_size = batch_size
