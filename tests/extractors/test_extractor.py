@@ -9,12 +9,20 @@ class TestData:
         data = Data([1, 2, 3, 4])
 
         assert list(data) == [1, 2, 3, 4]
-        assert data.index == range(0, 4)
         assert list(data.lazy_slice([3, 2, 1])) == [4, 3, 2]
-        assert data.index == range(0, 4)
+
+    def test_slice_of_slice(self):
+        data = Data([0, 1, 2, 3])
+        assert list(data) == [0, 1, 2, 3]
+
+        sliced = data.lazy_slice([3, 2, 1, 1, 1, 0])
+        assert list(sliced) == [3, 2, 1, 1, 1, 0]
+
+        sliced_again = sliced.lazy_slice([4, 3, 2])
+        assert list(sliced_again) == [1, 1, 1]
 
     def test_lazy_slice_works_on_array(self):
-        data = Data([[1, 2, 3], [2, 3, 4]], index=[0, 1, 2])
+        data = Data([[1, 2, 3], [2, 3, 4]], index=[0, 1])
         assert list(data.lazy_slice([0])) == [[1, 2, 3]]
         assert data[1] == [2, 3, 4]
 
@@ -75,6 +83,34 @@ class TestData:
             'x': tf.TensorShape([2]),
             'y': tf.TensorShape([])
         }
+
+    def test_slice_container(self):
+        large_data = list(range(500))
+        large_index = [0, 100, 200, 300, 400]
+        x = Data(large_data, index=large_index)
+        y = Data([1, 1, 1, 0, 0])
+        data = Container({'x': x, 'y': y}, index=[0, 1, 2, 3, 4])
+
+        assert list(data) == [
+            {'x': 0, 'y': 1},
+            {'x': 100, 'y': 1},
+            {'x': 200, 'y': 1},
+            {'x': 300, 'y': 0},
+            {'x': 400, 'y': 0},
+        ]
+        assert data[0] == {'x': 0, 'y': 1}
+        assert data['x'][0] == 0
+        assert data['y'][0] == 1
+
+        sliced = data.lazy_slice([3, 1, 1])
+        assert list(sliced) == [{'x': 300, 'y': 0},
+                                {'x': 100, 'y': 1},
+                                {'x': 100, 'y': 1}]
+        assert list(sliced['x']) == [300, 100, 100]
+        assert sliced[0] == {'x': 300, 'y': 0}
+        assert sliced[1] == {'x': 100, 'y': 1}
+        assert sliced[2] == {'x': 100, 'y': 1}
+        assert sliced['x'][0] == 300
 
 
 class TestInferShape:

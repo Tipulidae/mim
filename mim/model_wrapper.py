@@ -160,7 +160,7 @@ class KerasWrapper(Model):
         y = data['y'].as_dataset
 
         self._history = self.model.fit(
-            x=tf.data.Dataset.zip((x, y)).batch(self.batch_size),
+            x=tf.data.Dataset.zip((x, y)).batch(self.batch_size).prefetch(3),
             validation_data=validation_data,
             epochs=self.epochs
         )

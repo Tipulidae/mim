@@ -2,6 +2,7 @@ from copy import copy
 
 import numpy as np
 import tensorflow as tf
+import h5py
 
 
 class Data:
@@ -9,9 +10,9 @@ class Data:
         self.data = data
         self.dtype = dtype
         if index is None:
-            self.index = range(len(data))
+            self._index = range(len(data))
         else:
-            self.index = index
+            self._index = index
 
         self._shape = infer_shape(data)
 
@@ -20,8 +21,12 @@ class Data:
 
     def lazy_slice(self, index):
         new_data = copy(self)
-        new_data.index = index
+        new_data._index = [self._index[i] for i in index]
         return new_data
+
+    @property
+    def index(self):
+        return range(len(self))
 
     @property
     def as_dataset(self):
@@ -47,10 +52,13 @@ class Data:
         return self.__iter__()
 
     def __getitem__(self, item):
-        return self.data[item]
+        return self.data[self._index[item]]
+
+    def __len__(self):
+        return len(self._index)
 
     def __iter__(self):
-        for i in self.index:
+        for i in range(len(self)):
             yield self[i]
 
 
@@ -88,13 +96,9 @@ class Container(Data):
 
     def __getitem__(self, item):
         if item in self.data:
-            return super().__getitem__(item)
+            return self.data[item]
         else:
             return {key: value[item] for key, value in self.data.items()}
-
-    def __iter__(self):
-        for i in self.index:
-            yield self[i]
 
 
 def infer_shape(data):
@@ -106,3 +110,27 @@ def infer_shape(data):
         return None
 
     return list(shape[1:])
+
+
+class ECGData(Data):
+    def __init__(self, data, mode='raw', index=None, dtype=tf.float32,
+                 **kwargs):
+        if mode not in {'raw', 'beat'}:
+            mode = 'raw'
+
+        self.mode = mode
+
+        if index is None:
+            with h5py.File(data, 'r') as f:
+                index = range(len(f[mode]))
+
+        super().__init__(data, index=index, dtype=dtype, **kwargs)
+
+        if mode == 'beat':
+            self._shape = [1200, 8]
+        else:
+            self._shape = [10000, 8]
+
+    def __getitem__(self, item):
+        with h5py.File(self.data, 'r') as f:
+            return f[self.mode][self._index[item]]
