@@ -1,0 +1,39 @@
+from enum import Enum
+
+from sklearn.model_selection import KFold
+from sklearn.metrics import roc_auc_score
+
+from mim.experiments.experiments import Experiment
+from mim.model_wrapper import KerasWrapper
+from mim.extractors.esc_trop import EscTrop
+from mim.models.simple_nn import BasicCNN
+
+
+# Here's an attempt at a structure for experiment names:
+# [Data source]_[[features]]_[target]_[model]_[version]
+# Data source: {ESC, EXPECT, PTB, PTBXL, ...}
+# Features: {B, R}#, where B=beat, R=raw and # is the number of records used.
+# Other common feature-sets to be given names as needed.
+# Target: {MACE,AMI,...}#, where # would indicate some time frame
+# Model: Some short hand for the models that I use
+# Version: If I run multiple variations of this experiment, a version is handy
+
+
+class MultipleECG(Experiment, Enum):
+    ESC_B1_MACE30_BCNN2_V1 = Experiment(
+        description='Baseline CNN model using only current ECG median beat to '
+                    'predict MACE within 30 days.',
+        algorithm=KerasWrapper,
+        params={
+            'model': BasicCNN,
+            'num_conv_layers': 2,
+            'input_shape': (1200, 8),
+            'epochs': 200,
+            'batch_size': 64
+        },
+        extractor=EscTrop,
+        index={},
+        cv=KFold,
+        cv_args={'n_splits': 2},
+        scoring=roc_auc_score,
+    )

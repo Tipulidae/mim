@@ -58,7 +58,13 @@ class MyocardialInfarction(Experiment, Enum):
     PTBXL_SMALL = Experiment(
         description='Small experiment using a CNN with PTBXL',
         algorithm=KerasWrapper,
-        params={'model': BasicCNN, 'epochs': 5, 'batch_size': 32},
+        params={
+            'model': BasicCNN,
+            'num_conv_layers': 2,
+            'input_shape': (1000, 12),
+            'epochs': 5,
+            'batch_size': 32
+        },
         extractor=PTBXL,
         index={'size': 'XS'},
         cv=KFold,

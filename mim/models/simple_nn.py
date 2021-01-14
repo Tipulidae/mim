@@ -6,15 +6,19 @@ from tensorflow.keras.layers import (
     Conv1D,
     MaxPool1D,
     Dropout,
+    BatchNormalization,
+    ReLU
 )
 
 
 class BasicCNN(keras.Sequential):
-    def __init__(self):
+    def __init__(self, input_shape=(1200, 8), num_conv_layers=2):
         super().__init__()
-        self.add(Input(shape=(1000, 12)))
-        self.add_conv_layer()
-        self.add_conv_layer()
+        self.add(Input(shape=input_shape))
+        self.add(BatchNormalization())
+        for _ in range(num_conv_layers):
+            self.add_conv_layer()
+
         self.add(Flatten())
         self.add(Dense(1, activation="sigmoid", kernel_regularizer="l2"))
 
@@ -24,9 +28,10 @@ class BasicCNN(keras.Sequential):
                 filters=32,
                 kernel_size=16,
                 kernel_regularizer="l2",
-                activation="relu",
             )
         )
+        self.add(BatchNormalization())
+        self.add(ReLU())
         self.add(MaxPool1D(pool_size=16))
         self.add(Dropout(0.2))
 
