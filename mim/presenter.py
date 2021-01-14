@@ -7,7 +7,8 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     accuracy_score,
-    f1_score
+    f1_score,
+    roc_auc_score
 )
 
 from mim.util.logs import get_logger
@@ -58,6 +59,20 @@ class Presenter:
             [np.array(xp['train_score']), xp['test_score']],
             index=['train', 'test']
         )
+
+    def scores(self, like='.*'):
+        results = []
+        for name, xp in self._results_that_match_pattern(like):
+            targets, predictions = self._target_predictions(xp)
+            results.append(pd.Series(
+                data=[
+                    roc_auc_score(targets, predictions)
+                ],
+                index=[
+                    'auc'
+                ],
+                name=name))
+        return pd.DataFrame(results)
 
     def threshold_scores(self, like='.*', threshold=0.5):
         results = []
@@ -114,9 +129,13 @@ class Presenter:
             yield name, self.results[name]
 
     def _threshold_target_predictions(self, xp, threshold):
-        predictions = pd.concat(xp['predictions']['prediction'], axis=0)
+        targets, predictions = self._target_predictions(xp)
         predictions = (predictions > threshold).astype(int)
-        targets = pd.concat(xp['targets'], axis=0)
+        return targets, predictions
+
+    def _target_predictions(self, xp):
+        predictions = pd.concat(xp['predictions']['prediction'], axis=0)
+        targets = pd.DataFrame(np.concatenate(xp['targets']))
         return targets, predictions
 
     def _is_classifier(self, xps):
