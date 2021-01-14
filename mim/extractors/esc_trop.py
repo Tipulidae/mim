@@ -13,11 +13,13 @@ class EscTrop:
 
         ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
 
+        mode = self.specification['features']['ecg']
+
         data = Container(
             {
                 'x': ECGData(
                     ecg_path,
-                    mode='beat',
+                    mode=mode,
                     index=ed.ecg_id.astype(int).values
                 ),
                 'y': Data(ed.mace_30_days.astype(int).values)

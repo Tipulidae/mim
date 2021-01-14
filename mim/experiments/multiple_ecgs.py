@@ -32,6 +32,26 @@ class MultipleECG(Experiment, Enum):
             'batch_size': 64
         },
         extractor=EscTrop,
+        features={'ecg': 'beat'},
+        index={},
+        cv=KFold,
+        cv_args={'n_splits': 2},
+        scoring=roc_auc_score,
+    )
+
+    ESC_R1_MACE30_BCNN3_V1 = Experiment(
+        description='Baseline CNN model using only current raw ECG signal to '
+                    'predict MACE within 30 days.',
+        algorithm=KerasWrapper,
+        params={
+            'model': BasicCNN,
+            'num_conv_layers': 3,
+            'input_shape': (10000, 8),
+            'epochs': 200,
+            'batch_size': 32
+        },
+        extractor=EscTrop,
+        features={'ecg': 'raw'},
         index={},
         cv=KFold,
         cv_args={'n_splits': 2},
