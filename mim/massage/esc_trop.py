@@ -109,8 +109,7 @@ def make_ed_table():
         .set_index('id')
     )
 
-    table = table.join(old, how='inner')
-
+    table = table.join(old, how='inner').sort_values(by='admission_date')
     return table
 
 

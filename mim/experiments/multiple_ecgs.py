@@ -1,12 +1,12 @@
 from enum import Enum
 
-from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
 from mim.model_wrapper import KerasWrapper
 from mim.extractors.esc_trop import EscTrop
 from mim.models.simple_nn import BasicCNN
+from mim.cross_validation import ChronologicalSplit
 
 
 # Here's an attempt at a structure for experiment names:
@@ -28,14 +28,17 @@ class MultipleECG(Experiment, Enum):
             'model': BasicCNN,
             'num_conv_layers': 2,
             'input_shape': (1200, 8),
-            'epochs': 200,
+            'epochs': 10,
             'batch_size': 64
         },
         extractor=EscTrop,
-        features={'ecg': 'beat'},
+        features={'ecg_mode': 'beat'},
         index={},
-        cv=KFold,
-        cv_args={'n_splits': 2},
+        cv=ChronologicalSplit,
+        cv_args={
+            'test_size': 0.667
+        },
+        hold_out_size=0.25,
         scoring=roc_auc_score,
     )
 
@@ -48,13 +51,16 @@ class MultipleECG(Experiment, Enum):
             'num_conv_layers': 2,
             'input_shape': (10000, 8),
             'epochs': 200,
-            'batch_size': 32
+            'batch_size': 64
         },
         extractor=EscTrop,
-        features={'ecg': 'raw'},
+        features={'ecg_mode': 'raw'},
         index={},
-        cv=KFold,
-        cv_args={'n_splits': 2},
+        cv=ChronologicalSplit,
+        cv_args={
+            'test_size': 0.667
+        },
+        hold_out_size=0.25,
         scoring=roc_auc_score,
     )
 
@@ -65,6 +71,6 @@ class MultipleECG(Experiment, Enum):
             'num_conv_layers': 3,
             'input_shape': (10000, 8),
             'epochs': 200,
-            'batch_size': 32
+            'batch_size': 64
         },
     )

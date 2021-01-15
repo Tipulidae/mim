@@ -56,7 +56,7 @@ def run_one_experiment(experiment):
              f'{experiment.description}')
     t = time()
 
-    data = experiment.get_data()
+    data, hold_out = experiment.get_data()
     cross_validation = experiment.cross_validation
     feature_names = None
 
@@ -72,9 +72,10 @@ def run_one_experiment(experiment):
         'history': []
     }
 
-    for train, validation in tqdm(cross_validation.split(data.index)):
+    for train, validation in tqdm(cross_validation.split(data)):
         result = _validate(
-            data.split(train, validation),
+            train,
+            validation,
             experiment.classifier,
             experiment.scoring)
 
@@ -88,35 +89,7 @@ def run_one_experiment(experiment):
     return results
 
 
-def _create_fold(data, split, predict_only=False):
-    train, test = split
-    x, x_val, y = data
-    x_train = _slice(x, train)
-
-    if x_val is None:
-        x_test = _slice(x, test)
-    else:
-        x_test = _slice(x_val, test)
-
-    y_train = _slice(y, train)
-    if predict_only:
-        y_test = None
-    else:
-        y_test = _slice(y, test)
-
-    return x_train, x_test, y_train, y_test
-
-
-def _slice(array, index):
-    if isinstance(array, pd.DataFrame):
-        return array.iloc[index]
-    else:
-        return array[index]
-
-
-def _validate(data, model, scoring):
-    train, val = data
-
+def _validate(train, val, model, scoring):
     t0 = time()
     log.debug('\n\nFitting classifier...')
     model.fit(train)
@@ -235,7 +208,7 @@ if __name__ == '__main__':
     log.info(f'{len(xps_todo)} experiments has status NOT STARTED')
     log.info(f'{len(xps_to_rerun)} experiments has status RERUN')
 
-    all_xps_to_run = xps_todo+xps_to_rerun
+    all_xps_to_run = xps_todo + xps_to_rerun
 
     if not args.suppress:
         answer = input(

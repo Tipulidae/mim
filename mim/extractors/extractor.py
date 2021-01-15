@@ -6,9 +6,11 @@ import h5py
 
 
 class Data:
-    def __init__(self, data, index=None, dtype=tf.int64, **kwargs):
+    def __init__(self, data, index=None, dtype=tf.int64, groups=None,
+                 **kwargs):
         self.data = data
         self.dtype = dtype
+        self.groups = groups
         if index is None:
             self._index = range(len(data))
         else:

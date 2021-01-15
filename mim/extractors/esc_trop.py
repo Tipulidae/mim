@@ -13,7 +13,7 @@ class EscTrop:
 
         ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
 
-        mode = self.specification['features']['ecg']
+        mode = self.specification['features']['ecg_mode']
 
         data = Container(
             {
