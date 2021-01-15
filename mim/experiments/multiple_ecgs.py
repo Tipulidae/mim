@@ -28,7 +28,7 @@ class MultipleECG(Experiment, Enum):
             'model': BasicCNN,
             'num_conv_layers': 2,
             'input_shape': (1200, 8),
-            'epochs': 10,
+            'epochs': 200,
             'batch_size': 64
         },
         extractor=EscTrop,

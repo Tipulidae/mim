@@ -123,6 +123,21 @@ class Presenter:
             columns=xp['feature_names']
         )
 
+    def history(self, name):
+        xp = self.results[name]
+        if xp['history'] is None:
+            print(f"Experiment {name} has no history.")
+            return
+
+        # history = pd.DataFrame(xp['history'])
+        # df =
+        history = pd.concat(
+            [pd.DataFrame(h) for h in xp['history']],
+            axis=1,
+            keys=[f'fold {i}' for i in range(len(xp['history']))]
+        )
+        history.plot()
+
     def _results_that_match_pattern(self, pattern):
         p = re.compile(pattern)
         for name in filter(p.match, self.results):
