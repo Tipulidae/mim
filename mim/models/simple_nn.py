@@ -7,8 +7,37 @@ from tensorflow.keras.layers import (
     MaxPool1D,
     Dropout,
     BatchNormalization,
+    Concatenate,
     ReLU
 )
+
+
+def basic_cnn(input_shape, num_conv_layers=2):
+    inp = {key: Input(shape=value) for key, value in input_shape.items()}
+
+    layers = []
+    if 'ecg' in inp:
+        layers.append(_ecg_network(inp['ecg'], num_conv_layers))
+    if 'old_ecg' in inp:
+        layers.append(_ecg_network(inp['old_ecg'], num_conv_layers))
+    if 'features' in inp:
+        layers.append(BatchNormalization()(inp['features']))
+
+    x = Concatenate()(layers)
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
+
+
+def _ecg_network(ecg, num_conv_layers):
+    ecg = BatchNormalization()(ecg)
+    for _ in range(num_conv_layers):
+        ecg = Conv1D(filters=32, kernel_size=16, kernel_regularizer="l2")(ecg)
+        ecg = BatchNormalization()(ecg)
+        ecg = ReLU()(ecg)
+        ecg = MaxPool1D(pool_size=16)(ecg)
+        ecg = Dropout(0.2)(ecg)
+
+    return Flatten()(ecg)
 
 
 class BasicCNN(keras.Sequential):
@@ -52,12 +81,4 @@ class BasicFF(keras.Sequential):
                 Dense(32, activation='relu', name='hidden'),
                 Dense(10, activation='softmax', name='predictions')
             ]
-        )
-
-    def compile(self, **kwargs):
-        super().compile(
-            optimizer='rmsprop',
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy'],
-            **kwargs
         )

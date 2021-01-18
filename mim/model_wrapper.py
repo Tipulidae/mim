@@ -145,12 +145,20 @@ class KerasWrapper(Model):
             random_state=42,
             batch_size=16,
             epochs=2,
+            compile_args=None,
             **kwargs):
         np.random.seed(random_state)
         tf.random.set_seed(random_state)
 
         super().__init__(model, *args, can_use_tf_dataset=True, **kwargs)
-        self.model.compile()
+        if compile_args is None:
+            compile_args = {
+                'optimizer': 'sgd',
+                'loss': 'binary_crossentropy',
+                'metrics': ['accuracy']
+            }
+
+        self.model.compile(**compile_args)
         self._history = None
         self.batch_size = batch_size
         self.epochs = epochs

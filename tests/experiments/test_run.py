@@ -35,7 +35,12 @@ class SmallTestExperiment(Experiment, Enum):
         params={
             'model': BasicFF,
             'batch_size': 32,
-            'epochs': 2
+            'epochs': 2,
+            'compile_args': {
+                'optimizer': 'rmsprop',
+                'loss': 'sparse_categorical_crossentropy',
+                'metrics': ['accuracy']
+            },
         },
         scoring=sparse_categorical_accuracy,
     )

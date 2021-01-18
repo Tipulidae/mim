@@ -129,14 +129,13 @@ class Presenter:
             print(f"Experiment {name} has no history.")
             return
 
-        # history = pd.DataFrame(xp['history'])
-        # df =
         history = pd.concat(
             [pd.DataFrame(h) for h in xp['history']],
             axis=1,
             keys=[f'fold {i}' for i in range(len(xp['history']))]
         )
-        history.plot()
+        return history
+        # history.plot()
 
     def _results_that_match_pattern(self, pattern):
         p = re.compile(pattern)
