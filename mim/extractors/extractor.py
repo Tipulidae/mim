@@ -76,7 +76,7 @@ class Container(Data):
         )
 
     @classmethod
-    def from_dict(cls, data_dict, index):
+    def from_dict(cls, data_dict, index=None):
         def to_data(item):
             if isinstance(item, Data):
                 return item

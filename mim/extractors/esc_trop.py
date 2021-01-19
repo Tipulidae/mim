@@ -16,25 +16,28 @@ class EscTrop:
 
         ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
 
-        mode = self.specification['features']['ecg_mode']
+        spec = self.specification['features']
+        mode = spec['ecg_mode']
+
+        x_dict = {}
+        if 'index' in spec['ecgs']:
+            x_dict['ecg'] = ECGData(
+                ecg_path,
+                mode=mode,
+                index=ed.ecg_id.astype(int).values
+            )
+        if 'old' in spec['ecgs']:
+            x_dict['old_ecg'] = ECGData(
+                ecg_path,
+                mode=mode,
+                index=ed.old_ecg_id.astype(int).values
+            )
+        if 'features' in spec:
+            x_dict['features'] = Data(ed[spec['features']].values)
 
         data = Container(
             {
-                'x': Container(
-                    {
-                        'ecg': ECGData(
-                            ecg_path,
-                            mode=mode,
-                            index=ed.ecg_id.astype(int).values
-                        ),
-                        'old_ecg': ECGData(
-                            ecg_path,
-                            mode=mode,
-                            index=ed.old_ecg_id.astype(int).values
-                        ),
-                        'features': Data(ed[['age', 'sex']].values)
-                    }
-                ),
+                'x': Container.from_dict(x_dict),
                 'y': Data(ed.mace_30_days.astype(int).values)
             },
             index=ed.index

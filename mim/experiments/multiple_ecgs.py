@@ -32,7 +32,10 @@ class MultipleECG(Experiment, Enum):
             'batch_size': 64
         },
         extractor=EscTrop,
-        features={'ecg_mode': 'beat'},
+        features={
+            'ecg_mode': 'beat',
+            'ecgs': ['index']
+        },
         index={},
         cv=ChronologicalSplit,
         cv_args={
@@ -42,18 +45,14 @@ class MultipleECG(Experiment, Enum):
         scoring=roc_auc_score,
     )
 
-    ESC_B2_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
-        description='Running two CNNs in parallel on two ECG beat signals. ',
+    ESC_B1_MACE30_BCNN2_V2 = ESC_B1_MACE30_BCNN2_V1._replace(
         params={
             'model': basic_cnn,
             'num_conv_layers': 2,
-            'input_shape': {
-                'ecg': (1200, 8),
-                'old_ecg': (1200, 8),
-            },
+            'input_shape': {'ecg': (1200, 8)},
             'epochs': 200,
-            'batch_size': 64
-        }
+            'batch_size': 64,
+        },
     )
 
     ESC_B1AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
@@ -66,6 +65,11 @@ class MultipleECG(Experiment, Enum):
             'input_shape': {'ecg': (1200, 8), 'features': (2, )},
             'epochs': 200,
             'batch_size': 64
+        },
+        features={
+            'ecg_mode': 'beat',
+            'ecgs': ['index'],
+            'features': ['age', 'sex']
         }
     )
 
@@ -82,6 +86,11 @@ class MultipleECG(Experiment, Enum):
             },
             'epochs': 200,
             'batch_size': 64
+        },
+        features={
+            'ecg_mode': 'beat',
+            'ecgs': ['index', 'old'],
+            'features': ['age', 'sex']
         }
     )
 
@@ -95,5 +104,8 @@ class MultipleECG(Experiment, Enum):
             'epochs': 200,
             'batch_size': 64
         },
-        features={'ecg_mode': 'raw'},
+        features={
+            'ecg_mode': 'raw',
+            'ecgs': ['index']
+        }
     )

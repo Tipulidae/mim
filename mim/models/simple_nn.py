@@ -14,7 +14,6 @@ from tensorflow.keras.layers import (
 
 def basic_cnn(input_shape, num_conv_layers=2):
     inp = {key: Input(shape=value) for key, value in input_shape.items()}
-
     layers = []
     if 'ecg' in inp:
         layers.append(_ecg_network(inp['ecg'], num_conv_layers))
@@ -23,19 +22,23 @@ def basic_cnn(input_shape, num_conv_layers=2):
     if 'features' in inp:
         layers.append(BatchNormalization()(inp['features']))
 
-    x = Concatenate()(layers)
+    if len(layers) > 1:
+        x = Concatenate()(layers)
+    else:
+        x = layers[0]
+
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
 
 
-def _ecg_network(ecg, num_conv_layers):
+def _ecg_network(ecg, num_conv_layers, dropout=0.2):
     ecg = BatchNormalization()(ecg)
     for _ in range(num_conv_layers):
         ecg = Conv1D(filters=32, kernel_size=16, kernel_regularizer="l2")(ecg)
         ecg = BatchNormalization()(ecg)
         ecg = ReLU()(ecg)
         ecg = MaxPool1D(pool_size=16)(ecg)
-        ecg = Dropout(0.2)(ecg)
+        ecg = Dropout(dropout)(ecg)
 
     return Flatten()(ecg)
 
