@@ -69,9 +69,9 @@ class ABJSONExtractor:
         y = _get_labels(json_data, self.specification)
         data = Container(
             {
-                "x": Container(x_container_dict),
+                "x": Container(x_container_dict, index=range(len(json_data))),
                 "y": Data(y)
-            }
+            }, index=range(len(json_data))
         )
         return data
 
