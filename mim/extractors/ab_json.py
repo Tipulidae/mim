@@ -71,7 +71,7 @@ class ABJSONExtractor:
             {
                 "x": Container(x_container_dict, index=range(len(json_data))),
                 "y": Data(y)
-            }, index=range(len(json_data))
+            }
         )
         return data
 
