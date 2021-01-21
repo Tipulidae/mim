@@ -42,7 +42,7 @@ class TestData:
     def test_can_make_data_container_from_dict(self):
         x = [[1, 2], [2, 3], [3, 4]]
         y = [0, 1, 0]
-        data = Container.from_dict({'x': x, 'y': y}, index=range(3))
+        data = Container.from_dict({'x': x, 'y': y})
 
         assert isinstance(data, Container)
         assert isinstance(data, Data)
@@ -58,8 +58,7 @@ class TestData:
             {
                 'x': Data(x, index=range(3)),
                 'y': Data(y, index=range(3)),
-            },
-            index=range(3)
+            }
         )
 
         assert isinstance(data, Container)
@@ -79,7 +78,7 @@ class TestData:
     def test_container_shape(self):
         x = [[1, 2], [2, 3], [3, 4]]
         y = [0, 1, 0]
-        data = Container.from_dict({'x': x, 'y': y}, index=range(3))
+        data = Container.from_dict({'x': x, 'y': y})
 
         assert data.shape == {
             'x': tf.TensorShape([2]),
@@ -141,14 +140,15 @@ class TestContainer:
         }
         container = Container(data_dict)
         assert len(container) == 3
-        assert container.index == [0, 1, 2]
+        assert list(container.index) == [0, 1, 2]
 
-    # def test_all_values_in_dict_has_same_length(self):
     def test_making_container_with_different_lengths_raises_error(self):
-        pass
-
-    #    def test_can_make_container_with_dict(self):
-    #        Container
+        data_dict = {
+            'x': Data([1, 2, 3]),
+            'y': Data([1, 2, 3, 4])
+        }
+        with pytest.raises(ValueError):
+            Container(data_dict)
 
     def test_container_without_dict_raises_type_error(self):
         with pytest.raises(TypeError):

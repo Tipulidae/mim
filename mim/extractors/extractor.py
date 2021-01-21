@@ -66,31 +66,31 @@ class Data:
 
 
 class Container(Data):
-    def __init__(self, data: Dict[str, Data],  **kwargs):
+    def __init__(self, data: Dict[str, Data],  index=None, **kwargs):
         if not isinstance(data, dict):
             raise TypeError(f"Data must be of type dict (was {type(data)})")
-        # verify_index_is_same(data.values())
-        any_data_value = next(iter(data.values()))
-        super().__init__(data, index=any_data_value.index, **kwargs)
+        if len({len(v) for v in data.values()}) != 1:
+            raise ValueError("Inconsistent length of constituent Data")
+        if not index:
+            index = next(iter(data.values())).index
+        super().__init__(data, index=index, **kwargs)
 
     def lazy_slice(self, index):
         return self.__class__(
             {key: value.lazy_slice(index) for key, value in self.data.items()},
-            index=index,
             dtype=self.type
         )
 
     @classmethod
-    def from_dict(cls, data_dict, index):
+    def from_dict(cls, data_dict):
         def to_data(item):
             if isinstance(item, Data):
                 return item
             else:
-                return Data(item, index=index)
+                return Data(item)
 
         return cls(
-            {key: to_data(value) for key, value in data_dict.items()},
-            index=index
+            {key: to_data(value) for key, value in data_dict.items()}
         )
 
     @property
