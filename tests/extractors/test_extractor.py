@@ -1,3 +1,5 @@
+import pytest
+
 import numpy as np
 import tensorflow as tf
 
@@ -54,8 +56,8 @@ class TestData:
 
         data = Container.from_dict(
             {
-                'x': Data(x, index=range(3), shape=[2]),
-                'y': Data(y, index=range(3), shape=[0]),
+                'x': Data(x, index=range(3)),
+                'y': Data(y, index=range(3)),
             },
             index=range(3)
         )
@@ -112,6 +114,9 @@ class TestData:
         assert sliced[2] == {'x': 100, 'y': 1}
         assert sliced['x'][0] == 300
 
+    def test_dataset_has_correct_type(self):
+        pass
+
 
 class TestInferShape:
     def test_shape_ignores_first_dimension(self):
@@ -127,3 +132,26 @@ class TestInferShape:
 
     def test_shape_of_scalar_is_none(self):
         assert infer_shape(3) is None
+
+
+class TestContainer:
+    def test_container_index_has_correct_length(self):
+        data_dict = {
+            'x': Data([1, 2, 3]),
+        }
+        container = Container(data_dict)
+        assert len(container) == 3
+        assert container.index == [0, 1, 2]
+
+    # def test_all_values_in_dict_has_same_length(self):
+    def test_making_container_with_different_lengths_raises_error(self):
+        pass
+
+    #    def test_can_make_container_with_dict(self):
+    #        Container
+
+    def test_container_without_dict_raises_type_error(self):
+        with pytest.raises(TypeError):
+            Container([0])
+        with pytest.raises(TypeError):
+            Container('asdf')

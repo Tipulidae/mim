@@ -4,10 +4,11 @@ import numpy as np
 import tensorflow as tf
 import h5py
 
+from typing import Dict
+
 
 class Data:
-    def __init__(self, data, index=None, dtype=tf.int64, groups=None,
-                 **kwargs):
+    def __init__(self, data, index=None, dtype=tf.int64, groups=None):
         self.data = data
         self.dtype = dtype
         self.groups = groups
@@ -65,8 +66,12 @@ class Data:
 
 
 class Container(Data):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data: Dict[str, Data],  **kwargs):
+        if not isinstance(data, dict):
+            raise TypeError(f"Data must be of type dict (was {type(data)})")
+        # verify_index_is_same(data.values())
+        any_data_value = next(iter(data.values()))
+        super().__init__(data, index=any_data_value.index, **kwargs)
 
     def lazy_slice(self, index):
         return self.__class__(
