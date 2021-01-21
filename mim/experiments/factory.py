@@ -1,5 +1,6 @@
 from mim.experiments.troponin import MyocardialInfarction
 from mim.experiments.multiple_ecgs import MultipleECG
+from mim.experiments.ab_glucose import ABGlucose
 
 
 def experiment_from_name(name):
@@ -12,5 +13,7 @@ def experiment_from_name(name):
         return MyocardialInfarction
     elif name == 'multipleecg':
         return MultipleECG
+    elif name == 'ab':
+        return ABGlucose
     else:
         raise ValueError(f'No Experiment with name {name}')

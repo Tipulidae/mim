@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
 import gzip
 import json
 
@@ -15,3 +16,7 @@ def load_json(filename):
     with get_opener(filename)(filename, "rt", encoding="utf8") as fid:
         data = [json.loads(line) for line in fid]
     return data
+
+
+def parse_iso8601_datetime(s) -> datetime:
+    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
