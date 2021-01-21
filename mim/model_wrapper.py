@@ -6,6 +6,10 @@ import sklearn.ensemble as ensemble
 import sklearn.linear_model as linear_model
 import tensorflow as tf
 
+from mim.util.logs import get_logger
+
+log = get_logger('Model Wrapper')
+
 
 class ModelTypes(Enum):
     CLASSIFIER = 0
@@ -140,7 +144,7 @@ class NullModel:
 class KerasWrapper(Model):
     def __init__(
             self,
-            model,
+            model: tf.keras.Model,
             *args,
             random_state=42,
             batch_size=16,
@@ -162,6 +166,7 @@ class KerasWrapper(Model):
         self._history = None
         self.batch_size = batch_size
         self.epochs = epochs
+        log.info(self.model.summary())
 
     def fit(self, data, validation_data=None):
         x = data['x'].as_dataset
