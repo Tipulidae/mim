@@ -4,10 +4,11 @@ import numpy as np
 import tensorflow as tf
 import h5py
 
+from typing import Dict
+
 
 class Data:
-    def __init__(self, data, index=None, dtype=tf.int64, groups=None,
-                 **kwargs):
+    def __init__(self, data, index=None, dtype=tf.int64, groups=None):
         self.data = data
         self.dtype = dtype
         self.groups = groups
@@ -65,27 +66,31 @@ class Data:
 
 
 class Container(Data):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data: Dict[str, Data],  index=None, **kwargs):
+        if not isinstance(data, dict):
+            raise TypeError(f"Data must be of type dict (was {type(data)})")
+        if len({len(v) for v in data.values()}) != 1:
+            raise ValueError("Inconsistent length of constituent Data")
+        if not index:
+            index = next(iter(data.values())).index
+        super().__init__(data, index=index, **kwargs)
 
     def lazy_slice(self, index):
         return self.__class__(
             {key: value.lazy_slice(index) for key, value in self.data.items()},
-            index=index,
             dtype=self.type
         )
 
     @classmethod
-    def from_dict(cls, data_dict, index=None):
+    def from_dict(cls, data_dict):
         def to_data(item):
             if isinstance(item, Data):
                 return item
             else:
-                return Data(item, index=index)
+                return Data(item)
 
         return cls(
-            {key: to_data(value) for key, value in data_dict.items()},
-            index=index
+            {key: to_data(value) for key, value in data_dict.items()}
         )
 
     @property

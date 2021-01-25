@@ -39,7 +39,7 @@ class Experiment(NamedTuple):
             'index': self.index,
             'features': self.features,
             'labels': self.labels,
-            'processing': self.post_processing
+            'processing': self.post_processing,
         }
         data = self.extractor(specification=specification).get_data()
         splitter = self.hold_out(test_size=self.hold_out_size)

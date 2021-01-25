@@ -18,4 +18,4 @@ class FakeExtractor:
         index = range(len(x))
         x = Data(x, index=index, dtype=float64)
         y = Data(y, index=index, dtype=float64)
-        return Container.from_dict({'x': x, 'y': y}, index=index)
+        return Container.from_dict({'x': x, 'y': y})
