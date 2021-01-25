@@ -88,7 +88,6 @@ class RandomForestClassifier(Model):
         super().__init__(
             ensemble.RandomForestClassifier,
             *args,
-            can_use_tf_dataset=False,
             random_state=random_state,
             **kwargs
         )
