@@ -76,7 +76,7 @@ def run_one_experiment(experiment):
         result = _validate(
             train,
             validation,
-            experiment.classifier,
+            experiment.classifier(train),
             experiment.scoring)
 
         _update_results(results, result)

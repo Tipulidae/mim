@@ -35,18 +35,18 @@ class TestExperiment:
 
     def test_default_classifier_is_rf(self):
         xp = FakeExperiment.no_default_algorithm
-        assert isinstance(xp.classifier, RandomForestClassifier)
+        assert isinstance(xp.classifier(None), RandomForestClassifier)
 
     def test_different_classifier(self):
         xp = FakeExperiment.using_different_classifier
-        assert isinstance(xp.classifier, LogisticRegression)
+        assert isinstance(xp.classifier(None), LogisticRegression)
 
     def test_can_specify_different_params(self):
         xp = FakeExperiment.has_custom_params_dict
-        assert 42 == xp.classifier.model.n_estimators
+        assert 42 == xp.classifier(None).model.n_estimators
 
     def test_can_specify_params_as_enum(self):
         xp = FakeExperiment.has_custom_params_enum
         assert HyperParams.P1 == xp.params
-        assert 1000 == xp.classifier.model.n_estimators
-        assert 5 == xp.classifier.model.max_features
+        assert 1000 == xp.classifier(None).model.n_estimators
+        assert 5 == xp.classifier(None).model.max_features

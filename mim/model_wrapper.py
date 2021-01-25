@@ -39,6 +39,8 @@ class Model:
             can_use_tf_dataset=False,
             **kwargs):
         self.can_use_tf_dataset = can_use_tf_dataset
+        if not self.can_use_tf_dataset:
+            kwargs.pop('train_data')
         self.model = model(*args, **kwargs)
         self.xp_name = xp_name
         self.xp_class = xp_class
@@ -148,18 +150,20 @@ class NullModel:
 class KerasWrapper(Model):
     def __init__(
             self,
-            model: tf.keras.Model,
+            model,
             *args,
             random_state=42,
             batch_size=16,
             epochs=2,
             compile_args=None,
             ignore_callbacks=False,
+            train_data=None,
             **kwargs):
         np.random.seed(random_state)
         tf.random.set_seed(random_state)
 
-        super().__init__(model, *args, can_use_tf_dataset=True, **kwargs)
+        super().__init__(model, *args, can_use_tf_dataset=True,
+                         train_data=train_data, **kwargs)
         if compile_args is None:
             compile_args = {
                 'optimizer': tf.keras.optimizers.Adam(1e-4),
@@ -184,7 +188,7 @@ class KerasWrapper(Model):
             self.xp_class,
             self.xp_name
         )
-        if self.ignore_callbacks:
+        if self.ignore_callbacks or True:
             callbacks = None
         else:
             callbacks = [

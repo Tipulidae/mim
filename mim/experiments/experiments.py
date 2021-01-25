@@ -54,8 +54,7 @@ class Experiment(NamedTuple):
     def is_binary(self):
         return self.labels['is_binary']
 
-    @property
-    def classifier(self):
+    def classifier(self, train_data):
         default_params = {}
         ps = self.params
         if isinstance(ps, HyperParams):
@@ -67,6 +66,8 @@ class Experiment(NamedTuple):
 
         if 'random_state' not in ps:
             ps['random_state'] = 123
+
+        ps['train_data'] = train_data
 
         return self.algorithm(
             xp_name=self.name,

@@ -77,7 +77,7 @@ class BasicCNN(keras.Sequential):
 
 
 class BasicFF(keras.Sequential):
-    def __init__(self):
+    def __init__(self, train_data=None):
         super().__init__(
             layers=[
                 Flatten(input_shape=(128, ), name='digits'),

@@ -5,7 +5,7 @@ from mim.fakes.fake_extractors import FakeExtractor
 class TestModel:
     def test_rf_binary_classification_output_is_one_dimensional(self):
         data = FakeExtractor().get_data()
-        clf = mw.RandomForestClassifier(n_estimators=10)
+        clf = mw.RandomForestClassifier(n_estimators=10, train_data=None)
         clf.fit(data)
         assert clf.only_last_prediction_column_is_used
 
@@ -14,7 +14,7 @@ class TestModel:
 
     def test_rf_multiclass_classification_output_is_multi_dimensional(self):
         data = FakeExtractor(n_informative=3, n_classes=3).get_data()
-        clf = mw.RandomForestClassifier(n_estimators=10)
+        clf = mw.RandomForestClassifier(n_estimators=10, train_data=None)
         clf.fit(data)
         assert not clf.only_last_prediction_column_is_used
 
@@ -22,11 +22,11 @@ class TestModel:
         assert 3 == len(prediction.columns)
 
     def test_models_have_default_random_states(self):
-        rf = mw.RandomForestClassifier()
+        rf = mw.RandomForestClassifier(train_data=None)
         assert rf.model.random_state is not None
 
-        rf = mw.RandomForestClassifier(random_state=8382)
+        rf = mw.RandomForestClassifier(random_state=8382, train_data=None)
         assert 8382 == rf.model.random_state
 
-        rf = mw.RandomForestClassifier(random_state=3141592)
+        rf = mw.RandomForestClassifier(random_state=3141592, train_data=None)
         assert 3141592 == rf.model.random_state
