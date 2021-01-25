@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 
 import numpy as np
@@ -5,6 +6,9 @@ import pandas as pd
 import sklearn.ensemble as ensemble
 import sklearn.linear_model as linear_model
 import tensorflow as tf
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+
+from mim.config import PATH_TO_TF_LOGS, PATH_TO_TF_CHECKPOINTS
 
 
 class ModelTypes(Enum):
@@ -27,10 +31,14 @@ class Model:
             self,
             model,
             *args,
+            xp_name=None,
+            xp_class=None,
             can_use_tf_dataset=False,
             **kwargs):
         self.can_use_tf_dataset = can_use_tf_dataset
         self.model = model(*args, **kwargs)
+        self.xp_name = xp_name
+        self.xp_class = xp_class
 
     def predict(self, x):
         result = {}
@@ -46,22 +54,20 @@ class Model:
         result['prediction'] = pd.DataFrame(prediction)
         return result
 
-    def fit(self, data, **kwargs):
+    def fit(self, data, validation_data=None, **kwargs):
         if self.can_use_tf_dataset:
-            self.model.fit(data.as_dataset, **kwargs)
+            train = prepare_dataset(data, prefetch=3, **kwargs)
+            val = prepare_dataset(validation_data, prefetch=3, **kwargs)
+            return self.model.fit(train, validation_data=val, **kwargs).history
         else:
             x = data['x'].as_numpy
             y = data['y'].as_numpy.ravel()
-            self.model.fit(x, y, **kwargs)
+            return self.model.fit(x, y)
 
     @property
     def only_last_prediction_column_is_used(self):
         return (self.model_type is ModelTypes.CLASSIFIER and
                 len(self.model.classes_) == 2)
-
-    @property
-    def history(self):
-        return None
 
     def _prediction(self, x):
         return self.model.predict_proba(x)
@@ -146,6 +152,7 @@ class KerasWrapper(Model):
             batch_size=16,
             epochs=2,
             compile_args=None,
+            ignore_callbacks=False,
             **kwargs):
         np.random.seed(random_state)
         tf.random.set_seed(random_state)
@@ -153,29 +160,48 @@ class KerasWrapper(Model):
         super().__init__(model, *args, can_use_tf_dataset=True, **kwargs)
         if compile_args is None:
             compile_args = {
-                'optimizer': 'sgd',
+                'optimizer': tf.keras.optimizers.Adam(1e-4),
                 'loss': 'binary_crossentropy',
-                'metrics': ['accuracy']
+                'metrics': ['accuracy', tf.keras.metrics.AUC()]
             }
 
         self.model.compile(**compile_args)
-        self._history = None
         self.batch_size = batch_size
         self.epochs = epochs
+        self.ignore_callbacks = ignore_callbacks
 
-    def fit(self, data, validation_data=None):
-        x = data['x'].as_dataset
-        y = data['y'].as_dataset
-
-        self._history = self.model.fit(
-            x=tf.data.Dataset.zip((x, y)).batch(self.batch_size).prefetch(3),
-            validation_data=validation_data,
-            epochs=self.epochs
+    def fit(self, data, validation_data=None, **kwargs):
+        checkpoint_path = os.path.join(
+            PATH_TO_TF_CHECKPOINTS,
+            self.xp_class,
+            self.xp_name
         )
-
-    @property
-    def history(self):
-        return self._history.history
+        tensorboard_path = os.path.join(
+            PATH_TO_TF_LOGS,
+            self.xp_class,
+            self.xp_name
+        )
+        if self.ignore_callbacks:
+            callbacks = None
+        else:
+            callbacks = [
+                ModelCheckpoint(
+                    filepath=os.path.join(checkpoint_path, 'last.ckpt')
+                ),
+                ModelCheckpoint(
+                    filepath=os.path.join(checkpoint_path, 'best.ckpt'),
+                    save_best_only=True
+                ),
+                TensorBoard(log_dir=tensorboard_path)
+            ]
+        return super().fit(
+            data,
+            validation_data=validation_data,
+            batch_size=self.batch_size,
+            epochs=self.epochs,
+            callbacks=callbacks,
+            **kwargs
+        )
 
     @property
     def only_last_prediction_column_is_used(self):
@@ -183,3 +209,14 @@ class KerasWrapper(Model):
 
     def _prediction(self, x):
         return self.model.predict(x.batch(self.batch_size))
+
+
+def prepare_dataset(data, batch_size=1, prefetch=None, **kwargs):
+    x = data['x'].as_dataset
+    y = data['y'].as_dataset
+
+    fixed_data = tf.data.Dataset.zip((x, y)).batch(batch_size)
+    if prefetch:
+        fixed_data = fixed_data.prefetch(prefetch)
+
+    return fixed_data

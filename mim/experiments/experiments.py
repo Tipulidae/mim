@@ -17,7 +17,7 @@ class Experiment(NamedTuple):
     index: Any = None
     features: Any = None
     labels: Any = None
-    post_processing: Any = {'imputation'}
+    post_processing: Any = None
     params: Any = HyperParams.P0
     algorithm: Any = RandomForestClassifier
     wrapper: Any = None
@@ -45,7 +45,6 @@ class Experiment(NamedTuple):
         splitter = self.hold_out(test_size=self.hold_out_size)
         develop_index, test_index = next(splitter.split(data))
         return data.split(develop_index, test_index)
-        # return self.extractor(specification=specification).get_data()
 
     @property
     def cross_validation(self):
@@ -69,7 +68,11 @@ class Experiment(NamedTuple):
         if 'random_state' not in ps:
             ps['random_state'] = 123
 
-        return self.algorithm(**ps)
+        return self.algorithm(
+            xp_name=self.name,
+            xp_class=self.__class__.__name__,
+            **ps
+        )
 
     @property
     def name(self):

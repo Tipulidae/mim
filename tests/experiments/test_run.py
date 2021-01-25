@@ -36,6 +36,7 @@ class SmallTestExperiment(Experiment, Enum):
             'model': BasicFF,
             'batch_size': 32,
             'epochs': 2,
+            'ignore_callbacks': True,
             'compile_args': {
                 'optimizer': 'rmsprop',
                 'loss': 'sparse_categorical_crossentropy',

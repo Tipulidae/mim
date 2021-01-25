@@ -92,7 +92,7 @@ def run_one_experiment(experiment):
 def _validate(train, val, model, scoring):
     t0 = time()
     log.debug('\n\nFitting classifier...')
-    model.fit(train)
+    history = model.fit(train, validation_data=val)
     fit_time = time() - t0
 
     prediction = model.predict(val['x'])
@@ -120,7 +120,7 @@ def _validate(train, val, model, scoring):
         'fit_time': fit_time,
         'score_time': score_time,
         'targets': y_val,
-        'history': model.history
+        'history': history
     }
 
 
