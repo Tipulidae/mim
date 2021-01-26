@@ -61,9 +61,9 @@ class JSONDataPoint:
 
 class ABJSONExtractor(Extractor):
     def get_data(self):
-        json_data = _parse_json(self.specification)
-        x_container_dict = _extract_x(json_data, self.specification)
-        y = _get_labels(json_data, self.specification)
+        json_data = _parse_json(self.index)
+        x_container_dict = _extract_x(json_data, self.features)
+        y = _get_labels(json_data, self.labels)
         data = Container(
             {
                 "x": Container(x_container_dict, index=range(len(json_data))),
@@ -73,13 +73,13 @@ class ABJSONExtractor(Extractor):
         return data
 
 
-def _extract_x(json_data, specification):
+def _extract_x(json_data, features):
     r = {}
-    print(specification["features"])
+    print(features)
     numerical_keys = sorted(list(set(
-        specification["features"]).intersection(NUMERICAL_FEATURES)))
+        features).intersection(NUMERICAL_FEATURES)))
     categorical_keys = sorted(list(set(
-        specification["features"]).intersection(CATEGORICAL_FEATURES)))
+        features).intersection(CATEGORICAL_FEATURES)))
     dps = list(map(JSONDataPoint, json_data))
     if numerical_keys:
         print(numerical_keys)
@@ -105,12 +105,12 @@ def _get_categorical(dp: JSONDataPoint, categorical_keys):
     return r
 
 
-def _get_labels(json_data, specification):
-    return np.array([1 if d[specification["labels"]["target"]] == "T" else 0
+def _get_labels(json_data, labels):
+    return np.array([1 if d[labels["target"]] == "T" else 0
                      for d in json_data])
 
 
-def _parse_json(specification):
-    file = specification["index"]["json_train"]
+def _parse_json(index):
+    file = index["json_train"]
     data = mim.util.ab_util.load_json(file)
     return data
