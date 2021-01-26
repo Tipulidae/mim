@@ -17,12 +17,14 @@ def test_can_specify_inputs():
 
 
 def test_can_specify_inputs_like_experiment():
-    specification = {
-        'index': {'n_samples': 10, 'n_features': 5},
-        'features': {'foo': 43, 'bar': 999},
-        'labels': [123],
-        'processing': {1, 2, 3}
-    }
-    data = FakeExtractor(specification=specification).get_data()
+    index = {'n_samples': 10, 'n_features': 5}
+    features = {'foo': 43, 'bar': 999}
+    labels = [123]
+    processing = {1, 2, 3}
+    data = FakeExtractor(
+        index=index,
+        features=features,
+        labels=labels,
+        processing=processing).get_data()
 
     assert data['x'].as_numpy.shape == (10, 5)

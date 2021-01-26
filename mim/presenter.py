@@ -154,7 +154,7 @@ class Presenter:
 
     def _is_classifier(self, xps):
         for xp in xps:
-            if not self.experiments[xp].algorithm.model_type.is_classification:
+            if not self.experiments[xp].model.model_type.is_classification:
                 print(f'Experiment {xp} is not a classification problem!')
                 return False
 

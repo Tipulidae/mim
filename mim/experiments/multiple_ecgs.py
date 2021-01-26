@@ -1,9 +1,9 @@
 from enum import Enum
 
+import tensorflow as tf
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
-from mim.model_wrapper import KerasWrapper
 from mim.extractors.esc_trop import EscTrop
 from mim.models.simple_nn import basic_cnn
 from mim.cross_validation import ChronologicalSplit
@@ -23,11 +23,9 @@ class MultipleECG(Experiment, Enum):
     ESC_B1_MACE30_BCNN2_V1 = Experiment(
         description='Baseline CNN model using only current ECG median beat to '
                     'predict MACE within 30 days.',
-        algorithm=KerasWrapper,
-        params={
-            'model': basic_cnn,
+        model=basic_cnn,
+        model_kwargs={
             'num_conv_layers': 2,
-            'input_shape': {'ecg': (1200, 8)},
             'epochs': 200,
             'batch_size': 64
         },
@@ -38,7 +36,29 @@ class MultipleECG(Experiment, Enum):
         },
         index={},
         cv=ChronologicalSplit,
-        cv_args={
+        cv_kwargs={
+            'test_size': 0.333
+        },
+        hold_out_size=0.25,
+        scoring=roc_auc_score,
+    )
+
+    SANITY1 = Experiment(
+        description='Try to predict mace 30 using only the old ecg...',
+        model=basic_cnn,
+        model_kwargs={
+            'num_conv_layers': 2,
+            'epochs': 200,
+            'batch_size': 64
+        },
+        extractor=EscTrop,
+        features={
+            'ecg_mode': 'beat',
+            'ecgs': ['old']
+        },
+        index={},
+        cv=ChronologicalSplit,
+        cv_kwargs={
             'test_size': 0.333
         },
         hold_out_size=0.25,
@@ -46,10 +66,8 @@ class MultipleECG(Experiment, Enum):
     )
 
     ESC_B1_MACE30_BCNN2_V2 = ESC_B1_MACE30_BCNN2_V1._replace(
-        params={
-            'model': basic_cnn,
+        model_kwargs={
             'num_conv_layers': 2,
-            'input_shape': {'ecg': (1200, 8)},
             'epochs': 200,
             'batch_size': 64,
         },
@@ -59,10 +77,8 @@ class MultipleECG(Experiment, Enum):
         description='Baseline CNN model using a 2 conv layer network on '
                     '1 ECG median beat plus age and sex features concatenated '
                     'at the end, predicting MACE within 30 days.',
-        params={
-            'model': basic_cnn,
+        model_kwargs={
             'num_conv_layers': 2,
-            'input_shape': {'ecg': (1200, 8), 'features': (2, )},
             'epochs': 200,
             'batch_size': 64
         },
@@ -76,14 +92,8 @@ class MultipleECG(Experiment, Enum):
     ESC_B2AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
         description='Running two CNNs in parallel on two ECG beat signals. '
                     'Also uses age and sex as features.',
-        params={
-            'model': basic_cnn,
+        model_kwargs={
             'num_conv_layers': 2,
-            'input_shape': {
-                'ecg': (1200, 8),
-                'old_ecg': (1200, 8),
-                'features': (2, )
-            },
             'epochs': 200,
             'batch_size': 64
         },
@@ -97,15 +107,57 @@ class MultipleECG(Experiment, Enum):
     ESC_R1_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
         description='Baseline CNN model using only current raw ECG signal to '
                     'predict MACE within 30 days.',
-        params={
-            'model': basic_cnn,
+        model_kwargs={
             'num_conv_layers': 2,
-            'input_shape': {'ecg': (10000, 8)},
-            'epochs': 200,
+            'epochs': 1000,
             'batch_size': 64
         },
         features={
             'ecg_mode': 'raw',
             'ecgs': ['index']
         }
+    )
+
+    FOO = Experiment(
+        description='Foo',
+        model=basic_cnn,
+        model_kwargs={
+            'num_conv_layers': 2,
+            'dropout': 0.5,
+            'filters': 64,
+            'kernel_size': 8
+        },
+        epochs=200,
+        batch_size=64,
+        optimizer={
+            'name': tf.keras.optimizers.Adam,
+            'kwargs': {'learning_rate': 1e-4, 'epsilon': 1e-3, }
+        },
+        # optimizer=Choice([
+        #     {
+        #         'name': 'Adam',
+        #         'kwargs': {'lr': 1e-4, 'epsilon': 1e-3}
+        #     },
+        #     {
+        #         'name': 'SGD',
+        #         'kwargs': {'lr': 1e-3}
+        #     }
+        # ]),
+        building_model_requires_development_data=True,
+        extractor=EscTrop,
+        features={
+            'ecg_mode': 'beat',
+            'ecgs': ['index']
+        },
+        index={},
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 0.333
+        },
+        hold_out_size=0.25,
+        scoring=roc_auc_score,
+    )
+
+    FOO2 = FOO._replace(
+        epochs=300
     )

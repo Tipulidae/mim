@@ -13,6 +13,7 @@ class TestModel:
         assert 1 == len(prediction.columns)
 
     def test_rf_multiclass_classification_output_is_multi_dimensional(self):
+        # index = {'n_informative': 3, 'n_classes': 3}
         data = FakeExtractor(n_informative=3, n_classes=3).get_data()
         clf = mw.RandomForestClassifier(n_estimators=10)
         clf.fit(data)

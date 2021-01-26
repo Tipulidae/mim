@@ -6,7 +6,6 @@ from sklearn.metrics import roc_auc_score
 
 from mim.cross_validation import ChronologicalSplit
 from mim.experiments.experiments import Experiment
-from mim.model_wrapper import KerasWrapper
 from mim.extractors.ab_json import ABJSONExtractor
 import mim.models.ab_nn as ab_nn
 
@@ -15,14 +14,11 @@ class ABGlucose(Experiment, Enum):
     KERAS_LR_BLOOD_BL = Experiment(
         description="Log Reg baseline with Keras, using age, "
                     "gender, + 4 blood samples",
-        algorithm=KerasWrapper,
-        params={
-            'model': ab_nn.ab_simple_lr,
+        model=ab_nn.ab_simple_lr,
+        model_kwargs={
             'epochs': 100,
             'batch_size': 32,
             # 'learning_rate': 0.01,
-            'input_shape': {'numeric': (5,),
-                            'categorical': (2,)},
             'compile_args': {'optimizer': 'sgd'}
         },
         extractor=ABJSONExtractor,
@@ -36,6 +32,6 @@ class ABGlucose(Experiment, Enum):
         },
         labels={"target": "label-index+30d-ami+death-30d"},
         cv=ChronologicalSplit,
-        cv_args={"test_size": 0.25},
+        cv_kwargs={"test_size": 0.25},
         scoring=roc_auc_score
     )

@@ -33,13 +33,11 @@ class Model:
     def __init__(
             self,
             model,
-            *args,
             xp_name=None,
             xp_class=None,
-            can_use_tf_dataset=False,
-            **kwargs):
+            can_use_tf_dataset=False):
+        self.model = model
         self.can_use_tf_dataset = can_use_tf_dataset
-        self.model = model(*args, **kwargs)
         self.xp_name = xp_name
         self.xp_class = xp_class
 
@@ -86,36 +84,56 @@ def _numpy(array):
 class RandomForestClassifier(Model):
     def __init__(self, *args, random_state=123, **kwargs):
         super().__init__(
-            ensemble.RandomForestClassifier,
-            *args,
-            random_state=random_state,
-            **kwargs
+            ensemble.RandomForestClassifier(
+                *args,
+                random_state=random_state,
+                **kwargs
+            )
         )
 
 
 class ExtraTreesClassifier(Model):
     def __init__(self, *args, random_state=124, **kwargs):
-        super().__init__(ensemble.ExtraTreesClassifier, *args,
-                         random_state=random_state, **kwargs)
+        super().__init__(
+            ensemble.ExtraTreesClassifier(
+                *args,
+                random_state=random_state,
+                **kwargs
+            )
+        )
 
 
 class GradientBoostingClassifier(Model):
     def __init__(self, *args, random_state=125, **kwargs):
-        super().__init__(ensemble.GradientBoostingClassifier, *args,
-                         random_state=random_state, **kwargs)
+        super().__init__(
+            ensemble.GradientBoostingClassifier(
+                *args,
+                random_state=random_state,
+                **kwargs
+            )
+        )
 
 
 class LogisticRegression(Model):
     def __init__(self, *args, random_state=125, **kwargs):
-        super().__init__(linear_model.LogisticRegression, *args,
-                         random_state=random_state, **kwargs)
+        super().__init__(
+            linear_model.LogisticRegression(
+                *args,
+                random_state=random_state, **kwargs
+            )
+        )
 
 
 class LinearRegression(Model):
     model_type = ModelTypes.REGRESSOR
 
     def __init__(self, *args, **kwargs):
-        super().__init__(linear_model.LinearRegression, *args, **kwargs)
+        super().__init__(
+            linear_model.LinearRegression(
+                *args,
+                **kwargs
+            )
+        )
 
     def _prediction(self, x):
         return self.model.predict(x)
@@ -125,8 +143,13 @@ class RandomForestRegressor(Model):
     model_type = ModelTypes.REGRESSOR
 
     def __init__(self, *args, random_state=126, **kwargs):
-        super().__init__(ensemble.RandomForestRegressor, *args,
-                         random_state=random_state, **kwargs)
+        super().__init__(
+            ensemble.RandomForestRegressor(
+                *args,
+                random_state=random_state,
+                **kwargs
+            )
+        )
 
     def _prediction(self, x):
         return self.model.predict(x)
@@ -149,31 +172,35 @@ class KerasWrapper(Model):
     def __init__(
             self,
             model: tf.keras.Model,
-            *args,
             random_state=42,
             batch_size=16,
             epochs=2,
-            compile_args=None,
+            optimizer='adam',
+            loss='binary_crossentropy',
+            metrics=None,
             ignore_callbacks=False,
             **kwargs):
         np.random.seed(random_state)
         tf.random.set_seed(random_state)
 
-        super().__init__(model, *args, can_use_tf_dataset=True, **kwargs)
-        if compile_args is None:
-            compile_args = {
-                'optimizer': tf.keras.optimizers.Adam(1e-4),
-                'loss': 'binary_crossentropy',
-                'metrics': ['accuracy', tf.keras.metrics.AUC()]
-            }
-
-        self.model.compile(**compile_args)
+        super().__init__(model, can_use_tf_dataset=True, **kwargs)
+        self.model.compile(
+            optimizer=optimizer,
+            loss=loss,
+            metrics=metrics
+        )
         self.batch_size = batch_size
         self.epochs = epochs
         self.ignore_callbacks = ignore_callbacks
         log.info(self.model.summary())
 
     def fit(self, data, validation_data=None, **kwargs):
+        # TODO:
+        # Option 1:
+        # Store everything in a temporary folder, then move it to this folder
+        # once training is completed, and clear that folder then
+        # Option 2:
+        # Just as below, only clear the folder first. Maybe a bit more risky.
         checkpoint_path = os.path.join(
             PATH_TO_TF_CHECKPOINTS,
             self.xp_class,

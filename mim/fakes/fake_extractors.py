@@ -1,17 +1,22 @@
 from sklearn.datasets import make_classification
 from tensorflow import float64
 
-from mim.extractors.extractor import Container, Data
+from mim.extractors.extractor import Container, Data, Extractor
 
 
-class FakeExtractor:
+class FakeExtractor(Extractor):
     def __init__(self, **kwargs):
-        self.kwargs = kwargs
-        if 'specification' in kwargs:
-            self.kwargs = {}
-            if 'index' in kwargs['specification']:
-                if kwargs['specification']['index'] is not None:
-                    self.kwargs = kwargs['specification']['index']
+        super().__init__(None, None, None, None)
+        # self.kwargs = kwargs
+        # if 'specification' in kwargs:
+        # self.kwargs = {}
+        if 'index' in kwargs:
+            if kwargs['index'] is not None:
+                self.kwargs = kwargs['index']
+            else:
+                self.kwargs = {}
+        else:
+            self.kwargs = kwargs
 
     def get_data(self):
         x, y = make_classification(**self.kwargs)

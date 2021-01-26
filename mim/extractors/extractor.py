@@ -71,7 +71,7 @@ class Container(Data):
             raise TypeError(f"Data must be of type dict (was {type(data)})")
         if len({len(v) for v in data.values()}) != 1:
             raise ValueError("Inconsistent length of constituent Data")
-        if not index:
+        if index is None:
             index = next(iter(data.values())).index
         super().__init__(data, index=index, **kwargs)
 
@@ -141,3 +141,15 @@ class ECGData(Data):
     def __getitem__(self, item):
         with h5py.File(self.data, 'r') as f:
             return f[self.mode][self._index[item]]
+
+
+class Extractor:
+    def __init__(self, index=None, features=None, labels=None,
+                 processing=None):
+        self.index = index
+        self.features = features
+        self.labels = labels
+        self.processing = processing
+
+    def get_data(self) -> Data:
+        raise NotImplementedError

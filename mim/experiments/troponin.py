@@ -7,19 +7,18 @@ from mim.experiments.experiments import Experiment
 from mim.model_wrapper import (
     GradientBoostingClassifier,
     RandomForestClassifier,
-    KerasWrapper,
 )
 from mim.extractors.expect import Expect
 from mim.extractors.ptbxl import PTBXL
-from mim.models.simple_nn import BasicCNN
+from mim.models.simple_nn import basic_cnn
 
 
 class MyocardialInfarction(Experiment, Enum):
     THAN_EXPECT_GB = Experiment(
         description='Gradient Boosting Classifier similar to that of '
                     'Than et. al, Circulation 2019',
-        algorithm=GradientBoostingClassifier,
-        params={
+        model=GradientBoostingClassifier,
+        model_kwargs={
             'n_estimators': 1000,
             'learning_rate': 0.01,
             'max_depth': 2,
@@ -34,15 +33,15 @@ class MyocardialInfarction(Experiment, Enum):
         labels={'target': 'label-index-mi'},
         index={'source': 'two_tnt_gen-all.json'},
         cv=KFold,
-        cv_args={'n_splits': 5},
+        cv_kwargs={'n_splits': 5},
         scoring=roc_auc_score,
         extractor=Expect
     )
 
     THAN_EXPECT_RF = THAN_EXPECT_GB._replace(
         description='Replaces gradient boosting with random forest',
-        algorithm=RandomForestClassifier,
-        params={'n_estimators': 1000}
+        model=RandomForestClassifier,
+        model_kwargs={'n_estimators': 1000}
     )
 
     THAN_EXPECT_RF2 = THAN_EXPECT_RF._replace(
@@ -57,9 +56,8 @@ class MyocardialInfarction(Experiment, Enum):
 
     PTBXL_SMALL = Experiment(
         description='Small experiment using a CNN with PTBXL',
-        algorithm=KerasWrapper,
-        params={
-            'model': BasicCNN,
+        model=basic_cnn,
+        model_kwargs={
             'num_conv_layers': 2,
             'input_shape': (1000, 12),
             'epochs': 5,
@@ -68,6 +66,6 @@ class MyocardialInfarction(Experiment, Enum):
         extractor=PTBXL,
         index={'size': 'XS'},
         cv=KFold,
-        cv_args={'n_splits': 2},
+        cv_kwargs={'n_splits': 2},
         scoring=roc_auc_score,
     )

@@ -3,8 +3,7 @@ from enum import Enum
 from sklearn.model_selection import KFold
 
 from mim.fakes.fake_extractors import FakeExtractor
-from mim.models.simple_nn import BasicFF
-from mim.model_wrapper import KerasWrapper
+from mim.models.simple_nn import basic_ff
 from mim.metric_wrapper import sparse_categorical_accuracy
 from mim.experiments.experiments import Experiment
 from mim.experiments.run import run_one_experiment
@@ -15,8 +14,8 @@ class SmallTestExperiment(Experiment, Enum):
         description='Test of validate, with fake data',
         extractor=FakeExtractor,
         cv=KFold,
-        cv_args={'n_splits': 2},
-        params={'n_estimators': 10},
+        cv_kwargs={'n_splits': 2},
+        model_kwargs={'n_estimators': 10},
     )
 
     test_keras = Experiment(
@@ -30,19 +29,15 @@ class SmallTestExperiment(Experiment, Enum):
             'random_state': 1111
         },
         cv=KFold,
-        cv_args={'n_splits': 2},
-        algorithm=KerasWrapper,
-        params={
-            'model': BasicFF,
-            'batch_size': 32,
-            'epochs': 2,
-            'ignore_callbacks': True,
-            'compile_args': {
-                'optimizer': 'rmsprop',
-                'loss': 'sparse_categorical_crossentropy',
-                'metrics': ['accuracy']
-            },
-        },
+        cv_kwargs={'n_splits': 2},
+        model=basic_ff,
+        model_kwargs={},
+        batch_size=32,
+        ignore_callbacks=True,
+        epochs=2,
+        optimizer='rmsprop',
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy'],
         scoring=sparse_categorical_accuracy,
     )
 

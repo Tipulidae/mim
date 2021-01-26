@@ -6,16 +6,14 @@ import wfdb
 from tqdm import tqdm
 
 from mim.config import PATH_TO_DATA
+from mim.extractors.extractor import Extractor
 
 
-class PTBXL:
-    def __init__(self, specification):
-        self.specification = specification
-
+class PTBXL(Extractor):
     def get_data(self):
         path = PATH_TO_DATA+'/ptbxl/'
         info = pd.read_csv(path+'ptbxl_database.csv', index_col='ecg_id')
-        if self.specification['index']['size'] == 'XS':
+        if self.index['size'] == 'XS':
             info = info.iloc[:200, :]
 
         info.scp_codes = info.scp_codes.apply(ast.literal_eval)

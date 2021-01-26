@@ -12,13 +12,31 @@ from tensorflow.keras.layers import (
 )
 
 
-def basic_cnn(input_shape, num_conv_layers=2):
-    inp = {key: Input(shape=value) for key, value in input_shape.items()}
+def basic_cnn(train, validation, num_conv_layers=2, dropout=0.3, filters=32,
+              kernel_size=16, **kwargs):
+    # inp = train.tf_input
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     layers = []
     if 'ecg' in inp:
-        layers.append(_ecg_network(inp['ecg'], num_conv_layers))
+        layers.append(
+            _ecg_network(
+                inp['ecg'],
+                num_conv_layers,
+                dropout=dropout,
+                filters=filters,
+                kernel_size=kernel_size
+            )
+        )
     if 'old_ecg' in inp:
-        layers.append(_ecg_network(inp['old_ecg'], num_conv_layers))
+        layers.append(
+            _ecg_network(
+                inp['old_ecg'],
+                num_conv_layers,
+                dropout=dropout,
+                filters=filters,
+                kernel_size=kernel_size
+            )
+        )
     if 'features' in inp:
         layers.append(BatchNormalization()(inp['features']))
 
@@ -28,13 +46,21 @@ def basic_cnn(input_shape, num_conv_layers=2):
         x = layers[0]
 
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
-    return keras.Model(inp, output)
+    model = keras.Model(inp, output)
+    return model
+    # return KerasWrapper(model, **kwargs)
+    # return keras.Model(inp, output)
 
 
-def _ecg_network(ecg, num_conv_layers, dropout=0.2):
+def _ecg_network(ecg, num_conv_layers, dropout=0.2, filters=32,
+                 kernel_size=16):
     ecg = BatchNormalization()(ecg)
     for _ in range(num_conv_layers):
-        ecg = Conv1D(filters=32, kernel_size=16, kernel_regularizer="l2")(ecg)
+        ecg = Conv1D(
+            filters=filters,
+            kernel_size=kernel_size,
+            kernel_regularizer="l2",
+            padding='same')(ecg)
         ecg = BatchNormalization()(ecg)
         ecg = ReLU()(ecg)
         ecg = MaxPool1D(pool_size=16)(ecg)
@@ -85,3 +111,12 @@ class BasicFF(keras.Sequential):
                 Dense(10, activation='softmax', name='predictions')
             ]
         )
+
+
+def basic_ff():
+    inp = Input(shape=(128, ))
+    x = Flatten()(inp)
+    x = Dense(32, activation='relu')(x)
+    output = Dense(10, activation='softmax')(x)
+    model = keras.Model(inp, output)
+    return model
