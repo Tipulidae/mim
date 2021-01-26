@@ -2,7 +2,7 @@
 
 from enum import Enum
 from sklearn.metrics import roc_auc_score
-
+import tensorflow as tf
 
 from mim.cross_validation import ChronologicalSplit
 from mim.experiments.experiments import Experiment
@@ -15,11 +15,13 @@ class ABGlucose(Experiment, Enum):
         description="Log Reg baseline with Keras, using age, "
                     "gender, + 4 blood samples",
         model=ab_nn.ab_simple_lr,
-        model_kwargs={
-            'epochs': 100,
-            'batch_size': 32,
-            # 'learning_rate': 0.01,
-            'compile_args': {'optimizer': 'sgd'}
+        building_model_requires_development_data=True,
+        model_kwargs={},
+        epochs=100,
+        batch_size=32,
+        optimizer={
+            'name': tf.keras.optimizers.SGD,
+            'kwargs': {}
         },
         extractor=ABJSONExtractor,
         index={"json_train": "/home/sapfo/andersb/PycharmProjects/Expect/"

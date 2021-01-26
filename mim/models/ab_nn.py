@@ -13,9 +13,9 @@ from tensorflow.keras.layers import (
 )
 
 
-def ab_simple_lr(input_shape):
+def ab_simple_lr(train=None, validation=None, **kwargs):
     inp = {key: Input(shape=value, name=key)
-           for key, value in input_shape.items()}
+           for key, value in train['x'].shape.items()}
     to_cat = [value for key, value in sorted(inp.items())]
     layer = Concatenate()(to_cat)
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(layer)
