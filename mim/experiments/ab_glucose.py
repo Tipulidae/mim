@@ -2,12 +2,13 @@
 
 from enum import Enum
 from sklearn.metrics import roc_auc_score
+import tensorflow as tf
 
 
 from mim.cross_validation import ChronologicalSplit
 from mim.experiments.experiments import Experiment
-from mim.model_wrapper import KerasWrapper
 from mim.extractors.ab_json import ABJSONExtractor
+from mim.model_wrapper import KerasWrapper
 import mim.models.ab_nn as ab_nn
 
 
@@ -21,9 +22,10 @@ class ABGlucose(Experiment, Enum):
             'epochs': 100,
             'batch_size': 32,
             # 'learning_rate': 0.01,
-            'input_shape': {'numeric': (5,),
-                            'categorical': (2,)},
-            'compile_args': {'optimizer': 'sgd'}
+
+            'compile_args': {'optimizer': 'sgd',
+                             'loss': 'binary_crossentropy',
+                             'metrics': ['accuracy', tf.keras.metrics.AUC()]}
         },
         extractor=ABJSONExtractor,
         index={"json_train": "/home/sapfo/andersb/PycharmProjects/Expect/"
