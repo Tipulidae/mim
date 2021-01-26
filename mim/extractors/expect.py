@@ -4,7 +4,7 @@ import pandas as pd
 from tensorflow import float64
 from sklearn.preprocessing import OrdinalEncoder
 
-from mim.extractors.extractor import Data, Container
+from mim.extractors.extractor import Data, Container, Extractor
 
 CHARLSON_FEATURES = [
     "Charlson-AcuteMyocardialInfarction",
@@ -41,10 +41,7 @@ PREVIOUS_CONDITIONS = [
 ORDINAL_FEATURES = CHARLSON_FEATURES[:-1] + PREVIOUS_CONDITIONS + ['gender']
 
 
-class Expect:
-    def __init__(self, specification):
-        self.specification = specification
-
+class Expect(Extractor):
     def get_data(self):
         data = self._parse_json()
         x = self._extract_features(data)
@@ -63,32 +60,31 @@ class Expect:
 
     def _parse_json(self):
         path = '/home/sapfo/andersb/ekg_share/json_data/12tnt/hbg+lund-split/'
-        file = path + self.specification['index']['source']
+        file = path + self.index['source']
         with open(file) as fp:
             data = [json.loads(line) for line in fp.readlines()]
 
         return data
 
     def _extract_features(self, data):
-        spec = self.specification['features']
         features = []
-        if 'troponin' in spec:
+        if 'troponin' in self.features:
             tnts = pd.DataFrame.from_records(data, columns=['tnts'])
             troponin_features = extract_tnt_features(tnts.tnts)
             features.append(troponin_features)
-        if 'age' in spec:
+        if 'age' in self.features:
             features.append(
                 pd.DataFrame.from_records(data, columns=['age'])
             )
-        if 'gender' in spec:
+        if 'gender' in self.features:
             features.append(
                 pd.DataFrame.from_records(data, columns=['gender'])
             )
-        if 'charlson' in spec:
+        if 'charlson' in self.features:
             features.append(
                 pd.DataFrame.from_records(data, columns=CHARLSON_FEATURES)
             )
-        if 'previous_conditions' in spec:
+        if 'previous_conditions' in self.features:
             features.append(
                 pd.DataFrame.from_records(data, columns=PREVIOUS_CONDITIONS)
             )
@@ -100,7 +96,7 @@ class Expect:
         return df
 
     def _extract_labels(self, data):
-        target_name = self.specification['labels']['target']
+        target_name = self.labels['target']
         labels = pd.DataFrame.from_records(
             data, columns=[target_name])
         labels = labels.rename(columns={target_name: 'y'})

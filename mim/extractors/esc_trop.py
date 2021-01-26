@@ -1,11 +1,8 @@
 from mim.massage.esc_trop import make_ed_table, make_troponin_table
-from mim.extractors.extractor import Data, Container, ECGData
+from mim.extractors.extractor import Data, Container, ECGData, Extractor
 
 
-class EscTrop:
-    def __init__(self, specification):
-        self.specification = specification
-
+class EscTrop(Extractor):
     def get_data(self):
         ed = make_ed_table()
         tnt = make_troponin_table()
@@ -16,24 +13,23 @@ class EscTrop:
 
         ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
 
-        spec = self.specification['features']
-        mode = spec['ecg_mode']
+        mode = self.features['ecg_mode']
 
         x_dict = {}
-        if 'index' in spec['ecgs']:
+        if 'index' in self.features['ecgs']:
             x_dict['ecg'] = ECGData(
                 ecg_path,
                 mode=mode,
                 index=ed.ecg_id.astype(int).values
             )
-        if 'old' in spec['ecgs']:
+        if 'old' in self.features['ecgs']:
             x_dict['old_ecg'] = ECGData(
                 ecg_path,
                 mode=mode,
                 index=ed.old_ecg_id.astype(int).values
             )
-        if 'features' in spec:
-            x_dict['features'] = Data(ed[spec['features']].values)
+        if 'features' in self.features:
+            x_dict['features'] = Data(ed[self.features['features']].values)
 
         data = Container(
             {

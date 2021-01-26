@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from mim.extractors.extractor import Data, Container
+from mim.extractors.extractor import Data, Container, Extractor
 import mim.util.ab_util
 from mim.util.ab_util import parse_iso8601_datetime
 
@@ -59,10 +59,7 @@ class JSONDataPoint:
         return value1, value2, time_delta_seconds
 
 
-class ABJSONExtractor:
-    def __init__(self, specification):
-        self.specification = specification
-
+class ABJSONExtractor(Extractor):
     def get_data(self):
         json_data = _parse_json(self.specification)
         x_container_dict = _extract_x(json_data, self.specification)

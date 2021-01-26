@@ -1,29 +1,38 @@
 import os
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Callable
 
+import tensorflow as tf
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
+from sklearn.ensemble import RandomForestClassifier
 
+from mim.extractors.extractor import Extractor
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
-from mim.config import PATH_TO_TEST_RESULTS, HyperParams
-from mim.model_wrapper import RandomForestClassifier
+from mim.config import PATH_TO_TEST_RESULTS
+from mim.model_wrapper import Model, KerasWrapper
 
 
 class Experiment(NamedTuple):
     description: str
-    nickname: str = None
-    extractor: Any = None
+    alias: str = None
+    extractor: Callable[[Any], Extractor] = None
     index: Any = None
     features: Any = None
     labels: Any = None
     post_processing: Any = None
-    params: Any = HyperParams.P0
-    algorithm: Any = RandomForestClassifier
-    wrapper: Any = None
-    predict_only: bool = False
+    model: Any = RandomForestClassifier
+    model_kwargs: dict = {}
+    building_model_requires_development_data: bool = False
+    optimizer: Any = 'adam',
+    loss: Any = 'binary_crossentropy'
+    epochs: int = None
+    batch_size: int = 64
+    metrics: Any = ['accuracy', 'auc']
+    ignore_callbacks: bool = False
+    random_state: int = 123
     cv: Any = KFold
-    cv_args: dict = {}
+    cv_kwargs: dict = {}
     scoring: Any = roc_auc_score
     hold_out: Any = ChronologicalSplit
     hold_out_size: float = 0
@@ -41,46 +50,67 @@ class Experiment(NamedTuple):
             'labels': self.labels,
             'processing': self.post_processing,
         }
-        data = self.extractor(specification=specification).get_data()
+        data = self.extractor(**specification).get_data()
         splitter = self.hold_out(test_size=self.hold_out_size)
         develop_index, test_index = next(splitter.split(data))
         return data.split(develop_index, test_index)
 
+    def get_model(self, train, validation):
+        model_kwargs = self.model_kwargs
+
+        if self.building_model_requires_development_data:
+            model_kwargs['train'] = train
+            model_kwargs['validation'] = validation
+
+        model = self.model(**model_kwargs)
+
+        if isinstance(model, tf.keras.Model):
+            if isinstance(self.optimizer, dict):
+                optimizer = self.optimizer['name'](**self.optimizer['kwargs'])
+            else:
+                optimizer = self.optimizer
+
+            metric_list = []
+            for metric in self.metrics:
+                if metric == 'auc':
+                    metric_list.append(tf.keras.metrics.AUC())
+                else:
+                    metric_list.append(metric)
+
+            return KerasWrapper(
+                model,
+                xp_name=self.name,
+                xp_class=self.__class__.__name__,
+                random_state=self.random_state,
+                batch_size=self.batch_size,
+                epochs=self.epochs,
+                optimizer=optimizer,
+                loss=self.loss,
+                metrics=metric_list,
+                ignore_callbacks=self.ignore_callbacks
+            )
+        else:
+            model.random_state = self.random_state
+            return Model(
+                model,
+                xp_name=self.name,
+                xp_class=self.__class__.__name__,
+            )
+
     @property
     def cross_validation(self):
-        return CrossValidationWrapper(self.cv, **self.cv_args)
+        return CrossValidationWrapper(self.cv, **self.cv_kwargs)
 
     @property
     def is_binary(self):
         return self.labels['is_binary']
-
-    def classifier(self, train_data):
-        default_params = {}
-        ps = self.params
-        if isinstance(ps, HyperParams):
-            ps = self.params.value
-
-        ps = {**default_params, **ps}
-        if self.wrapper is not None:
-            ps['wrapper'] = self.wrapper
-
-        if 'random_state' not in ps:
-            ps['random_state'] = 123
-
-        ps['train_data'] = train_data
-
-        return self.algorithm(
-            xp_name=self.name,
-            xp_class=self.__class__.__name__,
-            **ps
-        )
 
     @property
     def name(self):
         if hasattr(self, '_name_'):
             return self._name_
         else:
-            return self.nickname
+            return self.alias
 
     @property
     def result_path(self):
