@@ -22,7 +22,6 @@ class ABGlucose(Experiment, Enum):
         optimizer={
             'name': tf.keras.optimizers.SGD,
             'kwargs': {}
-            # 'kwargs': {'learning_rate': 1e-4, 'epsilon': 1e-3, }
         },
         extractor=ABJSONExtractor,
         index={"json_train": "/home/sapfo/andersb/PycharmProjects/Expect/"

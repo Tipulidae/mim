@@ -35,7 +35,7 @@ class Experiment(NamedTuple):
     cv_kwargs: dict = {}
     scoring: Any = roc_auc_score
     hold_out: Any = ChronologicalSplit
-    hold_out_size: float = 0
+    hold_out_size: float = 0.25
 
     def get_data(self):
         """
