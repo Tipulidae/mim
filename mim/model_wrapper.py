@@ -1,7 +1,6 @@
 import os
 from enum import Enum
 
-import numpy as np
 import pandas as pd
 import sklearn.ensemble as ensemble
 import sklearn.linear_model as linear_model
@@ -180,9 +179,6 @@ class KerasWrapper(Model):
             metrics=None,
             ignore_callbacks=False,
             **kwargs):
-        np.random.seed(random_state)
-        tf.random.set_seed(random_state)
-
         super().__init__(model, can_use_tf_dataset=True, **kwargs)
         self.model.compile(
             optimizer=optimizer,

@@ -1,8 +1,9 @@
 import os
 from pathlib import Path
 from typing import Any, NamedTuple, Callable
-
+import numpy as np
 import tensorflow as tf
+
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestClassifier
@@ -24,7 +25,7 @@ class Experiment(NamedTuple):
     model: Any = RandomForestClassifier
     model_kwargs: dict = {}
     building_model_requires_development_data: bool = False
-    optimizer: Any = 'adam',
+    optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
     epochs: int = None
     batch_size: int = 64
@@ -57,6 +58,11 @@ class Experiment(NamedTuple):
 
     def get_model(self, train, validation):
         model_kwargs = self.model_kwargs
+
+        # Random state for TF needs to be set before self.model() is called
+        random_state = self.random_state
+        np.random.seed(random_state)
+        tf.random.set_seed(random_state)
 
         if self.building_model_requires_development_data:
             model_kwargs['train'] = train
