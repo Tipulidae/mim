@@ -16,8 +16,9 @@ class ABGlucose(Experiment, Enum):
                     "gender, + 4 blood samples",
         model=ab_nn.ab_simple_lr,
         building_model_requires_development_data=True,
+        ignore_callbacks=True,
         model_kwargs={},
-        epochs=100,
+        epochs=10,
         batch_size=32,
         optimizer={
             'name': tf.keras.optimizers.SGD,
@@ -34,6 +35,6 @@ class ABGlucose(Experiment, Enum):
         },
         labels={"target": "label-index+30d-ami+death-30d"},
         cv=ChronologicalSplit,
-        cv_kwargs={"test_size": 0.25},
+        cv_kwargs={"test_size": 0.33},
         scoring=roc_auc_score
     )
