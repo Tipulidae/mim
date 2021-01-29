@@ -12,9 +12,31 @@ from tensorflow.keras.layers import (
 )
 
 
-def basic_cnn(train, validation, num_conv_layers=2, dropout=0.3, filters=32,
-              kernel_size=16, **kwargs):
-    # inp = train.tf_input
+def basic_cnn2(train, validation=None, dropout=0, layers=None,
+               hidden_layer=None):
+    x = inp = Input(shape=train['x'].shape)
+    for layer in layers:
+        x = Conv1D(
+            filters=layer['filters'],
+            kernel_size=layer['kernel_size'],
+            kernel_regularizer="l2",
+            padding='same')(x)
+        x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = MaxPool1D(pool_size=2)(x)
+        x = Dropout(dropout)(x)
+
+    x = Flatten()(x)
+    if hidden_layer:
+        x = Dense(10)(x)
+        x = Dropout(hidden_layer['dropout'])(x)
+
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
+
+
+def basic_cnn(train, *, num_conv_layers=2, dropout=0.3, filters=32,
+              kernel_size=16):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     layers = []
     if 'ecg' in inp:
@@ -46,10 +68,7 @@ def basic_cnn(train, validation, num_conv_layers=2, dropout=0.3, filters=32,
         x = layers[0]
 
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
-    model = keras.Model(inp, output)
-    return model
-    # return KerasWrapper(model, **kwargs)
-    # return keras.Model(inp, output)
+    return keras.Model(inp, output)
 
 
 def _ecg_network(ecg, num_conv_layers, dropout=0.2, filters=32,
@@ -67,50 +86,6 @@ def _ecg_network(ecg, num_conv_layers, dropout=0.2, filters=32,
         ecg = Dropout(dropout)(ecg)
 
     return Flatten()(ecg)
-
-
-class BasicCNN(keras.Sequential):
-    def __init__(self, input_shape=(1200, 8), num_conv_layers=2):
-        super().__init__()
-        self.add(Input(shape=input_shape))
-        self.add(BatchNormalization())
-        for _ in range(num_conv_layers):
-            self.add_conv_layer()
-
-        self.add(Flatten())
-        self.add(Dense(1, activation="sigmoid", kernel_regularizer="l2"))
-
-    def add_conv_layer(self):
-        self.add(
-            Conv1D(
-                filters=32,
-                kernel_size=16,
-                kernel_regularizer="l2",
-            )
-        )
-        self.add(BatchNormalization())
-        self.add(ReLU())
-        self.add(MaxPool1D(pool_size=16))
-        self.add(Dropout(0.2))
-
-    def compile(self, **kwargs):
-        super().compile(
-            optimizer='sgd',
-            loss='binary_crossentropy',
-            metrics=['accuracy'],
-            **kwargs
-        )
-
-
-class BasicFF(keras.Sequential):
-    def __init__(self):
-        super().__init__(
-            layers=[
-                Flatten(input_shape=(128, ), name='digits'),
-                Dense(32, activation='relu', name='hidden'),
-                Dense(10, activation='softmax', name='predictions')
-            ]
-        )
 
 
 def basic_ff():

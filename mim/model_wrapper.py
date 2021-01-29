@@ -8,8 +8,8 @@ import sklearn.linear_model as linear_model
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 
-from mim.config import PATH_TO_TF_LOGS, PATH_TO_TF_CHECKPOINTS
 from mim.util.logs import get_logger
+from mim.util.util import model_summary_as_string
 
 log = get_logger('Model Wrapper')
 
@@ -33,13 +33,9 @@ class Model:
     def __init__(
             self,
             model,
-            xp_name=None,
-            xp_class=None,
             can_use_tf_dataset=False):
         self.model = model
         self.can_use_tf_dataset = can_use_tf_dataset
-        self.xp_name = xp_name
-        self.xp_class = xp_class
 
     def predict(self, x):
         result = {}
@@ -179,50 +175,51 @@ class KerasWrapper(Model):
             loss='binary_crossentropy',
             metrics=None,
             ignore_callbacks=False,
-            **kwargs):
+            checkpoint_path=None,
+            tensorboard_path=None):
         np.random.seed(random_state)
         tf.random.set_seed(random_state)
 
-        super().__init__(model, can_use_tf_dataset=True, **kwargs)
+        super().__init__(model, can_use_tf_dataset=True)
         self.model.compile(
             optimizer=optimizer,
             loss=loss,
             metrics=metrics
         )
+        self.checkpoint_path = checkpoint_path
+        self.tensorboard_path = tensorboard_path
         self.batch_size = batch_size
         self.epochs = epochs
         self.ignore_callbacks = ignore_callbacks
-        log.info(self.model.summary())
+        log.info("\n\n"+model_summary_as_string(model))
 
-    def fit(self, data, validation_data=None, **kwargs):
+    def fit(self, data, validation_data=None, split_number=None, **kwargs):
         # TODO:
         # Option 1:
         # Store everything in a temporary folder, then move it to this folder
         # once training is completed, and clear that folder then
         # Option 2:
         # Just as below, only clear the folder first. Maybe a bit more risky.
-        checkpoint_path = os.path.join(
-            PATH_TO_TF_CHECKPOINTS,
-            self.xp_class,
-            self.xp_name
-        )
-        tensorboard_path = os.path.join(
-            PATH_TO_TF_LOGS,
-            self.xp_class,
-            self.xp_name
-        )
         if self.ignore_callbacks:
             callbacks = None
         else:
+            if split_number is None:
+                split_folder = ""
+            else:
+                split_folder = f'split_{split_number}'
+
+            checkpoint = os.path.join(self.checkpoint_path, split_folder)
+            tensorboard = os.path.join(self.tensorboard_path, split_folder)
+
             callbacks = [
                 ModelCheckpoint(
-                    filepath=os.path.join(checkpoint_path, 'last.ckpt')
+                    filepath=os.path.join(checkpoint, 'last.ckpt')
                 ),
                 ModelCheckpoint(
-                    filepath=os.path.join(checkpoint_path, 'best.ckpt'),
+                    filepath=os.path.join(checkpoint, 'best.ckpt'),
                     save_best_only=True
                 ),
-                TensorBoard(log_dir=tensorboard_path)
+                TensorBoard(log_dir=tensorboard)
             ]
         return super().fit(
             data,

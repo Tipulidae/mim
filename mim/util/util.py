@@ -68,3 +68,10 @@ def hold_out_split(df, size, random_seed=4321):
     held_out = random.choice(df.index, replace=False, size=int(size*len(df)))
     rest = set(df.index) - set(held_out)
     return df.loc[held_out, :], df.loc[rest, :]
+
+
+def model_summary_as_string(model):
+    # Credit to https://stackoverflow.com/a/53668338/5693369
+    result = []
+    model.summary(print_fn=lambda x: result.append(x))
+    return "\n".join(result)

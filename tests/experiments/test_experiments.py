@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 
 from sklearn.ensemble import RandomForestClassifier
@@ -5,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
 
 from mim.experiments.experiments import Experiment
 from mim.model_wrapper import Model
+from mim.config import PATH_TO_TEST_RESULTS
 
 
 class FakeExperiment(Experiment, Enum):
@@ -50,3 +52,44 @@ class TestExperiment:
     def test_can_specify_different_params(self):
         xp = FakeExperiment.has_custom_params_dict
         assert 42 == xp.get_model(None, None).model.n_estimators
+
+    def test_result_path_for_normal_experiment(self):
+        expected_path = os.path.join(
+            PATH_TO_TEST_RESULTS,
+            'FakeExperiment',
+            'default_experiment',
+            'results.pickle'
+        )
+
+        assert FakeExperiment.default_experiment.result_path == expected_path
+
+    def test_result_path_for_bare_experiment(self):
+        bare = Experiment(
+            description='This has no parent',
+            alias='bare'
+        )
+        expected_path = os.path.join(
+            PATH_TO_TEST_RESULTS,
+            'Experiment',
+            'bare',
+            'results.pickle'
+        )
+
+        assert bare.result_path == expected_path
+
+    def test_can_specify_parent_name_for_result_path(self):
+        xp = Experiment(
+            description='This has no parent, but I can pretend like it does',
+            alias='foo',
+            parent_base='HyperSearch',
+            parent_name='RANDOM_SEARCH',
+        )
+        expected_path = os.path.join(
+            PATH_TO_TEST_RESULTS,
+            'HyperSearch',
+            'RANDOM_SEARCH',
+            'foo',
+            'results.pickle'
+        )
+
+        assert xp.result_path == expected_path

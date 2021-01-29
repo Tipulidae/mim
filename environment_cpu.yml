@@ -20,3 +20,4 @@ dependencies:
     - wfdb
     - ecg_plot
     - jupyter_contrib_nbextensions
+    - silence_tensorflow

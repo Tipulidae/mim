@@ -13,7 +13,6 @@ from sklearn.metrics import (
 
 from mim.util.logs import get_logger
 from mim.util.util import ranksort
-from mim.experiments.experiments import result_path
 from mim.experiments.factory import experiment_from_name
 
 log = get_logger("Presenter")
@@ -26,7 +25,7 @@ class Presenter:
 
         self.experiments = experiment_from_name(name)
         for xp in self.experiments:
-            path = result_path(xp)
+            path = xp.result_path
             try:
                 self.results[xp.name] = pd.read_pickle(path)
             except FileNotFoundError:

@@ -1,6 +1,7 @@
 from mim.experiments.troponin import MyocardialInfarction
 from mim.experiments.multiple_ecgs import MultipleECG
 from mim.experiments.ab_glucose import ABGlucose
+from mim.experiments.random_search import HyperSearch
 
 
 def experiment_from_name(name):
@@ -15,5 +16,7 @@ def experiment_from_name(name):
         return MultipleECG
     elif name == 'ab':
         return ABGlucose
+    elif name == 'hypersearch':
+        return HyperSearch
     else:
         raise ValueError(f'No Experiment with name {name}')

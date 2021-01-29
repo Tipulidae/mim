@@ -6,7 +6,7 @@ from mim.fakes.fake_extractors import FakeExtractor
 from mim.models.simple_nn import basic_ff
 from mim.metric_wrapper import sparse_categorical_accuracy
 from mim.experiments.experiments import Experiment
-from mim.experiments.run import run_one_experiment
+# from mim.experiments.run import run_one_experiment
 
 
 class SmallTestExperiment(Experiment, Enum):
@@ -44,7 +44,8 @@ class SmallTestExperiment(Experiment, Enum):
 
 class TestRunOneExperiment:
     def test_fake_experiment(self):
-        res = run_one_experiment(SmallTestExperiment.test_fake_data)
+        # res = run_one_experiment(SmallTestExperiment.test_fake_data)
+        res = SmallTestExperiment.test_fake_data._run()
 
         assert 'predictions' in res
         assert 'train_score' in res
@@ -56,5 +57,6 @@ class TestRunOneExperiment:
         assert 'history' in res
 
     def test_keras(self):
-        res = run_one_experiment(SmallTestExperiment.test_keras)
+        # res = run_one_experiment(SmallTestExperiment.test_keras)
+        res = SmallTestExperiment.test_keras._run()
         assert res['test_score'].mean() > 0
