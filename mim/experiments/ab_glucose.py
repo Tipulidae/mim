@@ -18,11 +18,11 @@ class ABGlucose(Experiment, Enum):
         building_model_requires_development_data=True,
         ignore_callbacks=True,
         model_kwargs={},
-        epochs=10,
-        batch_size=32,
+        epochs=300,
+        batch_size=-1,
         optimizer={
             'name': tf.keras.optimizers.SGD,
-            'kwargs': {}
+            'kwargs': {'learning_rate': 1}
         },
         extractor=ABJSONExtractor,
         index={"json_train": "/home/sapfo/andersb/PycharmProjects/Expect/"
