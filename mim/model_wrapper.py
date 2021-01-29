@@ -220,6 +220,9 @@ class KerasWrapper(Model):
                 ),
                 TensorBoard(log_dir=tensorboard_path)
             ]
+        if self.batch_size < 0:
+            self.batch_size = len(data)
+#        batch_size = self.batch_size  > 0 else len(data)
         return super().fit(
             data,
             validation_data=validation_data,
