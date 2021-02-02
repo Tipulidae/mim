@@ -1,7 +1,7 @@
 from mim.experiments.troponin import MyocardialInfarction
 from mim.experiments.multiple_ecgs import MultipleECG
 from mim.experiments.ab_glucose import ABGlucose
-from mim.experiments.random_search import HyperSearch
+from mim.experiments.hyper_experiments import HyperSearch
 
 
 def experiment_from_name(name):

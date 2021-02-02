@@ -49,12 +49,32 @@ class Choices(Param):
         return pick(generator.choices(self.data, k=k), generator)
 
 
-def pick(val, r):
-    if isinstance(val, Param):
-        return val.pick(r)
-    if isinstance(val, dict):
-        return {k: pick(v, r) for k, v in val.items()}
-    if isinstance(val, list):
-        return [pick(x, r) for x in val]
+def pick(search_space, r):
+    if isinstance(search_space, Param):
+        return search_space.pick(r)
+    if isinstance(search_space, dict):
+        return {k: pick(v, r) for k, v in search_space.items()}
+    if isinstance(search_space, list):
+        return [pick(x, r) for x in search_space]
     else:
-        return val
+        return search_space
+
+
+def flatten(nested_dict):
+    def _flatten(name, item):
+        if isinstance(item, dict):
+            return flatten({f"{name}_{k}": v for k, v in item.items()})
+        elif isinstance(item, list):
+            return flatten({f"{name}_{i}": v for i, v in enumerate(item)})
+        else:
+            return {name: item}
+
+    return merge([_flatten(k, v) for k, v in nested_dict.items()])
+
+
+def merge(list_of_dicts):
+    result = {}
+    for dictionary in list_of_dicts:
+        result = {**result, **dictionary}
+
+    return result

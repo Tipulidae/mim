@@ -88,6 +88,13 @@ class Metadata:
         return {f: {'changed': self._file_modified_date(f)} for f in
                 self._all_files()}
 
+    def conda(self):
+        """
+        :return: Returns the output from running "conda list", which is to
+        say, all the installed packages in the currently active environment.
+        """
+        return self._bash_command(['conda', 'list'])
+
     @staticmethod
     def _bash_command(array):
         return subprocess.check_output([] + array).strip().decode('UTF8')
@@ -110,9 +117,10 @@ class Metadata:
 class Validator:
     def __init__(self, allow_uncommitted=True, allow_different_commits=True,
                  allow_different_branches=True, allow_different_files=True,
+                 allow_different_environments=True,
                  max_age_difference=None):
         """
-        Each Experiment in Urd is associated with Metadata information. The
+        Each Experiment in mim is associated with Metadata information. The
         purpose of the Validator class is to consider this metadata from
         one or several experiments and determine whether the metadata is
         consistent. Exactly what it means for a collection of metadata
@@ -142,6 +150,7 @@ class Validator:
         self.allow_different_branches = allow_different_branches
         self.allow_different_files = allow_different_files
         self.max_age_difference = max_age_difference
+        self.allow_different_environments = allow_different_environments
 
     @classmethod
     def allow_nothing(cls):
@@ -211,6 +220,22 @@ class Validator:
                     raise MetadataConsistencyError(
                         f'Branches are different: '
                         f'{branches.pop()} != {branches.pop()}')
+
+    def _validate_same_environment(self, metadata):
+        if not self.allow_different_environment:
+            envs = set()
+            for md in metadata:
+                try:
+                    envs.add(md['conda'])
+                except KeyError:
+                    raise MetadataConsistencyError(
+                        'Metadata incomplete! No information about '
+                        'conda environment.')
+
+                if len(envs) > 1:
+                    raise MetadataConsistencyError(
+                        f'Environments are different: '
+                        f'{envs.pop()} != {envs.pop()}')
 
     def _validate_timestamp(self, metadata):
         if self.max_age_difference:

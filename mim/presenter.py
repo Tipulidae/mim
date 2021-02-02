@@ -1,3 +1,4 @@
+import os
 import re
 
 import numpy as np
@@ -12,8 +13,9 @@ from sklearn.metrics import (
 )
 
 from mim.util.logs import get_logger
-from mim.util.util import ranksort
-from mim.experiments.factory import experiment_from_name
+from mim.util.util import ranksort, insensitive_iglob
+from mim.experiments.hyper_parameter import flatten
+from mim.config import PATH_TO_TEST_RESULTS
 
 log = get_logger("Presenter")
 
@@ -21,15 +23,18 @@ log = get_logger("Presenter")
 class Presenter:
     def __init__(self, name):
         self.results = dict()
-        log.debug(f'Loading all experiments for {name}')
+        paths = insensitive_iglob(
+            f"{PATH_TO_TEST_RESULTS}/{name}/**/results.pickle",
+            recursive=True
+        )
 
-        self.experiments = experiment_from_name(name)
-        for xp in self.experiments:
-            path = xp.result_path
-            try:
-                self.results[xp.name] = pd.read_pickle(path)
-            except FileNotFoundError:
-                log.debug(f"Test {xp.name} doesn't exist in path {path}")
+        for path in sorted(paths):
+            _, xp_name = os.path.split(os.path.dirname(path))
+            log.info(f"Loading {xp_name}")
+            if xp_name in self.results:
+                log.warning(f"Two experiments with the name {xp_name}!")
+
+            self.results[xp_name] = pd.read_pickle(path)
 
     def describe(self, like='.*'):
         results = []
@@ -51,6 +56,14 @@ class Presenter:
                     'timestamp'],
                 name=name))
         return pd.DataFrame(results)
+
+    def summary(self):
+        flat_results = [
+            pd.Series(flatten(xp['experiment_summary']), name=name)
+            for name, xp in self.results.items() if 'experiment_summary' in xp
+        ]
+        df = pd.concat(flat_results, axis=1)
+        return df
 
     def train_test_scores(self, name):
         xp = self.results[name]
@@ -158,19 +171,6 @@ class Presenter:
                 return False
 
         return True
-
-    def _has_same_date_range(self, ts):
-        first = self._get_validation_dates(ts[0])
-        for t in ts:
-            if len(self._get_validation_dates(t)) != len(first):
-                return False
-
-        return True
-
-    def _get_validation_dates(self, test_name):
-        cv = self.experiments[test_name].cross_validation
-        log.debug(test_name)
-        return range(cv.n_splits)
 
     def _is_loaded(self, ts):
         for t in ts:

@@ -1,3 +1,5 @@
+import glob
+
 import scipy.io as sio
 import numpy as np
 import pandas as pd
@@ -109,6 +111,17 @@ class ECG:
             ECGStatus.MISSING_RECORDING,
             ECGStatus.MISSING_LEAD_SYSTEM
         })
+
+
+def create_esc_trop_ecg_hdf5():
+    # TODO:
+    #  Refactor this, maybe add a metadata report to it, and run once more
+    #  just to be safe.
+    esc_trop_paths = list(sorted(
+        glob.iglob('/mnt/air-crypt/air-crypt-esc-trop/ekg/mat/**/*.mat',
+                   recursive=True)
+    ))
+    to_hdf5(esc_trop_paths, '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5')
 
 
 def to_hdf5(ecg_paths, target_path):

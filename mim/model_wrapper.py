@@ -9,7 +9,7 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 
 from mim.util.logs import get_logger
-from mim.util.util import model_summary_as_string
+from mim.util.util import keras_model_summary_as_string
 
 log = get_logger('Model Wrapper')
 
@@ -60,6 +60,10 @@ class Model:
             x = data['x'].as_numpy
             y = data['y'].as_numpy.ravel()
             return self.model.fit(x, y)
+
+    @property
+    def summary(self):
+        return None
 
     @property
     def only_last_prediction_column_is_used(self):
@@ -191,7 +195,7 @@ class KerasWrapper(Model):
         self.batch_size = batch_size
         self.epochs = epochs
         self.ignore_callbacks = ignore_callbacks
-        log.info("\n\n"+model_summary_as_string(model))
+        log.info("\n\n" + keras_model_summary_as_string(model))
 
     def fit(self, data, validation_data=None, split_number=None, **kwargs):
         # TODO:
@@ -229,6 +233,10 @@ class KerasWrapper(Model):
             callbacks=callbacks,
             **kwargs
         )
+
+    @property
+    def summary(self):
+        return keras_model_summary_as_string(self.model)
 
     @property
     def only_last_prediction_column_is_used(self):

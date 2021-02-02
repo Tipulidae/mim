@@ -1,4 +1,5 @@
 import os
+from copy import copy
 from time import time
 from pathlib import Path
 from typing import Any, NamedTuple, Callable, Union
@@ -16,9 +17,10 @@ from mim.extractors.extractor import Extractor
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
-from mim.experiments.hyper_parameter import Param
 from mim.util.logs import get_logger
 from mim.util.metadata import Metadata
+from mim.util.util import callable_to_string
+import mim.experiments.hyper_parameter as hp
 
 log = get_logger("Experiment")
 
@@ -35,8 +37,8 @@ class Experiment(NamedTuple):
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam',
     loss: Any = 'binary_crossentropy'
-    epochs: Union[int, Param] = None
-    batch_size: Union[int, Param] = 64
+    epochs: Union[int, hp.Param] = None
+    batch_size: Union[int, hp.Param] = 64
     metrics: Any = ['accuracy', 'auc']
     ignore_callbacks: bool = False
     random_state: int = 123
@@ -45,11 +47,13 @@ class Experiment(NamedTuple):
     scoring: Any = roc_auc_score
     hold_out: Any = ChronologicalSplit
     hold_out_size: float = 0.25
+    log_conda_env: bool = True
     alias: str = ''
     parent_base: str = None
     parent_name: str = None
 
     def run(self):
+        self._run()
         try:
             results = self._run()
             pd.to_pickle(results, self.result_path)
@@ -64,18 +68,23 @@ class Experiment(NamedTuple):
 
         data, hold_out = self.get_data()
         cv = self.cross_validation
+
+        # TODO:
+        #  Add feature names to dataset somewhere so it can be
+        #  logged here
         feature_names = None
 
         results = {
             'fit_time': [],
             'score_time': [],
-            'test_score': [],
-            'feature_importance': [],
-            'predictions': [],
-            'targets': [],
-            'feature_names': feature_names,
             'train_score': [],
-            'history': []
+            'test_score': [],
+            'targets': [],
+            'predictions': [],
+            'feature_names': feature_names,
+            'feature_importance': [],
+            'model_summary': [],
+            'history': [],
         }
 
         for i, (train, validation) in enumerate(cv.split(data)):
@@ -86,12 +95,11 @@ class Experiment(NamedTuple):
                 self.scoring,
                 split_number=i
             )
-
             _update_results(results, result)
 
         _finish_results(results)
-        results['metadata'] = Metadata().report()
-
+        results['metadata'] = Metadata().report(conda=self.log_conda_env)
+        results['experiment_summary'] = self.asdict()
         log.info(f'Finished computing scores for {self.name} in '
                  f'{time() - t}s. ')
         return results
@@ -115,7 +123,7 @@ class Experiment(NamedTuple):
         return data.split(develop_index, test_index)
 
     def get_model(self, train, validation):
-        model_kwargs = self.model_kwargs
+        model_kwargs = copy(self.model_kwargs)
 
         if self.building_model_requires_development_data:
             model_kwargs['train'] = train
@@ -154,6 +162,9 @@ class Experiment(NamedTuple):
         else:
             model.random_state = self.random_state
             return Model(model)
+
+    def asdict(self):
+        return callable_to_string(self._asdict())
 
     @property
     def cross_validation(self):
@@ -225,7 +236,8 @@ def _validate(train, val, model, scoring, split_number=None):
         'fit_time': fit_time,
         'score_time': score_time,
         'targets': y_val,
-        'history': history
+        'history': history,
+        'model_summary': model.summary
     }
 
 
