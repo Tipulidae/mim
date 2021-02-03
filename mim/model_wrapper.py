@@ -175,25 +175,29 @@ class KerasWrapper(Model):
             random_state=42,
             batch_size=16,
             epochs=2,
+            initial_epoch=0,
             optimizer='adam',
             loss='binary_crossentropy',
             metrics=None,
             ignore_callbacks=False,
             checkpoint_path=None,
+            skip_compile=False,
             tensorboard_path=None):
         np.random.seed(random_state)
         tf.random.set_seed(random_state)
 
         super().__init__(model, can_use_tf_dataset=True)
-        self.model.compile(
-            optimizer=optimizer,
-            loss=loss,
-            metrics=metrics
-        )
+        if not skip_compile:
+            self.model.compile(
+                optimizer=optimizer,
+                loss=loss,
+                metrics=metrics
+            )
         self.checkpoint_path = checkpoint_path
         self.tensorboard_path = tensorboard_path
         self.batch_size = batch_size
         self.epochs = epochs
+        self.initial_epoch = initial_epoch
         self.ignore_callbacks = ignore_callbacks
         log.info("\n\n" + keras_model_summary_as_string(model))
 
@@ -230,6 +234,7 @@ class KerasWrapper(Model):
             validation_data=validation_data,
             batch_size=self.batch_size,
             epochs=self.epochs,
+            initial_epoch=self.initial_epoch,
             callbacks=callbacks,
             **kwargs
         )
@@ -255,3 +260,7 @@ def prepare_dataset(data, batch_size=1, prefetch=None, **kwargs):
         fixed_data = fixed_data.prefetch(prefetch)
 
     return fixed_data
+
+
+# def load_keras_model(path):
+#     tf.keras.model.load_model(path)

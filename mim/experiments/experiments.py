@@ -38,9 +38,11 @@ class Experiment(NamedTuple):
     optimizer: Any = 'adam',
     loss: Any = 'binary_crossentropy'
     epochs: Union[int, hp.Param] = None
+    initial_epoch: int = 0
     batch_size: Union[int, hp.Param] = 64
     metrics: Any = ['accuracy', 'auc']
     ignore_callbacks: bool = False
+    skip_compile: bool = False
     random_state: int = 123
     cv: Any = KFold
     cv_kwargs: dict = {}
@@ -53,7 +55,6 @@ class Experiment(NamedTuple):
     parent_name: str = None
 
     def run(self):
-        self._run()
         try:
             results = self._run()
             pd.to_pickle(results, self.result_path)
@@ -91,7 +92,7 @@ class Experiment(NamedTuple):
             result = _validate(
                 train,
                 validation,
-                self.get_model(train, validation),
+                self.get_model(train, validation, split_number=i),
                 self.scoring,
                 split_number=i
             )
@@ -122,12 +123,17 @@ class Experiment(NamedTuple):
         develop_index, test_index = next(splitter.split(data))
         return data.split(develop_index, test_index)
 
-    def get_model(self, train, validation):
+    def get_model(self, train, validation, split_number):
         model_kwargs = copy(self.model_kwargs)
 
         if self.building_model_requires_development_data:
             model_kwargs['train'] = train
             model_kwargs['validation'] = validation
+
+        # This is kinda ugly, but important that the model is loaded from
+        # the right split, otherwise we peek!
+        if self.model.__name__ == 'load_keras_model':
+            model_kwargs['split_number'] = split_number
 
         # Releases keras global state. Ref:
         # https://www.tensorflow.org/api_docs/python/tf/keras/backend/clear_session
@@ -154,9 +160,11 @@ class Experiment(NamedTuple):
                 random_state=self.random_state,
                 batch_size=self.batch_size,
                 epochs=self.epochs,
+                initial_epoch=self.initial_epoch,
                 optimizer=optimizer,
                 loss=self.loss,
                 metrics=metric_list,
+                skip_compile=self.skip_compile,
                 ignore_callbacks=self.ignore_callbacks
             )
         else:
@@ -203,6 +211,14 @@ class Experiment(NamedTuple):
     def is_done(self):
         file = Path(self.result_path)
         return file.is_file()
+
+    @property
+    def validation_scores(self):
+        if self.is_done:
+            results = pd.read_pickle(self.result_path)
+            return results['test_score']
+        else:
+            return None
 
 
 def _validate(train, val, model, scoring, split_number=None):

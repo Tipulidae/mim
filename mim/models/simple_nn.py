@@ -1,3 +1,6 @@
+import os
+import math
+
 from tensorflow import keras
 from tensorflow.keras.layers import (
     Input,
@@ -30,6 +33,34 @@ def basic_cnn2(train, validation=None, dropout=0, layers=None,
     if hidden_layer:
         x = Dense(10)(x)
         x = Dropout(hidden_layer['dropout'])(x)
+
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
+
+
+def basic_cnn3(train, validation=None, dropout=0, layers=None,
+               pool_size=2, hidden_dropout=None):
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    x = BatchNormalization()(inp['ecg'])
+
+    n = len(layers)
+    max_pool_size = math.floor((1200 / 20) ** (1 / n))
+    pool_size = min(max_pool_size, pool_size)
+    for layer in layers:
+        x = Conv1D(
+            filters=layer['filters'],
+            kernel_size=layer['kernel_size'],
+            kernel_regularizer="l2",
+            padding='same')(x)
+        x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = MaxPool1D(pool_size=pool_size)(x)
+        x = Dropout(layer['dropout'])(x)
+
+    x = Flatten()(x)
+    if hidden_dropout is not None:
+        x = Dense(10)(x)
+        x = Dropout(hidden_dropout)(x)
 
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
@@ -95,3 +126,12 @@ def basic_ff():
     output = Dense(10, activation='softmax')(x)
     model = keras.Model(inp, output)
     return model
+
+
+def load_keras_model(base_path, split_number, **kwargs):
+    path = os.path.join(
+        base_path,
+        f"split_{split_number}",
+        "last.ckpt"
+    )
+    return keras.models.load_model(filepath=path)
