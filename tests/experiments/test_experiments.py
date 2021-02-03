@@ -39,19 +39,19 @@ class TestExperiment:
 
     def test_default_classifier_is_rf(self):
         xp = FakeExperiment.no_default_algorithm
-        model = xp.get_model(None, None)
+        model = xp.get_model(None, None, None)
         assert isinstance(model, Model)
         assert isinstance(model.model, RandomForestClassifier)
 
     def test_different_classifier(self):
         xp = FakeExperiment.using_different_classifier
-        model = xp.get_model(None, None)
+        model = xp.get_model(None, None, None)
         assert isinstance(model, Model)
         assert isinstance(model.model, LogisticRegression)
 
     def test_can_specify_different_params(self):
         xp = FakeExperiment.has_custom_params_dict
-        assert 42 == xp.get_model(None, None).model.n_estimators
+        assert 42 == xp.get_model(None, None, None).model.n_estimators
 
     def test_result_path_for_normal_experiment(self):
         expected_path = os.path.join(
