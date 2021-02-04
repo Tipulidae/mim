@@ -25,9 +25,10 @@ class MultipleECG(Experiment, Enum):
         model=basic_cnn,
         model_kwargs={
             'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64
         },
+        epochs=200,
+        batch_size=64,
+        optimizer='sgd',
         extractor=EscTrop,
         features={
             'ecg_mode': 'beat',
@@ -46,10 +47,11 @@ class MultipleECG(Experiment, Enum):
         description='Try to predict mace 30 using only the old ecg...',
         model=basic_cnn,
         model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64
+            'num_conv_layers': 2
         },
+        epochs=200,
+        batch_size=64,
+        optimizer='sgd',
         extractor=EscTrop,
         features={
             'ecg_mode': 'beat',
@@ -64,23 +66,10 @@ class MultipleECG(Experiment, Enum):
         scoring=roc_auc_score,
     )
 
-    ESC_B1_MACE30_BCNN2_V2 = ESC_B1_MACE30_BCNN2_V1._replace(
-        model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64,
-        },
-    )
-
     ESC_B1AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
         description='Baseline CNN model using a 2 conv layer network on '
                     '1 ECG median beat plus age and sex features concatenated '
                     'at the end, predicting MACE within 30 days.',
-        model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64
-        },
         features={
             'ecg_mode': 'beat',
             'ecgs': ['index'],
@@ -91,11 +80,6 @@ class MultipleECG(Experiment, Enum):
     ESC_B2AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
         description='Running two CNNs in parallel on two ECG beat signals. '
                     'Also uses age and sex as features.',
-        model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64
-        },
         features={
             'ecg_mode': 'beat',
             'ecgs': ['index', 'old'],
@@ -106,11 +90,6 @@ class MultipleECG(Experiment, Enum):
     ESC_R1_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
         description='Baseline CNN model using only current raw ECG signal to '
                     'predict MACE within 30 days.',
-        model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 1000,
-            'batch_size': 64
-        },
         features={
             'ecg_mode': 'raw',
             'ecgs': ['index']
