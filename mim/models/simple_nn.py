@@ -66,8 +66,8 @@ def basic_cnn3(train, validation=None, dropout=0, layers=None,
     return keras.Model(inp, output)
 
 
-def basic_cnn(train, *, num_conv_layers=2, dropout=0.3, filters=32,
-              kernel_size=16):
+def basic_cnn(train, validation=None, num_conv_layers=2, dropout=0.3,
+              filters=32, kernel_size=16):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     layers = []
     if 'ecg' in inp:

@@ -41,6 +41,7 @@ class MultipleECG(Experiment, Enum):
         },
         hold_out_size=0.25,
         scoring=roc_auc_score,
+        building_model_requires_development_data=True
     )
 
     SANITY1 = Experiment(
@@ -64,6 +65,7 @@ class MultipleECG(Experiment, Enum):
         },
         hold_out_size=0.25,
         scoring=roc_auc_score,
+        building_model_requires_development_data=True
     )
 
     ESC_B1AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
