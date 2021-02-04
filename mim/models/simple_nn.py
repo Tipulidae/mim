@@ -44,7 +44,7 @@ def basic_cnn3(train, validation=None, dropout=0, layers=None,
     x = BatchNormalization()(inp['ecg'])
 
     n = len(layers)
-    max_pool_size = math.floor((1200 / 20) ** (1 / n))
+    max_pool_size = math.floor((train['x']['ecg'].shape[0] / 20) ** (1 / n))
     pool_size = min(max_pool_size, pool_size)
     for layer in layers:
         x = Conv1D(

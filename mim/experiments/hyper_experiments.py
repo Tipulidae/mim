@@ -134,7 +134,7 @@ class SuccessiveHalving(Searcher):
                         name=experiment.name
                     )
                     log.info(f"Experiment {experiment.name} with kwargs\n"
-                             f"{s.filter(regex='model_kwargs', axis=0)}\n\n")
+                             f"{s}\n\n")
                     experiment.run()
                 score = experiment.validation_scores.mean()
                 scores[name] = score
