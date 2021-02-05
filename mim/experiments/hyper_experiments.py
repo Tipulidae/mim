@@ -437,7 +437,6 @@ class HyperSearch(HyperExperiment, Enum):
                 'test_size': 0.333
             },
             hold_out_size=0.25,
-
             model=super_basic_cnn,
             building_model_requires_development_data=True,
             optimizer={

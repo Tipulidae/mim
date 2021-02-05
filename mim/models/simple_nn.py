@@ -12,20 +12,21 @@ from tensorflow.keras.layers import (
     BatchNormalization,
     Concatenate,
     ReLU,
-    # Lambda,
+    Lambda,
 )
 
 
 def super_basic_cnn(train, validation=None, dropout=0, ):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
-    # m = 4.057771e-05
-    # s = 0.0001882498
-    # x = Lambda(lambda v: (v - m) / s)(x)
+    m = 4.057771e-05
+    s = 0.0001882498
+    x = inp['ecg']
+    x = Lambda(lambda v: (v - m) / s)(x)
     x = Conv1D(
         filters=32,
         kernel_size=16,
         kernel_regularizer="l2",
-        padding='same')(inp['ecg'])
+        padding='same')(x)
     x = ReLU()(x)
     x = MaxPool1D(pool_size=8)(x)
     x = Dropout(dropout)(x)
