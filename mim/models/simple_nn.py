@@ -11,8 +11,37 @@ from tensorflow.keras.layers import (
     Dropout,
     BatchNormalization,
     Concatenate,
-    ReLU
+    ReLU,
+    # Lambda,
 )
+
+
+def super_basic_cnn(train, validation=None, dropout=0, ):
+    x = inp = Input(shape=train['x'].shape)
+    # m = 4.057771e-05
+    # s = 0.0001882498
+    # x = Lambda(lambda v: (v - m) / s)(x)
+    x = Conv1D(
+        filters=32,
+        kernel_size=16,
+        kernel_regularizer="l2",
+        padding='same')(x)
+    x = ReLU()(x)
+    x = MaxPool1D(pool_size=8)(x)
+    x = Dropout(dropout)(x)
+
+    x = Conv1D(
+        filters=32,
+        kernel_size=16,
+        kernel_regularizer="l2",
+        padding='same')(x)
+    x = ReLU()(x)
+    x = MaxPool1D(pool_size=8)(x)
+    x = Dropout(dropout)(x)
+
+    x = Flatten()(x)
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
 
 
 def basic_cnn2(train, validation=None, dropout=0, layers=None,

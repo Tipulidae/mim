@@ -43,7 +43,7 @@ class Experiment(NamedTuple):
     metrics: Any = ['accuracy', 'auc']
     ignore_callbacks: bool = False
     skip_compile: bool = False
-    random_state: int = 123
+    random_state: Union[int, hp.Param] = 123
     cv: Any = KFold
     cv_kwargs: dict = {}
     scoring: Any = roc_auc_score

@@ -10,7 +10,8 @@ import tensorflow as tf
 
 import mim.experiments.hyper_parameter as hp
 from mim.experiments.experiments import Experiment
-from mim.models.simple_nn import basic_cnn2, basic_cnn3, load_keras_model
+from mim.models.simple_nn import basic_cnn2, basic_cnn3, load_keras_model, \
+    super_basic_cnn
 from mim.fakes.fake_extractors import FakeECG
 from mim.extractors.esc_trop import EscTrop
 from mim.cross_validation import ChronologicalSplit
@@ -202,15 +203,13 @@ def calculate_number_of_brackets(B, n, r):
     return math.ceil(B / (n * r) - 1)
 
 
-class RandomSearch:
-    def __init__(self, template, restart=False, iterations=10,
-                 random_seed=123, parent_base='', parent_name=''):
-        self.template = template
+class RandomSearch(Searcher):
+    def __init__(self, restart=False, iterations=10,
+                 random_seed=123, **kwargs):
+        super().__init__(**kwargs)
         self.restart = restart
         self.iterations = iterations
         self.random_seed = random_seed
-        self.parent_base = parent_base
-        self.parent_name = parent_name
 
     def search(self):
         for xp in self.experiments():
@@ -411,5 +410,57 @@ class HyperSearch(HyperExperiment, Enum):
         strategy_kwargs={
             'maximum_resource': 40,
             'resource_unit': 5
+        }
+    )
+
+    SingleRawECG = SingleECG._replace(
+        template=SingleECG.template._replace(
+            features={
+                'ecg_mode': 'raw',
+                'ecgs': ['index']
+            },
+        )
+    )
+
+    LearningRates = HyperExperiment(
+        template=Experiment(
+            description="Experiment using very simple cnn, testing various "
+                        "learning rates and normalization parameters",
+            extractor=EscTrop,
+            features={
+                'ecg_mode': 'beat',
+                'ecgs': ['index']
+            },
+            index={},
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 0.333
+            },
+            hold_out_size=0.25,
+
+            model=super_basic_cnn,
+            building_model_requires_development_data=True,
+            optimizer={
+                'name': tf.keras.optimizers.Adam,
+                'kwargs': {
+                    'learning_rate':
+                        hp.Choice([3e-3, 1e-3, 3e-4, 1e-4, 3e-5])
+                }
+            },
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            epochs=200,
+            random_state=hp.Int(0, 1000000000),
+            batch_size=hp.Choice([8, 16, 32, 64, 128]),
+            model_kwargs={
+                'dropout': hp.Choice(
+                    [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+                )
+            },
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 1000
         }
     )
