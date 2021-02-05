@@ -17,7 +17,7 @@ from tensorflow.keras.layers import (
 
 
 def super_basic_cnn(train, validation=None, dropout=0, ):
-    x = inp = Input(shape=train['x'].shape)
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     # m = 4.057771e-05
     # s = 0.0001882498
     # x = Lambda(lambda v: (v - m) / s)(x)
@@ -25,7 +25,7 @@ def super_basic_cnn(train, validation=None, dropout=0, ):
         filters=32,
         kernel_size=16,
         kernel_regularizer="l2",
-        padding='same')(x)
+        padding='same')(inp['ecg'])
     x = ReLU()(x)
     x = MaxPool1D(pool_size=8)(x)
     x = Dropout(dropout)(x)
