@@ -63,7 +63,7 @@ class Presenter:
             for name, xp in self.results.items() if 'experiment_summary' in xp
         ]
         df = pd.concat(flat_results, axis=1)
-        return df
+        return df.T.join(self.scores())
 
     def train_test_scores(self, name):
         xp = self.results[name]
@@ -135,7 +135,7 @@ class Presenter:
             columns=xp['feature_names']
         )
 
-    def history(self, name):
+    def history(self, name, columns='all', folds='all'):
         xp = self.results[name]
         if xp['history'] is None:
             print(f"Experiment {name} has no history.")
@@ -146,8 +146,51 @@ class Presenter:
             axis=1,
             keys=[f'fold {i}' for i in range(len(xp['history']))]
         )
+
+        if isinstance(columns, list):
+            history = history.loc[:, pd.IndexSlice[:, columns]]
+        if isinstance(folds, list):
+            fold_names = [f'fold {i}' for i in folds]
+            history = history.loc[:, pd.IndexSlice[fold_names, :]]
+        if folds == 'first':
+            history = history.loc[:, 'fold 0']
+
         return history
-        # history.plot()
+
+    def plot_history(self, names, columns=None,
+                     folds='first', **plot_kwargs):
+        if columns is None:
+            columns = ['val_loss', 'loss']
+
+        history = pd.concat(
+            [self.history(name, columns, folds) for name in names],
+            axis=1
+        )
+        history.columns = [f'{name}_{col}' for name in names
+                           for col in columns]
+
+        if 'style' not in plot_kwargs:
+            styles = ['-', '--', '-.', '.']
+            plot_kwargs['style'] = styles[:len(columns)] * len(names)
+
+        if 'color' not in plot_kwargs:
+            colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red',
+                      'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray',
+                      'tab:olive', 'tab:cyan']
+            plot_kwargs['color'] = [
+                colors[i % len(colors)]
+                for i in range(len(names))
+                for _ in columns
+            ]
+
+        history.plot(**plot_kwargs)
+
+    def times(self):
+        return pd.DataFrame.from_dict(
+            {name: self.results[name]['fit_time'].sum()
+             for name in self.results},
+            orient='index', columns=['time']
+        )
 
     def _results_that_match_pattern(self, pattern):
         p = re.compile(pattern)
@@ -163,22 +206,3 @@ class Presenter:
         predictions = pd.concat(xp['predictions']['prediction'], axis=0)
         targets = pd.DataFrame(np.concatenate(xp['targets']))
         return targets, predictions
-
-    def _is_classifier(self, xps):
-        for xp in xps:
-            if not self.experiments[xp].model.model_type.is_classification:
-                print(f'Experiment {xp} is not a classification problem!')
-                return False
-
-        return True
-
-    def _is_loaded(self, ts):
-        for t in ts:
-            if not (self._is_valid_test_case(t) and self.results[t]):
-                print(f"Test case {t} doesn't exist or isn't loaded!")
-                return False
-
-        return True
-
-    def _is_valid_test_case(self, t):
-        return t in self.results

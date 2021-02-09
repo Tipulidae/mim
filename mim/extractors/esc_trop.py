@@ -7,6 +7,12 @@ class EscTrop(Extractor):
         ed = make_ed_table()
         tnt = make_troponin_table()
         ed = ed.join(tnt).reset_index()
+
+        # Include only those that have a first valid tnt measurement!
+        # This drops total from 20506 to 19444. There are 8722 patients with
+        # two valid tnts.
+        ed = ed.dropna(subset=['tnt_1'])
+
         # ed['days_since_last_ecg'] = (ed.ecg_date - ed.old_ecg_date
         #                              ).dt.total_seconds() // (24 * 3600)
         ed.sex = ed.sex.apply(lambda x: 1 if x == 'M' else 0)
@@ -33,10 +39,11 @@ class EscTrop(Extractor):
 
         data = Container(
             {
-                'x': Container.from_dict(x_dict),
+                'x': Container(x_dict),
                 'y': Data(ed.mace_30_days.astype(int).values)
             },
-            index=ed.index
+            index=ed.index,
+            fits_in_memory=self.fits_in_memory
         )
 
         return data

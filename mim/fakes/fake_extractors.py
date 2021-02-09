@@ -37,6 +37,9 @@ class FakeECG(Extractor):
             random_state=1234
         )
         return Container({
-            'x': Data(x.reshape((n_samples, rows, cols))),
+            'x': Container(
+                {'ecg': Data(x.reshape((n_samples, rows, cols)),
+                             dtype=float64)}
+            ),
             'y': Data(y)
         })

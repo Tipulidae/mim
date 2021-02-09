@@ -53,6 +53,7 @@ class Experiment(NamedTuple):
     alias: str = ''
     parent_base: str = None
     parent_name: str = None
+    data_fits_in_memory: bool = True
 
     def run(self):
         try:
@@ -117,6 +118,7 @@ class Experiment(NamedTuple):
             'features': self.features,
             'labels': self.labels,
             'processing': self.post_processing,
+            'fits_in_memory': self.data_fits_in_memory
         }
         data = self.extractor(**specification).get_data()
         splitter = self.hold_out(test_size=self.hold_out_size)
@@ -138,6 +140,8 @@ class Experiment(NamedTuple):
         # Releases keras global state. Ref:
         # https://www.tensorflow.org/api_docs/python/tf/keras/backend/clear_session
         tf.keras.backend.clear_session()
+        np.random.seed(self.random_state)
+        tf.random.set_seed(self.random_state)
         model = self.model(**model_kwargs)
 
         if isinstance(model, tf.keras.Model):
@@ -157,7 +161,6 @@ class Experiment(NamedTuple):
                 model,
                 checkpoint_path=self.base_path,
                 tensorboard_path=self.base_path,
-                random_state=self.random_state,
                 batch_size=self.batch_size,
                 epochs=self.epochs,
                 initial_epoch=self.initial_epoch,

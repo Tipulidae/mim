@@ -1,10 +1,11 @@
 from enum import Enum
 
+import tensorflow as tf
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.models.simple_nn import basic_cnn
+from mim.models.simple_nn import basic_cnn, super_basic_cnn
 from mim.cross_validation import ChronologicalSplit
 
 
@@ -96,4 +97,30 @@ class MultipleECG(Experiment, Enum):
             'ecg_mode': 'raw',
             'ecgs': ['index']
         }
+    )
+
+    TEMP = Experiment(
+        description="foo",
+        extractor=EscTrop,
+        features={
+            'ecg_mode': 'beat',
+            'ecgs': ['index']
+        },
+        model=super_basic_cnn,
+        model_kwargs={
+            'dropout': 0.5,
+        },
+        building_model_requires_development_data=True,
+        optimizer={
+            'name': tf.keras.optimizers.Adam,
+            'kwargs': {'learning_rate': 3e-4},
+        },
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+        epochs=200,
+        batch_size=256,
+        data_fits_in_memory=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 0.3},
+        hold_out_size=0
     )

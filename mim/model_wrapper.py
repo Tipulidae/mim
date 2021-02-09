@@ -1,7 +1,6 @@
 import os
 from enum import Enum
 
-import numpy as np
 import pandas as pd
 import sklearn.ensemble as ensemble
 import sklearn.linear_model as linear_model
@@ -33,7 +32,8 @@ class Model:
     def __init__(
             self,
             model,
-            can_use_tf_dataset=False):
+            can_use_tf_dataset=False,
+    ):
         self.model = model
         self.can_use_tf_dataset = can_use_tf_dataset
 
@@ -54,7 +54,7 @@ class Model:
     def fit(self, data, validation_data=None, **kwargs):
         if self.can_use_tf_dataset:
             train = prepare_dataset(data, prefetch=3, **kwargs)
-            val = prepare_dataset(validation_data, prefetch=3, **kwargs)
+            val = prepare_dataset(validation_data, prefetch=30, **kwargs)
             return self.model.fit(train, validation_data=val, **kwargs).history
         else:
             x = data['x'].as_numpy
@@ -172,7 +172,6 @@ class KerasWrapper(Model):
     def __init__(
             self,
             model: tf.keras.Model,
-            random_state=42,
             batch_size=16,
             epochs=2,
             initial_epoch=0,
@@ -182,10 +181,8 @@ class KerasWrapper(Model):
             ignore_callbacks=False,
             checkpoint_path=None,
             skip_compile=False,
-            tensorboard_path=None):
-        np.random.seed(random_state)
-        tf.random.set_seed(random_state)
-
+            tensorboard_path=None,
+    ):
         super().__init__(model, can_use_tf_dataset=True)
         if not skip_compile:
             self.model.compile(
@@ -260,7 +257,3 @@ def prepare_dataset(data, batch_size=1, prefetch=None, **kwargs):
         fixed_data = fixed_data.prefetch(prefetch)
 
     return fixed_data
-
-
-# def load_keras_model(path):
-#     tf.keras.model.load_model(path)

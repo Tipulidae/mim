@@ -15,6 +15,12 @@ class Int(Param):
             pick(self.max_value, generator)
         )
 
+    def __str__(self):
+        return f"Int({self.min_value}, {self.max_value})"
+
+    def __repr__(self):
+        return f"Int({self.min_value}, {self.max_value})"
+
 
 class Float(Param):
     def __init__(self, min_value, max_value):
@@ -28,6 +34,12 @@ class Float(Param):
             pick(self.max_value, generator)
         )
 
+    def __str__(self):
+        return f"Float({self.min_value}, {self.max_value})"
+
+    def __repr__(self):
+        return f"Float({self.min_value}, {self.max_value})"
+
 
 class Choice(Param):
     def __init__(self, data):
@@ -36,6 +48,12 @@ class Choice(Param):
 
     def pick(self, generator):
         return pick(generator.choice(self.data), generator)
+
+    def __str__(self):
+        return f"Choice({self.data})"
+
+    def __repr__(self):
+        return f"Choice({self.data})"
 
 
 class Choices(Param):
@@ -47,6 +65,12 @@ class Choices(Param):
     def pick(self, generator):
         k = pick(self.k, generator)
         return pick(generator.choices(self.data, k=k), generator)
+
+    def __str__(self):
+        return f"Choices({self.data}, k={self.k})"
+
+    def __repr__(self):
+        return f"Choices({self.data}, k={self.k})"
 
 
 def pick(search_space, r):
