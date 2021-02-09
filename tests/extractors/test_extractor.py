@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import tensorflow as tf
 
-from fake_extractors import FakeExtractor
+from mim.fakes.fake_extractors import FakeExtractor
 from mim.extractors.extractor import Data, Container, infer_shape
 
 
