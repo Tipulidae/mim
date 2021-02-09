@@ -7,6 +7,8 @@ PATH_TO_TEST_RESULTS = os.path.join(PATH_TO_DATA, 'test_results')
 PATH_TO_TF_LOGS = os.path.join(PATH_TO_DATA, 'tf_logs')
 PATH_TO_TF_CHECKPOINTS = os.path.join(PATH_TO_DATA, 'tf_checkpoints')
 
+GLUCOSE_ROOT = "/home/anders/PycharmProjects/Expect/json_data/pontus_glukos"
+
 
 class HyperParams(Enum):
     P0 = {
