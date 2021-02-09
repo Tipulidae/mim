@@ -1,9 +1,13 @@
 import os
+from copy import copy
+from time import time
 from pathlib import Path
-from typing import Any, NamedTuple, Callable
-import numpy as np
-import tensorflow as tf
+from typing import Any, NamedTuple, Callable, Union
 
+import numpy as np
+import pandas as pd
+import silence_tensorflow.auto  # noqa: F401
+import tensorflow as tf
 from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 
@@ -11,31 +15,48 @@ from mim.extractors.extractor import Extractor
 from mim.extractors.extractor import DataProvider
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
+from mim.util.logs import get_logger
+from mim.util.metadata import Metadata
+from mim.util.util import callable_to_string
+import mim.experiments.hyper_parameter as hp
+
+log = get_logger("Experiment")
 
 
 class Experiment(NamedTuple):
     description: str
-    alias: str = None
+    extractor: Callable[[Any], Extractor] = None
+    index: Any = None
+    features: Any = None
+    labels: Any = None
+    post_processing: Any = None
     model: Any = RandomForestClassifier
     model_kwargs: dict = {}
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
-    epochs: int = None
-    batch_size: int = 64
+    epochs: Union[int, hp.Param] = None
+    initial_epoch: int = 0
+    batch_size: Union[int, hp.Param] = 64
     metrics: Any = ['accuracy', 'auc']
     ignore_callbacks: bool = False
-    random_state: int = 123
+    skip_compile: bool = False
+    random_state: Union[int, hp.Param] = 123
     scoring: Any = roc_auc_score
+    log_conda_env: bool = True
+    alias: str = ''
+    parent_base: str = None
+    parent_name: str = None
+    data_fits_in_memory: bool = True
 
-    extractor: Callable[[Any], Extractor] = None
     extractor_kwargs: dict = {
         "index": {},
         "features": None,
         "labels": None,
         "processing": None,
     }
-    data_provider_kwargs = {
+
+    data_provider_kwargs: dict = {
         "train_frac": 0.50,
         "val_frac": 0.25,
         "test_frac": 0.25,
@@ -43,6 +64,56 @@ class Experiment(NamedTuple):
         "cv_folds": 5,
         "cv_set": 'dev'
     }
+
+    def run(self):
+        try:
+            results = self._run()
+            pd.to_pickle(results, self.result_path)
+            log.debug(f'Saved results in {self.result_path}')
+        except Exception as e:
+            log.error('Something went wrong!')
+            raise e
+
+    def _run(self):
+        log.info(f'Running experiment {self.name}: {self.description}')
+        t = time()
+
+        data_provider = self.get_data()
+
+        # TODO:
+        #  Add feature names to dataset somewhere so it can be
+        #  logged here
+        feature_names = None
+
+        results = {
+            'fit_time': [],
+            'score_time': [],
+            'train_score': [],
+            'test_score': [],
+            'targets': [],
+            'predictions': [],
+            'feature_names': feature_names,
+            'feature_importance': [],
+            'model_summary': [],
+            'history': [],
+        }
+
+        for i, (train, validation) in enumerate(data_provider.split()):
+            result = _validate(
+                train,
+                validation,
+                self.get_model(train, validation, split_number=i),
+                self.scoring,
+                split_number=i
+            )
+            _update_results(results, result)
+
+        _finish_results(results)
+        results['metadata'] = Metadata().report(conda=self.log_conda_env)
+        results['experiment_summary'] = self.asdict()
+        log.info(f'Finished computing scores for {self.name} in '
+                 f'{time() - t}s. ')
+        return results
 
     def get_data(self) -> DataProvider:
         """
@@ -55,18 +126,23 @@ class Experiment(NamedTuple):
         data_provider = extractor.get_data_provider(self.data_provider_kwargs)
         return data_provider
 
-    def get_model(self, train, validation):
-        model_kwargs = self.model_kwargs
-
-        # Random state for TF needs to be set before self.model() is called
-        random_state = self.random_state
-        np.random.seed(random_state)
-        tf.random.set_seed(random_state)
+    def get_model(self, train, validation, split_number):
+        model_kwargs = copy(self.model_kwargs)
 
         if self.building_model_requires_development_data:
             model_kwargs['train'] = train
             model_kwargs['validation'] = validation
 
+        # This is kinda ugly, but important that the model is loaded from
+        # the right split, otherwise we peek!
+        if self.model.__name__ == 'load_keras_model':
+            model_kwargs['split_number'] = split_number
+
+        # Releases keras global state. Ref:
+        # https://www.tensorflow.org/api_docs/python/tf/keras/backend/clear_session
+        tf.keras.backend.clear_session()
+        np.random.seed(self.random_state)
+        tf.random.set_seed(self.random_state)
         model = self.model(**model_kwargs)
 
         if isinstance(model, tf.keras.Model):
@@ -84,23 +160,23 @@ class Experiment(NamedTuple):
 
             return KerasWrapper(
                 model,
-                xp_name=self.name,
-                xp_class=self.__class__.__name__,
-                random_state=self.random_state,
+                checkpoint_path=self.base_path,
+                tensorboard_path=self.base_path,
                 batch_size=self.batch_size,
                 epochs=self.epochs,
+                initial_epoch=self.initial_epoch,
                 optimizer=optimizer,
                 loss=self.loss,
                 metrics=metric_list,
+                skip_compile=self.skip_compile,
                 ignore_callbacks=self.ignore_callbacks
             )
         else:
             model.random_state = self.random_state
-            return Model(
-                model,
-                xp_name=self.name,
-                xp_class=self.__class__.__name__,
-            )
+            return Model(model)
+
+    def asdict(self):
+        return callable_to_string(self._asdict())
 
     # @property
     # def cross_validation(self, data_provider):
@@ -120,16 +196,88 @@ class Experiment(NamedTuple):
     @property
     def result_path(self):
         return os.path.join(
+            self.base_path,
+            'results.pickle'
+        )
+
+    @property
+    def base_path(self):
+        parent_base = self.parent_base or ''
+        parent_name = self.parent_name or str(self.__class__.__name__)
+        return os.path.join(
             PATH_TO_TEST_RESULTS,
-            f'{self.__class__.__name__}_{self.name}.experiment')
+            parent_base,
+            parent_name,
+            self.name
+        )
 
     @property
     def is_done(self):
         file = Path(self.result_path)
         return file.is_file()
 
+    @property
+    def validation_scores(self):
+        if self.is_done:
+            results = pd.read_pickle(self.result_path)
+            return results['test_score']
+        else:
+            return None
 
-def result_path(xp):
-    return os.path.join(
-        PATH_TO_TEST_RESULTS,
-        f'{xp.__class__.__name__}_{xp.name}.experiment')
+
+def _validate(train, val, model, scoring, split_number=None):
+    t0 = time()
+    log.info(f'\n\nFitting classifier, split {split_number}')
+    history = model.fit(train, validation_data=val, split_number=split_number)
+    fit_time = time() - t0
+
+    prediction = model.predict(val['x'])
+    score_time = time() - fit_time - t0
+
+    train_score = scoring(
+        train['y'].as_numpy,
+        model.predict(train['x'])['prediction']
+    )
+
+    y_val = val['y'].as_numpy
+    test_score = scoring(y_val, prediction['prediction'])
+    log.debug(f'test score: {test_score}, train score: {train_score}')
+
+    try:
+        feature_importance = model.model.feature_importances_
+    except AttributeError:
+        feature_importance = None
+
+    return {
+        'predictions': prediction,
+        'train_score': train_score,
+        'test_score': test_score,
+        'feature_importance': feature_importance,
+        'fit_time': fit_time,
+        'score_time': score_time,
+        'targets': y_val,
+        'history': history,
+        'model_summary': model.summary
+    }
+
+
+def _update_results(results, result):
+    for key, value in result.items():
+        results[key].append(value)
+
+
+def _finish_results(results):
+    predictions = results['predictions']
+    new_predictions = {}
+    for prediction in predictions:
+        for key, value in prediction.items():
+            if key not in new_predictions:
+                new_predictions[key] = []
+            new_predictions[key].append(value)
+
+    results['predictions'] = new_predictions
+
+    results['fit_time'] = np.array(results['fit_time'])
+    results['score_time'] = np.array(results['score_time'])
+    results['test_score'] = np.array(results['test_score'])
+    results['feature_importance'] = np.array(results['feature_importance'])

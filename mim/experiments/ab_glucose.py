@@ -5,8 +5,8 @@ from sklearn.metrics import roc_auc_score
 from os.path import join
 import tensorflow as tf
 
-from mim.config import GLUCOSE_ROOT
 from mim.experiments.experiments import Experiment
+from mim.config import GLUCOSE_ROOT
 from mim.extractors.ab_json import ABJSONExtractor
 import mim.models.ab_nn as ab_nn
 
@@ -35,6 +35,8 @@ class ABGlucose(Experiment, Enum):
                          "age",
                          "bl-Glukos", "bl-TnT", "bl-Krea", "bl-Hb"},
             "labels": {"target": "label-index+30d-ami+death-30d"},
-
         },
+        data_provider_kwargs={
+            "mode": "train_val"
+        }
     )

@@ -67,7 +67,7 @@ class ABJSONExtractor(Extractor):
             "val": self._get_container_from_json(self.index["val"]),
             "test": self._get_container_from_json(self.index["test"])
         }
-        dp = IndividualContainerDataProvider(d)
+        dp = IndividualContainerDataProvider(container_dict=d, **dp_kwargs)
         return dp
 
     def _get_container_from_json(self, json_file):

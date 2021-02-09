@@ -1,13 +1,10 @@
 import mim.model_wrapper as mw
 from mim.fakes.fake_extractors import FakeExtractor
 
-DEFAULT_SPLIT_KWARGS = {"train_frac": 0.6, "val_frac": 0.2, "test_frac": 0.2,
-                        "mode": "cv", "cv_folds": 5, "cv_set": "all"}
-
 
 class TestModel:
     def test_rf_binary_classification_output_is_one_dimensional(self):
-        dp = FakeExtractor().get_data_provider(DEFAULT_SPLIT_KWARGS)
+        dp = FakeExtractor().get_data_provider({})
         data = dp.get_set("all")
         clf = mw.RandomForestClassifier(n_estimators=10)
         clf.fit(data)
@@ -17,10 +14,9 @@ class TestModel:
         assert 1 == len(prediction.columns)
 
     def test_rf_multiclass_classification_output_is_multi_dimensional(self):
-        # index = {'n_informative': 3, 'n_classes': 3}
         dp = FakeExtractor(
             **{"index": dict(n_informative=3, n_classes=3)}
-        ).get_data_provider(DEFAULT_SPLIT_KWARGS)
+        ).get_data_provider({})
         data = dp.get_set("all")
         clf = mw.RandomForestClassifier(n_estimators=10)
         clf.fit(data)

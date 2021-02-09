@@ -1,3 +1,6 @@
+import os
+import math
+
 from tensorflow import keras
 from tensorflow.keras.layers import (
     Input,
@@ -8,13 +11,95 @@ from tensorflow.keras.layers import (
     Dropout,
     BatchNormalization,
     Concatenate,
-    ReLU
+    ReLU,
+    Lambda,
 )
 
 
-def basic_cnn(train, validation, num_conv_layers=2, dropout=0.3, filters=32,
-              kernel_size=16, **kwargs):
-    # inp = train.tf_input
+def super_basic_cnn(train, validation=None, dropout=0, filters=32,
+                    kernel_size=16, pool_size=8):
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    m = 4.057771e-05
+    s = 0.0001882498
+    x = inp['ecg']
+    x = Lambda(lambda v: (v - m) / s)(x)
+    x = Conv1D(
+        filters=filters,
+        kernel_size=kernel_size,
+        kernel_regularizer="l2",
+        padding='same')(x)
+    x = ReLU()(x)
+    x = MaxPool1D(pool_size=pool_size)(x)
+    x = Dropout(dropout)(x)
+
+    x = Conv1D(
+        filters=filters,
+        kernel_size=kernel_size,
+        kernel_regularizer="l2",
+        padding='same')(x)
+    x = ReLU()(x)
+    x = MaxPool1D(pool_size=pool_size)(x)
+    x = Dropout(dropout)(x)
+
+    x = Flatten()(x)
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
+
+
+def basic_cnn2(train, validation=None, dropout=0, layers=None,
+               hidden_layer=None):
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    x = inp['ecg']
+    for layer in layers:
+        x = Conv1D(
+            filters=layer['filters'],
+            kernel_size=layer['kernel_size'],
+            kernel_regularizer="l2",
+            padding='same')(x)
+        x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = MaxPool1D(pool_size=2)(x)
+        x = Dropout(dropout)(x)
+
+    x = Flatten()(x)
+    if hidden_layer:
+        x = Dense(10)(x)
+        x = Dropout(hidden_layer['dropout'])(x)
+
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
+
+
+def basic_cnn3(train, validation=None, dropout=0, layers=None,
+               pool_size=2, hidden_dropout=None):
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    x = BatchNormalization()(inp['ecg'])
+
+    n = len(layers)
+    max_pool_size = math.floor((train['x']['ecg'].shape[0] / 20) ** (1 / n))
+    pool_size = min(max_pool_size, pool_size)
+    for layer in layers:
+        x = Conv1D(
+            filters=layer['filters'],
+            kernel_size=layer['kernel_size'],
+            kernel_regularizer="l2",
+            padding='same')(x)
+        x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = MaxPool1D(pool_size=pool_size)(x)
+        x = Dropout(layer['dropout'])(x)
+
+    x = Flatten()(x)
+    if hidden_dropout is not None:
+        x = Dense(10)(x)
+        x = Dropout(hidden_dropout)(x)
+
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
+
+
+def basic_cnn(train, validation=None, num_conv_layers=2, dropout=0.3,
+              filters=32, kernel_size=16):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     layers = []
     if 'ecg' in inp:
@@ -46,10 +131,7 @@ def basic_cnn(train, validation, num_conv_layers=2, dropout=0.3, filters=32,
         x = layers[0]
 
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
-    model = keras.Model(inp, output)
-    return model
-    # return KerasWrapper(model, **kwargs)
-    # return keras.Model(inp, output)
+    return keras.Model(inp, output)
 
 
 def _ecg_network(ecg, num_conv_layers, dropout=0.2, filters=32,
@@ -69,50 +151,6 @@ def _ecg_network(ecg, num_conv_layers, dropout=0.2, filters=32,
     return Flatten()(ecg)
 
 
-class BasicCNN(keras.Sequential):
-    def __init__(self, input_shape=(1200, 8), num_conv_layers=2):
-        super().__init__()
-        self.add(Input(shape=input_shape))
-        self.add(BatchNormalization())
-        for _ in range(num_conv_layers):
-            self.add_conv_layer()
-
-        self.add(Flatten())
-        self.add(Dense(1, activation="sigmoid", kernel_regularizer="l2"))
-
-    def add_conv_layer(self):
-        self.add(
-            Conv1D(
-                filters=32,
-                kernel_size=16,
-                kernel_regularizer="l2",
-            )
-        )
-        self.add(BatchNormalization())
-        self.add(ReLU())
-        self.add(MaxPool1D(pool_size=16))
-        self.add(Dropout(0.2))
-
-    def compile(self, **kwargs):
-        super().compile(
-            optimizer='sgd',
-            loss='binary_crossentropy',
-            metrics=['accuracy'],
-            **kwargs
-        )
-
-
-class BasicFF(keras.Sequential):
-    def __init__(self):
-        super().__init__(
-            layers=[
-                Flatten(input_shape=(128, ), name='digits'),
-                Dense(32, activation='relu', name='hidden'),
-                Dense(10, activation='softmax', name='predictions')
-            ]
-        )
-
-
 def basic_ff():
     inp = Input(shape=(128, ))
     x = Flatten()(inp)
@@ -120,3 +158,12 @@ def basic_ff():
     output = Dense(10, activation='softmax')(x)
     model = keras.Model(inp, output)
     return model
+
+
+def load_keras_model(base_path, split_number, **kwargs):
+    path = os.path.join(
+        base_path,
+        f"split_{split_number}",
+        "last.ckpt"
+    )
+    return keras.models.load_model(filepath=path)

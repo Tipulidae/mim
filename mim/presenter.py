@@ -1,3 +1,4 @@
+import os
 import re
 
 import numpy as np
@@ -12,9 +13,9 @@ from sklearn.metrics import (
 )
 
 from mim.util.logs import get_logger
-from mim.util.util import ranksort
-from mim.experiments.experiments import result_path
-from mim.experiments.factory import experiment_from_name
+from mim.util.util import ranksort, insensitive_iglob
+from mim.experiments.hyper_parameter import flatten
+from mim.config import PATH_TO_TEST_RESULTS
 
 log = get_logger("Presenter")
 
@@ -22,15 +23,18 @@ log = get_logger("Presenter")
 class Presenter:
     def __init__(self, name):
         self.results = dict()
-        log.debug(f'Loading all experiments for {name}')
+        paths = insensitive_iglob(
+            f"{PATH_TO_TEST_RESULTS}/{name}/**/results.pickle",
+            recursive=True
+        )
 
-        self.experiments = experiment_from_name(name)
-        for xp in self.experiments:
-            path = result_path(xp)
-            try:
-                self.results[xp.name] = pd.read_pickle(path)
-            except FileNotFoundError:
-                log.debug(f"Test {xp.name} doesn't exist in path {path}")
+        for path in sorted(paths):
+            _, xp_name = os.path.split(os.path.dirname(path))
+            log.info(f"Loading {xp_name}")
+            if xp_name in self.results:
+                log.warning(f"Two experiments with the name {xp_name}!")
+
+            self.results[xp_name] = pd.read_pickle(path)
 
     def describe(self, like='.*'):
         results = []
@@ -52,6 +56,14 @@ class Presenter:
                     'timestamp'],
                 name=name))
         return pd.DataFrame(results)
+
+    def summary(self):
+        flat_results = [
+            pd.Series(flatten(xp['experiment_summary']), name=name)
+            for name, xp in self.results.items() if 'experiment_summary' in xp
+        ]
+        df = pd.concat(flat_results, axis=1)
+        return df.T.join(self.scores())
 
     def train_test_scores(self, name):
         xp = self.results[name]
@@ -123,7 +135,7 @@ class Presenter:
             columns=xp['feature_names']
         )
 
-    def history(self, name):
+    def history(self, name, columns='all', folds='all'):
         xp = self.results[name]
         if xp['history'] is None:
             print(f"Experiment {name} has no history.")
@@ -134,8 +146,51 @@ class Presenter:
             axis=1,
             keys=[f'fold {i}' for i in range(len(xp['history']))]
         )
+
+        if isinstance(columns, list):
+            history = history.loc[:, pd.IndexSlice[:, columns]]
+        if isinstance(folds, list):
+            fold_names = [f'fold {i}' for i in folds]
+            history = history.loc[:, pd.IndexSlice[fold_names, :]]
+        if folds == 'first':
+            history = history.loc[:, 'fold 0']
+
         return history
-        # history.plot()
+
+    def plot_history(self, names, columns=None,
+                     folds='first', **plot_kwargs):
+        if columns is None:
+            columns = ['val_loss', 'loss']
+
+        history = pd.concat(
+            [self.history(name, columns, folds) for name in names],
+            axis=1
+        )
+        history.columns = [f'{name}_{col}' for name in names
+                           for col in columns]
+
+        if 'style' not in plot_kwargs:
+            styles = ['-', '--', '-.', '.']
+            plot_kwargs['style'] = styles[:len(columns)] * len(names)
+
+        if 'color' not in plot_kwargs:
+            colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red',
+                      'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray',
+                      'tab:olive', 'tab:cyan']
+            plot_kwargs['color'] = [
+                colors[i % len(colors)]
+                for i in range(len(names))
+                for _ in columns
+            ]
+
+        history.plot(**plot_kwargs)
+
+    def times(self):
+        return pd.DataFrame.from_dict(
+            {name: self.results[name]['fit_time'].sum()
+             for name in self.results},
+            orient='index', columns=['time']
+        )
 
     def _results_that_match_pattern(self, pattern):
         p = re.compile(pattern)
@@ -151,22 +206,3 @@ class Presenter:
         predictions = pd.concat(xp['predictions']['prediction'], axis=0)
         targets = pd.DataFrame(np.concatenate(xp['targets']))
         return targets, predictions
-
-    def _is_classifier(self, xps):
-        for xp in xps:
-            if not self.experiments[xp].model.model_type.is_classification:
-                print(f'Experiment {xp} is not a classification problem!')
-                return False
-
-        return True
-
-    def _is_loaded(self, ts):
-        for t in ts:
-            if not (self._is_valid_test_case(t) and self.results[t]):
-                print(f"Test case {t} doesn't exist or isn't loaded!")
-                return False
-
-        return True
-
-    def _is_valid_test_case(self, t):
-        return t in self.results

@@ -4,7 +4,6 @@ from mim.fakes.fake_extractors import FakeExtractor
 from mim.models.simple_nn import basic_ff
 from mim.metric_wrapper import sparse_categorical_accuracy
 from mim.experiments.experiments import Experiment
-from mim.experiments.run import run_one_experiment
 
 
 class SmallTestExperiment(Experiment, Enum):
@@ -12,6 +11,7 @@ class SmallTestExperiment(Experiment, Enum):
         description='Test of validate, with fake data',
         extractor=FakeExtractor,
         model_kwargs={'n_estimators': 10},
+        log_conda_env=False  # True (which is default) is a little slow
     )
 
     test_keras = Experiment(
@@ -35,12 +35,13 @@ class SmallTestExperiment(Experiment, Enum):
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy'],
         scoring=sparse_categorical_accuracy,
+        log_conda_env=False
     )
 
 
 class TestRunOneExperiment:
     def test_fake_experiment(self):
-        res = run_one_experiment(SmallTestExperiment.test_fake_data)
+        res = SmallTestExperiment.test_fake_data._run()
 
         assert 'predictions' in res
         assert 'train_score' in res
@@ -52,5 +53,5 @@ class TestRunOneExperiment:
         assert 'history' in res
 
     def test_keras(self):
-        res = run_one_experiment(SmallTestExperiment.test_keras)
+        res = SmallTestExperiment.test_keras._run()
         assert res['test_score'].mean() > 0

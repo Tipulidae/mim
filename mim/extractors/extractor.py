@@ -9,12 +9,14 @@ from typing import Dict, Tuple, Iterator
 
 
 class Data:
-    def __init__(self, data, index=None, dtype=tf.int64, groups=None):
+    def __init__(self, data, index=None, dtype=tf.int64, fits_in_memory=True,
+                 groups=None):
         self.data = data
         self.dtype = dtype
         self.groups = groups
+        self._fits_in_memory = fits_in_memory
         if index is None:
-            self._index = range(len(data))
+            self._index = np.array(range(len(data)))
         else:
             self._index = index
 
@@ -25,20 +27,25 @@ class Data:
 
     def lazy_slice(self, index):
         new_data = copy(self)
-        new_data._index = [self._index[i] for i in index]
+        new_data._index = np.array([self._index[i] for i in index])
         return new_data
 
     @property
     def index(self):
-        return range(len(self))
+        return np.array(range(len(self)))
 
     @property
     def as_dataset(self):
-        return tf.data.Dataset.from_generator(
-            self,
-            output_types=self.type,
-            output_shapes=self.shape
-        )
+        if self._fits_in_memory:
+            return tf.data.Dataset.from_tensor_slices(
+                self.as_numpy
+            )
+        else:
+            return tf.data.Dataset.from_generator(
+                self,
+                output_types=self.type,
+                output_shapes=self.shape
+            )
 
     @property
     def as_numpy(self):
@@ -51,6 +58,14 @@ class Data:
     @property
     def shape(self):
         return tf.TensorShape(self._shape)
+
+    @property
+    def fits_in_memory(self):
+        return self._fits_in_memory
+
+    @fits_in_memory.setter
+    def fits_in_memory(self, setting):
+        self._fits_in_memory = setting
 
     def __call__(self, *args, **kwargs):
         return self.__iter__()
@@ -67,14 +82,20 @@ class Data:
 
 
 class Container(Data):
-    def __init__(self, data: Dict[str, Data], index=None, **kwargs):
+    def __init__(self, data: Dict[str, Data], index=None, fits_in_memory=None,
+                 **kwargs):
         if not isinstance(data, dict):
             raise TypeError(f"Data must be of type dict (was {type(data)})")
         if len({len(v) for v in data.values()}) != 1:
             raise ValueError("Inconsistent length of constituent Data")
         if index is None:
             index = next(iter(data.values())).index
-        super().__init__(data, index=index, **kwargs)
+        if fits_in_memory is None:
+            fits_in_memory = all([d.fits_in_memory for d in data.values()])
+
+        super().__init__(data, index=index, fits_in_memory=fits_in_memory,
+                         **kwargs)
+        self.fits_in_memory = fits_in_memory
 
     def lazy_slice(self, index):
         return self.__class__(
@@ -101,6 +122,20 @@ class Container(Data):
     @property
     def shape(self):
         return {key: value.shape for key, value in self.data.items()}
+
+    @property
+    def as_numpy(self):
+        return {key: value.as_numpy for key, value in self.data.items()}
+
+    @property
+    def fits_in_memory(self):
+        return self._fits_in_memory
+
+    @fits_in_memory.setter
+    def fits_in_memory(self, setting):
+        self._fits_in_memory = setting
+        for value in self.data.values():
+            value.fits_in_memory = setting
 
     def __getitem__(self, item):
         if item in self.data:
@@ -130,7 +165,7 @@ class ECGData(Data):
 
         if index is None:
             with h5py.File(data, 'r') as f:
-                index = range(len(f[mode]))
+                index = np.array(range(len(f[mode])))
 
         super().__init__(data, index=index, dtype=dtype, **kwargs)
 
@@ -146,11 +181,12 @@ class ECGData(Data):
 
 class Extractor:
     def __init__(self, index=None, features=None, labels=None,
-                 processing=None, cv_kwargs=None):
+                 processing=None, fits_in_memory=True, cv_kwargs=None):
         self.index = index
         self.features = features
         self.labels = labels
         self.processing = processing
+        self.fits_in_memory = fits_in_memory
         self.cv_kwargs = cv_kwargs
 
     def get_data_provider(self, dp_kwargs) -> "DataProvider":
@@ -158,7 +194,7 @@ class Extractor:
 
 
 class DataProvider:
-    def __init__(self, mode, cv_folds, cv_set):
+    def __init__(self, mode="cv", cv_folds=5, cv_set="dev", **kwargs):
         self.mode = mode
         self.cv_folds = cv_folds
         self.cv_set = cv_set
@@ -185,10 +221,9 @@ class DataProvider:
 
 
 class SingleContainerLinearSplitProvider(DataProvider):
-    def __init__(self, container: Container, train_frac: float,
-                 val_frac: float, test_frac: float, **kwargs):
-        super().__init__(mode=kwargs["mode"], cv_folds=kwargs["cv_folds"],
-                         cv_set=kwargs["cv_set"])
+    def __init__(self, container: Container, train_frac: float = 0.5,
+                 val_frac: float = 0.25, test_frac: float = 0.25, **kwargs):
+        super().__init__(**kwargs)
         self.container = container
         assert train_frac + val_frac + test_frac == 1.0
         self.train_frac = train_frac
@@ -217,8 +252,7 @@ class SingleContainerLinearSplitProvider(DataProvider):
 
 class IndividualContainerDataProvider(DataProvider):
     def __init__(self, container_dict: Dict[str, Container], **kwargs):
-        super().__init__(mode=kwargs["mode"], cv_folds=kwargs["cv_folds"],
-                         cv_set=kwargs["cv_set"])
+        super().__init__(**kwargs)
         self.container_dict = container_dict
 
     def get_set(self, name) -> Container:

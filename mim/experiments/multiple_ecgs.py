@@ -24,9 +24,10 @@ class MultipleECG(Experiment, Enum):
         model=basic_cnn,
         model_kwargs={
             'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64
         },
+        epochs=200,
+        batch_size=64,
+        optimizer='sgd',
         extractor=EscTrop,
         extractor_kwargs={
             "features": {
@@ -98,60 +99,3 @@ class MultipleECG(Experiment, Enum):
             }}
         )
     )
-
-    # ESC_R1_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
-    #     description='Baseline CNN model using only current raw ECG signal to'
-    #                 'predict MACE within 30 days.',
-    #     model_kwargs={
-    #         'num_conv_layers': 2,
-    #         'epochs': 1000,
-    #         'batch_size': 64
-    #     },
-    #     features={
-    #         'ecg_mode': 'raw',
-    #         'ecgs': ['index']
-    #     }
-    # )
-    #
-    # FOO = Experiment(
-    #     description='Foo',
-    #     model=basic_cnn,
-    #     model_kwargs={
-    #         'num_conv_layers': 2,
-    #         'dropout': 0.5,
-    #         'filters': 64,
-    #         'kernel_size': 8
-    #     },
-    #     epochs=200,
-    #     batch_size=64,
-    #     optimizer={
-    #         'name': tf.keras.optimizers.Adam,
-    #         'kwargs': {'learning_rate': 1e-4, 'epsilon': 1e-3, }
-    #     },
-    #     # optimizer=Choice([
-    #     #     {
-    #     #         'name': 'Adam',
-    #     #         'kwargs': {'lr': 1e-4, 'epsilon': 1e-3}
-    #     #     },
-    #     #     {
-    #     #         'name': 'SGD',
-    #     #         'kwargs': {'lr': 1e-3}
-    #     #     }
-    #     # ]),
-    #     building_model_requires_development_data=True,
-    #     extractor=EscTrop,
-    #     features={
-    #         'ecg_mode': 'beat',
-    #         'ecgs': ['index']
-    #     },
-    #     index={},
-    #     cv_kwargs={
-    #         'test_size': 0.333
-    #     },
-    #     hold_out_size=0.25,
-    #     scoring=roc_auc_score,
-    # )
-    #
-    # FOO2 = FOO._replace(
-    #     epochs=300
-    # )
