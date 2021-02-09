@@ -2,7 +2,8 @@
 
 import numpy as np
 
-from mim.extractors.extractor import Data, Container, Extractor
+from mim.extractors.extractor import Data, Container, Extractor, \
+    DataProvider, IndividualContainerDataProvider
 import mim.util.ab_util
 from mim.util.ab_util import parse_iso8601_datetime
 
@@ -60,17 +61,26 @@ class JSONDataPoint:
 
 
 class ABJSONExtractor(Extractor):
-    def get_data(self):
-        json_data = _parse_json(self.index)
+    def get_data_provider(self, dp_kwargs) -> DataProvider:
+        d = {
+            "train": self._get_container_from_json(self.index["train"]),
+            "val": self._get_container_from_json(self.index["val"]),
+            "test": self._get_container_from_json(self.index["test"])
+        }
+        dp = IndividualContainerDataProvider(d)
+        return dp
+
+    def _get_container_from_json(self, json_file):
+        json_data = _parse_json(json_file)
         x_container_dict = _extract_x(json_data, self.features)
         y = _get_labels(json_data, self.labels)
-        data = Container(
+        c = Container(
             {
                 "x": Container(x_container_dict, index=range(len(json_data))),
                 "y": Data(y)
             }
         )
-        return data
+        return c
 
 
 def _extract_x(json_data, features):
@@ -110,7 +120,6 @@ def _get_labels(json_data, labels):
                      for d in json_data])
 
 
-def _parse_json(index):
-    file = index["json_train"]
-    data = mim.util.ab_util.load_json(file)
+def _parse_json(json_file):
+    data = mim.util.ab_util.load_json(json_file)
     return data

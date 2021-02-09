@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import h5py
 
-from typing import Dict
+from typing import Dict, Tuple, Generator
 
 
 class Data:
@@ -66,7 +66,7 @@ class Data:
 
 
 class Container(Data):
-    def __init__(self, data: Dict[str, Data],  index=None, **kwargs):
+    def __init__(self, data: Dict[str, Data], index=None, **kwargs):
         if not isinstance(data, dict):
             raise TypeError(f"Data must be of type dict (was {type(data)})")
         if len({len(v) for v in data.values()}) != 1:
@@ -143,13 +143,60 @@ class ECGData(Data):
             return f[self.mode][self._index[item]]
 
 
+class DataProvider:
+    def get_set(self, name) -> Container:
+        raise NotImplementedError
+
+    def train_val_split(self) -> Generator[Tuple[Container, Container], None,
+                                           None]:
+        yield self.get_set("train"), self.get_set("val")
+
+
 class Extractor:
     def __init__(self, index=None, features=None, labels=None,
-                 processing=None):
+                 processing=None, cv_kwargs=None):
         self.index = index
         self.features = features
         self.labels = labels
         self.processing = processing
+        self.cv_kwargs = cv_kwargs
 
-    def get_data(self) -> Data:
+    def get_data_provider(self, dp_kwargs) -> DataProvider:
         raise NotImplementedError
+
+
+class SingleContainerLinearSplitProvider(DataProvider):
+    def __init__(self, container: Container, train_frac: float,
+                 val_frac: float, test_frac: float):
+        self.container = container
+        assert train_frac + val_frac + test_frac == 1.0
+        self.train_frac = train_frac
+        self.val_frac = val_frac
+        self.test_frac = test_frac
+        self.n = len(self.container)
+        self.train_val_point = int(self.n * self.train_frac)
+        self.val_test_point = self.train_val_point + int(self.n*self.val_frac)
+
+    def get_set(self, name) -> Container:
+        if name == "all":
+            return self.container
+        elif name == "train":
+            return self.container.lazy_slice(range(self.train_val_point))
+        elif name == "val":
+            return self.container.lazy_slice(range(self.train_val_point,
+                                                   self.val_test_point))
+        elif name == "test":
+            return self.container.lazy_slice(range(self.val_test_point,
+                                                   self.n))
+        elif name == "dev":
+            return self.container.lazy_slice(range(self.val_test_point))
+        else:
+            print("Throw some error here")
+
+
+class IndividualContainerDataProvider(DataProvider):
+    def __init__(self, container_dict: Dict[str, Container]):
+        self.container_dict = container_dict
+
+    def get_set(self, name) -> Container:
+        return self.container_dict[name]

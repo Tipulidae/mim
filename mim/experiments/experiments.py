@@ -1,15 +1,14 @@
 import os
 from pathlib import Path
-from typing import Any, NamedTuple, Callable
+from typing import Any, NamedTuple, Callable, Dict
 import numpy as np
 import tensorflow as tf
 
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestClassifier
 
 from mim.extractors.extractor import Extractor
-from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
+from mim.cross_validation import DataProvider
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 
@@ -17,11 +16,6 @@ from mim.model_wrapper import Model, KerasWrapper
 class Experiment(NamedTuple):
     description: str
     alias: str = None
-    extractor: Callable[[Any], Extractor] = None
-    index: Any = None
-    features: Any = None
-    labels: Any = None
-    post_processing: Any = None
     model: Any = RandomForestClassifier
     model_kwargs: dict = {}
     building_model_requires_development_data: bool = False
@@ -32,29 +26,35 @@ class Experiment(NamedTuple):
     metrics: Any = ['accuracy', 'auc']
     ignore_callbacks: bool = False
     random_state: int = 123
-    cv: Any = KFold
-    cv_kwargs: dict = {}
     scoring: Any = roc_auc_score
-    hold_out: Any = ChronologicalSplit
-    hold_out_size: float = 0.25
 
-    def get_data(self):
+    extractor: Callable[[Any], Extractor] = None
+    extractor_kwargs: dict = {
+        "index": {},
+        "features": None,
+        "labels": None,
+        "processing": None,
+    }
+    data_provider_kwargs = {
+        "train_frac": 0.50,
+        "val_frac": 0.25,
+        "test_frac": 0.25,
+    }
+
+    def update_dict(self, name, update_dict):
+        d: Dict = self.__getattribute__(name).copy()
+        d.update(update_dict)
+
+    def get_data(self) -> DataProvider:
         """
         Uses the extractor and specifications to create the X and y data
         set.
 
         :return: Data object
         """
-        specification = {
-            'index': self.index,
-            'features': self.features,
-            'labels': self.labels,
-            'processing': self.post_processing,
-        }
-        data = self.extractor(**specification).get_data()
-        splitter = self.hold_out(test_size=self.hold_out_size)
-        develop_index, test_index = next(splitter.split(data))
-        return data.split(develop_index, test_index)
+        extractor = self.extractor(**self.extractor_kwargs)
+        data_provider = extractor.get_data_provider(self.data_provider_kwargs)
+        return data_provider
 
     def get_model(self, train, validation):
         model_kwargs = self.model_kwargs
@@ -103,13 +103,13 @@ class Experiment(NamedTuple):
                 xp_class=self.__class__.__name__,
             )
 
-    @property
-    def cross_validation(self):
-        return CrossValidationWrapper(self.cv, **self.cv_kwargs)
+    # @property
+    # def cross_validation(self, data_provider):
+    #     return CrossValidationWrapper(**self.cv_kwargs)
 
     @property
     def is_binary(self):
-        return self.labels['is_binary']
+        return self.extractor_kwargs["labels"]['is_binary']
 
     @property
     def name(self):

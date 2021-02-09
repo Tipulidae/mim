@@ -1,12 +1,10 @@
 from enum import Enum
 
-import tensorflow as tf
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
 from mim.models.simple_nn import basic_cnn
-from mim.cross_validation import ChronologicalSplit
 
 
 # Here's an attempt at a structure for experiment names:
@@ -30,40 +28,33 @@ class MultipleECG(Experiment, Enum):
             'batch_size': 64
         },
         extractor=EscTrop,
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['index']
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'beat',
+                'ecgs': ['index']
+            },
+            "index": {}
         },
-        index={},
-        cv=ChronologicalSplit,
-        cv_kwargs={
-            'test_size': 0.333
-        },
-        hold_out_size=0.25,
         scoring=roc_auc_score,
     )
 
-    SANITY1 = Experiment(
-        description='Try to predict mace 30 using only the old ecg...',
-        model=basic_cnn,
-        model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64
-        },
-        extractor=EscTrop,
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['old']
-        },
-        index={},
-        cv=ChronologicalSplit,
-        cv_kwargs={
-            'test_size': 0.333
-        },
-        hold_out_size=0.25,
-        scoring=roc_auc_score,
-    )
+    # AB: Shouldn't this jsut be a copy of the above experiment, with the
+    # features changed?
+    # SANITY1 = Experiment(
+    #     description='Try to predict mace 30 using only the old ecg...',
+    #     model=basic_cnn,
+    #     model_kwargs={
+    #         'num_conv_layers': 2,
+    #         'epochs': 200,
+    #         'batch_size': 64
+    #     },
+    #     extractor=EscTrop,
+    #     features={
+    #         'ecg_mode': 'beat',
+    #         'ecgs': ['old']
+    #     },
+    #     scoring=roc_auc_score,
+    # )
 
     ESC_B1_MACE30_BCNN2_V2 = ESC_B1_MACE30_BCNN2_V1._replace(
         model_kwargs={
@@ -82,11 +73,13 @@ class MultipleECG(Experiment, Enum):
             'epochs': 200,
             'batch_size': 64
         },
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['index'],
-            'features': ['age', 'sex']
-        }
+        extractor_kwargs=ESC_B1_MACE30_BCNN2_V1.extractor_kwargs.copy().update(
+            {"features": {
+                'ecg_mode': 'beat',
+                'ecgs': ['index'],
+                'features': ['age', 'sex']
+            }}
+        )
     )
 
     ESC_B2AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
@@ -97,67 +90,68 @@ class MultipleECG(Experiment, Enum):
             'epochs': 200,
             'batch_size': 64
         },
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['index', 'old'],
-            'features': ['age', 'sex']
-        }
+        extractor_kwargs=ESC_B1_MACE30_BCNN2_V1.extractor_kwargs.copy().update(
+            {"features": {
+                'ecg_mode': 'beat',
+                'ecgs': ['index', 'old'],
+                'features': ['age', 'sex']
+            }}
+        )
     )
 
-    ESC_R1_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
-        description='Baseline CNN model using only current raw ECG signal to '
-                    'predict MACE within 30 days.',
-        model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 1000,
-            'batch_size': 64
-        },
-        features={
-            'ecg_mode': 'raw',
-            'ecgs': ['index']
-        }
-    )
-
-    FOO = Experiment(
-        description='Foo',
-        model=basic_cnn,
-        model_kwargs={
-            'num_conv_layers': 2,
-            'dropout': 0.5,
-            'filters': 64,
-            'kernel_size': 8
-        },
-        epochs=200,
-        batch_size=64,
-        optimizer={
-            'name': tf.keras.optimizers.Adam,
-            'kwargs': {'learning_rate': 1e-4, 'epsilon': 1e-3, }
-        },
-        # optimizer=Choice([
-        #     {
-        #         'name': 'Adam',
-        #         'kwargs': {'lr': 1e-4, 'epsilon': 1e-3}
-        #     },
-        #     {
-        #         'name': 'SGD',
-        #         'kwargs': {'lr': 1e-3}
-        #     }
-        # ]),
-        building_model_requires_development_data=True,
-        extractor=EscTrop,
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['index']
-        },
-        index={},
-        cv=ChronologicalSplit,
-        cv_kwargs={
-            'test_size': 0.333
-        },
-        hold_out_size=0.25,
-        scoring=roc_auc_score,
-    )
-
-    FOO2 = FOO._replace(
-        epochs=300
-    )
+    # ESC_R1_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
+    #     description='Baseline CNN model using only current raw ECG signal to'
+    #                 'predict MACE within 30 days.',
+    #     model_kwargs={
+    #         'num_conv_layers': 2,
+    #         'epochs': 1000,
+    #         'batch_size': 64
+    #     },
+    #     features={
+    #         'ecg_mode': 'raw',
+    #         'ecgs': ['index']
+    #     }
+    # )
+    #
+    # FOO = Experiment(
+    #     description='Foo',
+    #     model=basic_cnn,
+    #     model_kwargs={
+    #         'num_conv_layers': 2,
+    #         'dropout': 0.5,
+    #         'filters': 64,
+    #         'kernel_size': 8
+    #     },
+    #     epochs=200,
+    #     batch_size=64,
+    #     optimizer={
+    #         'name': tf.keras.optimizers.Adam,
+    #         'kwargs': {'learning_rate': 1e-4, 'epsilon': 1e-3, }
+    #     },
+    #     # optimizer=Choice([
+    #     #     {
+    #     #         'name': 'Adam',
+    #     #         'kwargs': {'lr': 1e-4, 'epsilon': 1e-3}
+    #     #     },
+    #     #     {
+    #     #         'name': 'SGD',
+    #     #         'kwargs': {'lr': 1e-3}
+    #     #     }
+    #     # ]),
+    #     building_model_requires_development_data=True,
+    #     extractor=EscTrop,
+    #     features={
+    #         'ecg_mode': 'beat',
+    #         'ecgs': ['index']
+    #     },
+    #     index={},
+    #     cv_kwargs={
+    #         'test_size': 0.333
+    #     },
+    #     hold_out_size=0.25,
+    #     scoring=roc_auc_score,
+    # )
+    #
+    # FOO2 = FOO._replace(
+    #     epochs=300
+    # )

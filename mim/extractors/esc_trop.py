@@ -1,9 +1,10 @@
 from mim.massage.esc_trop import make_ed_table, make_troponin_table
-from mim.extractors.extractor import Data, Container, ECGData, Extractor
+from mim.extractors.extractor import Data, Container, ECGData, Extractor, \
+    DataProvider, SingleContainerLinearSplitProvider
 
 
 class EscTrop(Extractor):
-    def get_data(self):
+    def get_data_provider(self, dp_kwargs) -> DataProvider:
         ed = make_ed_table()
         tnt = make_troponin_table()
         ed = ed.join(tnt).reset_index()
@@ -39,4 +40,4 @@ class EscTrop(Extractor):
             index=ed.index
         )
 
-        return data
+        return SingleContainerLinearSplitProvider(data, **dp_kwargs)

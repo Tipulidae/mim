@@ -2,9 +2,10 @@
 
 from enum import Enum
 from sklearn.metrics import roc_auc_score
+from os.path import join
 import tensorflow as tf
 
-from mim.cross_validation import ChronologicalSplit
+from mim.config import GLUCOSE_ROOT
 from mim.experiments.experiments import Experiment
 from mim.extractors.ab_json import ABJSONExtractor
 import mim.models.ab_nn as ab_nn
@@ -17,6 +18,7 @@ class ABGlucose(Experiment, Enum):
         model=ab_nn.ab_simple_lr,
         building_model_requires_development_data=True,
         ignore_callbacks=True,
+        scoring=roc_auc_score,
         model_kwargs={},
         epochs=300,
         batch_size=-1,
@@ -25,16 +27,14 @@ class ABGlucose(Experiment, Enum):
             'kwargs': {'learning_rate': 1}
         },
         extractor=ABJSONExtractor,
-        index={"json_train": "/home/sapfo/andersb/PycharmProjects/Expect/"
-                             "json_data/pontus_glukos/hbg+lund-train.json.gz"
-               },
-        features={
-            "gender",
-            "age",
-            "bl-Glukos", "bl-TnT", "bl-Krea", "bl-Hb"
+        extractor_kwargs={
+            "index": {"train": join(GLUCOSE_ROOT, "hbg+lund-train.json.gz"),
+                      "val": join(GLUCOSE_ROOT, "hbg+lund-dev.json.gz"),
+                      "test": join(GLUCOSE_ROOT, "hbg+lund-test.json.gz")},
+            "features": {"gender",
+                         "age",
+                         "bl-Glukos", "bl-TnT", "bl-Krea", "bl-Hb"},
+            "labels": {"target": "label-index+30d-ami+death-30d"},
+
         },
-        labels={"target": "label-index+30d-ami+death-30d"},
-        cv=ChronologicalSplit,
-        cv_kwargs={"test_size": 0.33},
-        scoring=roc_auc_score
     )

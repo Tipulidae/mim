@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 import tensorflow as tf
 
+from fake_extractors import FakeExtractor
 from mim.extractors.extractor import Data, Container, infer_shape
 
 
@@ -155,3 +156,15 @@ class TestContainer:
             Container([0])
         with pytest.raises(TypeError):
             Container('asdf')
+
+
+class TestFoo:
+
+    def test_fake_extractor(self):
+        n_samples = 100
+        fe = FakeExtractor(**{"index": dict(n_samples=n_samples)})
+        dp_kwargs = {"train_frac": 0.6, "val_frac": 0.2, "test_frac": 0.2}
+        dp = fe.get_data_provider(dp_kwargs)
+        for s in ["train", "val", "test"]:
+            assert len(dp.get_set(s)) == \
+                   int(dp_kwargs[f"{s}_frac"] * n_samples)

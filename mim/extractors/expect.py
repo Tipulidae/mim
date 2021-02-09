@@ -4,7 +4,8 @@ import pandas as pd
 from tensorflow import float64
 from sklearn.preprocessing import OrdinalEncoder
 
-from mim.extractors.extractor import Data, Container, Extractor
+from mim.extractors.extractor import Data, Container, Extractor, \
+    SingleContainerLinearSplitProvider
 
 CHARLSON_FEATURES = [
     "Charlson-AcuteMyocardialInfarction",
@@ -42,7 +43,7 @@ ORDINAL_FEATURES = CHARLSON_FEATURES[:-1] + PREVIOUS_CONDITIONS + ['gender']
 
 
 class Expect(Extractor):
-    def get_data(self):
+    def get_data_provider(self, dp_kwargs):
         data = self._parse_json()
         x = self._extract_features(data)
         y = self._extract_labels(data)
@@ -55,8 +56,7 @@ class Expect(Extractor):
             },
             index=index
         )
-
-        return data
+        return SingleContainerLinearSplitProvider(data, **dp_kwargs)
 
     def _parse_json(self):
         path = '/home/sapfo/andersb/ekg_share/json_data/12tnt/hbg+lund-split/'

@@ -1,7 +1,5 @@
 from enum import Enum
 
-from sklearn.model_selection import KFold
-
 from mim.fakes.fake_extractors import FakeExtractor
 from mim.models.simple_nn import basic_ff
 from mim.metric_wrapper import sparse_categorical_accuracy
@@ -13,23 +11,21 @@ class SmallTestExperiment(Experiment, Enum):
     test_fake_data = Experiment(
         description='Test of validate, with fake data',
         extractor=FakeExtractor,
-        cv=KFold,
-        cv_kwargs={'n_splits': 2},
         model_kwargs={'n_estimators': 10},
     )
 
     test_keras = Experiment(
         description='Test small Keras network using fake data',
         extractor=FakeExtractor,
-        index={
-            'n_samples': 512,
-            'n_features': 128,
-            'n_informative': 100,
-            'n_classes': 10,
-            'random_state': 1111
+        extractor_kwargs={
+            "index": {
+                'n_samples': 512,
+                'n_features': 128,
+                'n_informative': 100,
+                'n_classes': 10,
+                'random_state': 1111
+            },
         },
-        cv=KFold,
-        cv_kwargs={'n_splits': 2},
         model=basic_ff,
         model_kwargs={},
         batch_size=32,

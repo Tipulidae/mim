@@ -1,17 +1,23 @@
 from mim.extractors.extractor import Data
 from mim.fakes.fake_extractors import FakeExtractor
 
+DEFAULT_SPLIT_KWARGS = {"train_frac": 0.6, "val_frac": 0.2, "test_frac": 0.2}
+
 
 def test_data_is_correct_format():
-    data = FakeExtractor().get_data()
+    dp = FakeExtractor().get_data_provider(DEFAULT_SPLIT_KWARGS)
+    data = dp.get_set("all")
     assert isinstance(data, Data)
     assert data['x'].as_numpy.shape == (100, 20)
     assert data['y'].as_numpy.shape == (100,)
 
 
 def test_can_specify_inputs():
-    ext = FakeExtractor(n_samples=10, n_features=5, n_informative=3)
-    data = ext.get_data()
+    ext = FakeExtractor(**{"index": dict(n_samples=10,
+                                         n_features=5,
+                                         n_informative=3)})
+    dp = ext.get_data_provider(DEFAULT_SPLIT_KWARGS)
+    data = dp.get_set("all")
 
     assert data['x'].as_numpy.shape == (10, 5)
 
@@ -21,10 +27,15 @@ def test_can_specify_inputs_like_experiment():
     features = {'foo': 43, 'bar': 999}
     labels = [123]
     processing = {1, 2, 3}
-    data = FakeExtractor(
+    extractors_kwargs = dict(
         index=index,
         features=features,
         labels=labels,
-        processing=processing).get_data()
+        processing=processing
+    )
+    dp = FakeExtractor(**extractors_kwargs).get_data_provider(
+        DEFAULT_SPLIT_KWARGS)
+
+    data = dp.get_set("all")
 
     assert data['x'].as_numpy.shape == (10, 5)

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from mim.experiments.experiments import Experiment
 from .factory import experiment_from_name
 from mim.util.metadata import Metadata
 from mim.util.logs import get_logger
@@ -37,7 +38,7 @@ def run_experiments(experiments, continue_on_error=False):
     log.info('Everything looks good! :)')
 
 
-def run_one_experiment(experiment):
+def run_one_experiment(experiment: Experiment):
     """
     Generate the data from an experiment, split it into training and
     testing sets according to the prescribed cross-validation technique,
@@ -56,9 +57,8 @@ def run_one_experiment(experiment):
              f'{experiment.description}')
     t = time()
 
-    data, hold_out = experiment.get_data()
-    cross_validation = experiment.cross_validation
-    feature_names = None
+    data_provider = experiment.get_data()
+    feature_names = None  # AB: What role does this play?
 
     results = {
         'fit_time': [],
@@ -72,7 +72,11 @@ def run_one_experiment(experiment):
         'history': []
     }
 
-    for train, validation in tqdm(cross_validation.split(data)):
+    # for train, validation in tqdm(cross_validation.split(data)):
+
+    # Extend below to allow for CV instead, parametrize which subset (train,
+    # val etc, as well as K)
+    for train, validation in tqdm(data_provider.train_val_split()):
         result = _validate(
             train,
             validation,
