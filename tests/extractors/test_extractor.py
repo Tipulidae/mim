@@ -163,7 +163,8 @@ class TestFoo:
     def test_fake_extractor(self):
         n_samples = 100
         fe = FakeExtractor(**{"index": dict(n_samples=n_samples)})
-        dp_kwargs = {"train_frac": 0.6, "val_frac": 0.2, "test_frac": 0.2}
+        dp_kwargs = {"train_frac": 0.6, "val_frac": 0.2, "test_frac": 0.2,
+                     "mode": "cv", "cv_folds": 5, "cv_set": "all"}
         dp = fe.get_data_provider(dp_kwargs)
         for s in ["train", "val", "test"]:
             assert len(dp.get_set(s)) == \

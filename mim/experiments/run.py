@@ -76,7 +76,7 @@ def run_one_experiment(experiment: Experiment):
 
     # Extend below to allow for CV instead, parametrize which subset (train,
     # val etc, as well as K)
-    for train, validation in tqdm(data_provider.train_val_split()):
+    for train, validation in tqdm(data_provider.split()):
         result = _validate(
             train,
             validation,

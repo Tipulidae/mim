@@ -1,10 +1,11 @@
 from copy import copy
+from sklearn.model_selection import KFold
 
 import numpy as np
 import tensorflow as tf
 import h5py
 
-from typing import Dict, Tuple, Generator
+from typing import Dict, Tuple, Iterator
 
 
 class Data:
@@ -143,15 +144,6 @@ class ECGData(Data):
             return f[self.mode][self._index[item]]
 
 
-class DataProvider:
-    def get_set(self, name) -> Container:
-        raise NotImplementedError
-
-    def train_val_split(self) -> Generator[Tuple[Container, Container], None,
-                                           None]:
-        yield self.get_set("train"), self.get_set("val")
-
-
 class Extractor:
     def __init__(self, index=None, features=None, labels=None,
                  processing=None, cv_kwargs=None):
@@ -161,13 +153,42 @@ class Extractor:
         self.processing = processing
         self.cv_kwargs = cv_kwargs
 
-    def get_data_provider(self, dp_kwargs) -> DataProvider:
+    def get_data_provider(self, dp_kwargs) -> "DataProvider":
         raise NotImplementedError
+
+
+class DataProvider:
+    def __init__(self, mode, cv_folds, cv_set):
+        self.mode = mode
+        self.cv_folds = cv_folds
+        self.cv_set = cv_set
+
+    def get_set(self, name) -> Container:
+        raise NotImplementedError
+
+    def _get_cv(self, data) -> Iterator[Tuple[Container, Container]]:
+        x = data.index
+        y = data['y'].as_numpy
+        groups = data.groups
+        cv = KFold(n_splits=self.cv_folds)
+        for train, val in cv.split(x, y=y, groups=groups):
+            yield data.split(train, val)
+
+    def split(self) -> Iterator[Tuple[Container, Container]]:
+        if self.mode == "cv":
+            return self._get_cv(self.get_set(self.cv_set))
+        elif self.mode == "train_val":
+            return self.train_val_split()
+
+    def train_val_split(self) -> Iterator[Tuple[Container, Container]]:
+        yield self.get_set("train"), self.get_set("val")
 
 
 class SingleContainerLinearSplitProvider(DataProvider):
     def __init__(self, container: Container, train_frac: float,
-                 val_frac: float, test_frac: float):
+                 val_frac: float, test_frac: float, **kwargs):
+        super().__init__(mode=kwargs["mode"], cv_folds=kwargs["cv_folds"],
+                         cv_set=kwargs["cv_set"])
         self.container = container
         assert train_frac + val_frac + test_frac == 1.0
         self.train_frac = train_frac
@@ -195,7 +216,9 @@ class SingleContainerLinearSplitProvider(DataProvider):
 
 
 class IndividualContainerDataProvider(DataProvider):
-    def __init__(self, container_dict: Dict[str, Container]):
+    def __init__(self, container_dict: Dict[str, Container], **kwargs):
+        super().__init__(mode=kwargs["mode"], cv_folds=kwargs["cv_folds"],
+                         cv_set=kwargs["cv_set"])
         self.container_dict = container_dict
 
     def get_set(self, name) -> Container:

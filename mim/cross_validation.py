@@ -15,11 +15,11 @@ log = get_logger('Cross Validation')
 #             yield data.split(train, val)
 
 
-class DataProvider:
-
-    def train_val_split(self):
-        raise NotImplementedError
-
+# class DataProvider:
+#
+#     def train_val_split(self):
+#         raise NotImplementedError
+#
 
 # class ChronologicalSplit:
 #     def __init__(self, test_size=0.5):

@@ -160,19 +160,6 @@ class Presenter:
 
         return True
 
-    def _has_same_date_range(self, ts):
-        first = self._get_validation_dates(ts[0])
-        for t in ts:
-            if len(self._get_validation_dates(t)) != len(first):
-                return False
-
-        return True
-
-    def _get_validation_dates(self, test_name):
-        # cv = self.experiments[test_name].cross_validation
-        log.debug(test_name)
-        return range(5)  # XXX: need to fix this.
-
     def _is_loaded(self, ts):
         for t in ts:
             if not (self._is_valid_test_case(t) and self.results[t]):

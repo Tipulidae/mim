@@ -1,7 +1,8 @@
 import mim.model_wrapper as mw
 from mim.fakes.fake_extractors import FakeExtractor
 
-DEFAULT_SPLIT_KWARGS = {"train_frac": 0.6, "val_frac": 0.2, "test_frac": 0.2}
+DEFAULT_SPLIT_KWARGS = {"train_frac": 0.6, "val_frac": 0.2, "test_frac": 0.2,
+                        "mode": "cv", "cv_folds": 5, "cv_set": "all"}
 
 
 class TestModel:

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, NamedTuple, Callable, Dict
+from typing import Any, NamedTuple, Callable
 import numpy as np
 import tensorflow as tf
 
@@ -8,7 +8,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 
 from mim.extractors.extractor import Extractor
-from mim.cross_validation import DataProvider
+from mim.extractors.extractor import DataProvider
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 
@@ -39,11 +39,10 @@ class Experiment(NamedTuple):
         "train_frac": 0.50,
         "val_frac": 0.25,
         "test_frac": 0.25,
+        "mode": 'cv',  # cv, train_val, dev_test, ...
+        "cv_folds": 5,
+        "cv_set": 'dev'
     }
-
-    def update_dict(self, name, update_dict):
-        d: Dict = self.__getattribute__(name).copy()
-        d.update(update_dict)
 
     def get_data(self) -> DataProvider:
         """
