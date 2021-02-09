@@ -169,9 +169,9 @@ class Presenter:
         return True
 
     def _get_validation_dates(self, test_name):
-        cv = self.experiments[test_name].cross_validation
+        # cv = self.experiments[test_name].cross_validation
         log.debug(test_name)
-        return range(cv.n_splits)
+        return range(5)  # XXX: need to fix this.
 
     def _is_loaded(self, ts):
         for t in ts:
