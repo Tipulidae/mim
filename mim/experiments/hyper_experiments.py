@@ -148,3 +148,43 @@ class HyperSearch(HyperExperiment, Enum):
             'iterations': 1000
         }
     )
+
+    ConvParams = HyperExperiment(
+        template=Experiment(
+            description="Experiment using very simple cnn, testing different "
+                        "filters, kernel sizes and pool sizes.",
+            extractor=EscTrop,
+            features={
+                'ecg_mode': 'beat',
+                'ecgs': ['index']
+            },
+            index={},
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 0.333
+            },
+            hold_out_size=0.25,
+            model=super_basic_cnn,
+            building_model_requires_development_data=True,
+            optimizer={
+                'name': tf.keras.optimizers.Adam,
+                'kwargs': {'learning_rate': 3e-4}
+            },
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            epochs=400,
+            random_state=hp.Int(0, 1000000000),
+            batch_size=hp.Choice([128, 256]),
+            model_kwargs={
+                'dropout': 0.3,
+                'filters': hp.Choice([8, 16, 32, 64, 128]),
+                'kernel_size': hp.Choice([4, 8, 16, 32, 64]),
+                'pool_size': hp.Choice([2, 3, 4, 5, 6, 7, 8, 9, 10])
+            },
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 1000
+        }
+    )
