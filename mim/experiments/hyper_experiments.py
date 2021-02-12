@@ -6,7 +6,7 @@ import tensorflow as tf
 import mim.experiments.hyper_parameter as hp
 from mim.experiments.experiments import Experiment
 from mim.experiments.search_strategies import Hyperband, RandomSearch
-from mim.models.simple_nn import basic_cnn3, super_basic_cnn
+from mim.models.simple_nn import basic_cnn3, super_basic_cnn, sequential_cnn
 from mim.extractors.esc_trop import EscTrop
 from mim.cross_validation import ChronologicalSplit
 from mim.util.logs import get_logger
@@ -186,5 +186,93 @@ class HyperSearch(HyperExperiment, Enum):
         strategy=RandomSearch,
         strategy_kwargs={
             'iterations': 1000
+        }
+    )
+
+    RawMultiLayer = HyperExperiment(
+        template=Experiment(
+            description="Testing ",
+            extractor=EscTrop,
+            features={
+                'ecg_mode': 'raw',
+                'ecgs': ['index']
+            },
+            index={},
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 0.333
+            },
+            hold_out_size=0.25,
+            model=sequential_cnn,
+            building_model_requires_development_data=True,
+            optimizer={
+                'name': tf.keras.optimizers.Adam,
+                'kwargs': {'learning_rate': 1e-4}
+            },
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            epochs=400,
+            random_state=hp.Int(0, 1000000000),
+            batch_size=128,
+            model_kwargs={
+                'dropout': 0.4,
+                'filter_first': hp.Choice([16, 32, 64]),
+                'filter_last': hp.Choice([16, 32, 64]),
+                'kernel_first': hp.Choice([5, 15, 31]),
+                'kernel_last': hp.Choice([5, 15, 31]),
+                'num_layers': hp.Choice([2, 3, 4]),
+                'dense': hp.Choice([True, False]),
+                'batch_norm': hp.Choice([True, False])
+            },
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 200
+        }
+    )
+
+    RawMultiLayerHyperband = HyperExperiment(
+        template=Experiment(
+            description="",
+            extractor=EscTrop,
+            features={
+                'ecg_mode': 'raw',
+                'ecgs': ['index']
+            },
+            index={},
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 0.333
+            },
+            hold_out_size=0.25,
+            model=sequential_cnn,
+            building_model_requires_development_data=True,
+            optimizer={
+                'name': tf.keras.optimizers.Adam,
+                'kwargs': {'learning_rate': 1e-4}
+            },
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            epochs=0,
+            random_state=hp.Int(0, 1000000000),
+            batch_size=128,
+            model_kwargs={
+                'dropout': hp.Choice([0.2, 0.3, 0.4, 0.5]),
+                'filter_first': hp.Int(16, 64),
+                'filter_last': hp.Int(16, 64),
+                'kernel_first': hp.Int(5, 31, step=2),
+                'kernel_last': hp.Int(5, 31, step=2),
+                'num_layers': hp.Choice([2, 3, 4]),
+                'dense': True,
+                'batch_norm': False
+            },
+        ),
+        random_seed=42,
+        strategy=Hyperband,
+        strategy_kwargs={
+            'iterations': 100,
+            'maximum_resource': 50,
+            'resource_unit': 10
         }
     )

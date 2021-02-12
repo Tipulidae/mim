@@ -23,13 +23,21 @@ class MultipleECG(Experiment, Enum):
     ESC_B1_MACE30_BCNN2_V1 = Experiment(
         description='Baseline CNN model using only current ECG median beat to '
                     'predict MACE within 30 days.',
-        model=basic_cnn,
+        model=super_basic_cnn,
         model_kwargs={
-            'num_conv_layers': 2,
+            'dropout': 0.3,
+            'filters': 32,
+            'kernel_size': 16,
+            'pool_size': 8,
+            'dense': True
         },
         epochs=200,
-        batch_size=64,
-        optimizer='sgd',
+        batch_size=128,
+        building_model_requires_development_data=True,
+        optimizer={
+            'name': tf.keras.optimizers.Adam,
+            'kwargs': {'learning_rate': 3e-4},
+        },
         extractor=EscTrop,
         features={
             'ecg_mode': 'beat',
@@ -42,7 +50,29 @@ class MultipleECG(Experiment, Enum):
         },
         hold_out_size=0.25,
         scoring=roc_auc_score,
-        building_model_requires_development_data=True
+    )
+
+    ESC_B1_MACE30_BCNN2_V2 = ESC_B1_MACE30_BCNN2_V1._replace(
+        description='Trying without dense layer at the end',
+        model_kwargs={
+            'dropout': 0.3,
+            'filters': 32,
+            'kernel_size': 16,
+            'pool_size': 8,
+            'dense': False
+        },
+    )
+
+    ESC_B1_MACE30_BCNN2_V3 = ESC_B1_MACE30_BCNN2_V1._replace(
+        description='Trying with dense and relu activation',
+        model_kwargs={
+            'dropout': 0.3,
+            'filters': 32,
+            'kernel_size': 16,
+            'pool_size': 8,
+            'dense': True,
+            'dense_activation': 'relu'
+        },
     )
 
     SANITY1 = Experiment(

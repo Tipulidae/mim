@@ -1,6 +1,7 @@
 import os
 import math
 
+import numpy as np
 from tensorflow import keras
 from tensorflow.keras.layers import (
     Input,
@@ -8,6 +9,7 @@ from tensorflow.keras.layers import (
     Flatten,
     Conv1D,
     MaxPool1D,
+    AveragePooling1D,
     Dropout,
     BatchNormalization,
     Concatenate,
@@ -17,7 +19,8 @@ from tensorflow.keras.layers import (
 
 
 def super_basic_cnn(train, validation=None, dropout=0, filters=32,
-                    kernel_size=16, pool_size=8):
+                    kernel_size=16, pool_size=8, dense=False,
+                    dense_activation=None):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     m = 4.057771e-05
     s = 0.0001882498
@@ -40,8 +43,48 @@ def super_basic_cnn(train, validation=None, dropout=0, filters=32,
     x = ReLU()(x)
     x = MaxPool1D(pool_size=pool_size)(x)
     x = Dropout(dropout)(x)
+    x = Flatten()(x)
+
+    if dense:
+        x = Dense(10, activation=dense_activation)(x)
+        x = Dropout(dropout)(x)
+
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
+
+
+def sequential_cnn(train, validation=None, dropout=0, filter_first=16,
+                   filter_last=16, kernel_first=5, kernel_last=5, num_layers=2,
+                   dense=True, batch_norm=True):
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    # m = 4.057771e-05
+    # s = 0.0001882498
+    m = 7.1811132e-06
+    s = 0.0002694354
+    x = inp['ecg']
+    x = Lambda(lambda v: (v - m) / s)(x)
+    x = AveragePooling1D(2, padding='same')(x)
+
+    pool_size = math.floor(500 ** (1 / num_layers))
+    filters = map(round, np.linspace(filter_first, filter_last, num_layers))
+    kernels = map(round, np.linspace(kernel_first, kernel_last, num_layers))
+    for filter_size, kernel_size in zip(filters, kernels):
+        x = Conv1D(
+            filters=filter_size,
+            kernel_size=kernel_size,
+            kernel_regularizer="l2",
+            padding='same')(x)
+        if batch_norm:
+            x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = MaxPool1D(pool_size=pool_size)(x)
+        x = Dropout(dropout)(x)
 
     x = Flatten()(x)
+    if dense:
+        x = Dense(10, activation='relu')(x)
+        x = Dropout(dropout)(x)
+
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
 

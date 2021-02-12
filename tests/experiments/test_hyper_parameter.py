@@ -2,7 +2,10 @@ import mim.experiments.hyper_parameter as hp
 
 
 class FakeRandom:
-    def randint(self, a, b):
+    def randint(self, a, b, step=1):
+        return a
+
+    def randrange(self, a, b, step=1):
         return a
 
     def uniform(self, a, b):
