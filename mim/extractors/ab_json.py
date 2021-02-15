@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
+from typing import List
 
 import numpy as np
+import tensorflow as tf
 
-from mim.extractors.extractor import Data, Container, Extractor, \
-    DataProvider, IndividualContainerDataProvider
+from mim.extractors.extractor import (
+    Data,
+    Container,
+    Extractor,
+    DataProvider,
+    IndividualContainerDataProvider
+)
+from mim.massage.ecg import ECG
 import mim.util.ab_util
 from mim.util.ab_util import parse_iso8601_datetime
 
@@ -12,6 +20,7 @@ NUMERICAL_FEATURES = ["age"] + ["bl-" + sample
                                 for sample in
                                 ["Glukos", "Krea", "TnT", "Hb"]
                                 ]
+ECG_FEATURES = ["ecg_raw_12", "ecg_raw_8", "ecg_beat_12", "ecg_beat_8"]
 
 
 class JSONDataPoint:
@@ -83,6 +92,56 @@ class ABJSONExtractor(Extractor):
         return c
 
 
+class LazyECGsFromFiles(Data):
+
+    def __init__(self, key, filenames: List, caching=True):
+        self.filenames = filenames
+        self.cache = {} if caching else None
+        _, s, n = key.split("_", 2)
+        self.last_lead = 8 if n == "8" else 12
+        super().__init__(data=filenames, index=list(range(len(filenames))),
+                         dtype=tf.float32, fits_in_memory=True)
+        if s == "raw":
+            self.raw_signal = True
+            self._shape = [10000, self.last_lead]
+        else:
+            self.raw_signal = False
+            self._shape = [1200, self.last_lead]
+
+    def _load(self, filename):
+        ecg = ECG(filename)
+        if self.raw_signal:
+            matrix = ecg.ecg_dict["Data"]["ECG"][0][0][:10000, :self.last_lead]
+        else:
+            matrix = ecg.ecg_dict["Data"]["Beat"][0][0][:1200, :self.last_lead]
+        return matrix
+
+    def _cached(self, item):
+        if item in self.cache:
+            return self.cache[item]
+        else:
+            ecg = self._load(self.filenames[item])
+            self.cache[item] = ecg
+            return ecg
+
+    def __getitem__(self, item):
+        if self.cache is not None:
+            return self._cached(self._index[item])
+        else:
+            return self._load(self.filenames[self._index[item]])
+
+    @property
+    def cache_size(self):
+        if self.cache is not None:
+            return len(self.cache)
+        else:
+            return 0
+
+    def clear_cache(self):
+        if self.cache is not None:
+            self.cache.clear()
+
+
 def _extract_x(json_data, features):
     r = {}
     print(features)
@@ -90,6 +149,7 @@ def _extract_x(json_data, features):
         features).intersection(NUMERICAL_FEATURES)))
     categorical_keys = sorted(list(set(
         features).intersection(CATEGORICAL_FEATURES)))
+    ecg_keys = sorted(list(set(features).intersection(ECG_FEATURES)))
     dps = list(map(JSONDataPoint, json_data))
     if numerical_keys:
         print(numerical_keys)
@@ -102,6 +162,9 @@ def _extract_x(json_data, features):
         r["categorical"] = Data(
             np.array([_get_categorical(dp, categorical_keys) for dp in dps])
         )
+    if ecg_keys:
+        assert len(ecg_keys) == 1
+
     return r
 
 
