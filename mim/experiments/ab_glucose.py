@@ -12,20 +12,10 @@ import mim.models.ab_nn as ab_nn
 
 
 class ABGlucose(Experiment, Enum):
-    KERAS_LR_BLOOD_BL = Experiment(
-        description="Log Reg baseline with Keras, using age, "
-                    "gender, + 4 blood samples",
-        model=ab_nn.ab_simple_lr,
-        building_model_requires_development_data=True,
-        ignore_callbacks=True,
+
+    _BASE = Experiment(
+        description="Abstract. Don't run me.",
         scoring=roc_auc_score,
-        model_kwargs={},
-        epochs=300,
-        batch_size=-1,
-        optimizer={
-            'name': tf.keras.optimizers.SGD,
-            'kwargs': {'learning_rate': 1}
-        },
         extractor=ABJSONExtractor,
         extractor_kwargs={
             "index": {"train": join(GLUCOSE_ROOT, "hbg+lund-train.json.gz"),
@@ -35,8 +25,29 @@ class ABGlucose(Experiment, Enum):
                          "age",
                          "bl-Glukos", "bl-TnT", "bl-Krea", "bl-Hb"},
             "labels": {"target": "label-index+30d-ami+death-30d"},
+        }
+    )
+
+    KERAS_LR_BLOOD_BL = _BASE._replace(
+        description="Log Reg baseline with Keras, using age, "
+                    "gender, + 4 blood samples",
+        model=ab_nn.ab_simple_lr,
+        building_model_requires_development_data=True,
+        ignore_callbacks=False,
+        model_kwargs={},
+        epochs=300,
+        batch_size=-1,
+        optimizer={
+            'name': tf.keras.optimizers.SGD,
+            'kwargs': {'learning_rate': 1}
         },
         data_provider_kwargs={
             "mode": "train_val"
         }
+    )
+
+    TEMP = KERAS_LR_BLOOD_BL._replace(
+        description="Foo",
+        ignore_callbacks=False,
+        epochs=10
     )
