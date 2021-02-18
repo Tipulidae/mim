@@ -24,7 +24,7 @@ ECG_FEATURES = ["ecg_raw_12", "ecg_raw_8", "ecg_beat_12", "ecg_beat_8"]
 
 
 class JSONDataPoint:
-    def __init__(self, m, ecg=None):
+    def __init__(self, m):
         (self.is_female, self.is_male) = (1, 0) if m["gender"] == "Female" \
             else (0, 1)
         (tnt1, tnt2, tnt_time_delta_seconds) = self.extract_tnts(m)
@@ -50,10 +50,11 @@ class JSONDataPoint:
                 self.reals_absolute["bl-" + key] = value
         if "ecg" in m and m["ecg"] is not None:
             self.ecg_timestamp = parse_iso8601_datetime(m["ecg"][0])
-            self.ecg = ecg
+#            self.ecg = ecg
+            self.ecg_path = m["ecg"][1]
         else:
             self.ecg_timestamp = None
-            self.ecg = None
+#            self.ecg = None
 
     @staticmethod
     def extract_tnts(m):
@@ -164,6 +165,8 @@ def _extract_x(json_data, features):
         )
     if ecg_keys:
         assert len(ecg_keys) == 1
+        files = [dp.ecg_path for dp in dps]
+        r["ecg"] = LazyECGsFromFiles(ecg_keys[0], files)
 
     return r
 
