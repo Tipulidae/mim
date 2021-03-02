@@ -8,6 +8,7 @@ from mim.experiments.experiments import Experiment
 from mim.experiments.search_strategies import Hyperband, RandomSearch
 from mim.models.simple_nn import basic_cnn3, super_basic_cnn
 from mim.extractors.esc_trop import EscTrop
+from mim.cross_validation import ChronologicalSplit
 from mim.util.logs import get_logger
 from mim.util.util import callable_to_string
 
@@ -55,14 +56,18 @@ class HyperSearch(HyperExperiment, Enum):
             description="Experiment using variations of a basic CNN for "
                         "predicing MACE using a single ECG record.",
             extractor=EscTrop,
-            features={
-                'ecg_mode': 'beat',
-                'ecgs': ['index']
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'beat',
+                    'ecgs': ['index']
+                },
+                'index': {},
             },
-            index={},
 
             model=basic_cnn3,
             building_model_requires_development_data=True,
+            cv=ChronologicalSplit,
+            cv_kwargs={'test_size': 1 / 3},
             optimizer={
                 'name': hp.Choice([
                     tf.keras.optimizers.Adam,
@@ -106,13 +111,17 @@ class HyperSearch(HyperExperiment, Enum):
             description="Experiment using very simple cnn, testing different "
                         "learning rates, batch sizes and dropout rates.",
             extractor=EscTrop,
-            features={
-                'ecg_mode': 'beat',
-                'ecgs': ['index']
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'beat',
+                    'ecgs': ['index']
+                },
+                'index': {},
             },
-            index={},
             model=super_basic_cnn,
             building_model_requires_development_data=True,
+            cv=ChronologicalSplit,
+            cv_kwargs={'test_size': 1 / 3},
             optimizer={
                 'name': tf.keras.optimizers.Adam,
                 'kwargs': {
@@ -143,13 +152,17 @@ class HyperSearch(HyperExperiment, Enum):
             description="Experiment using very simple cnn, testing different "
                         "filters, kernel sizes and pool sizes.",
             extractor=EscTrop,
-            features={
-                'ecg_mode': 'beat',
-                'ecgs': ['index']
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'beat',
+                    'ecgs': ['index']
+                },
+                'index': {},
             },
-            index={},
             model=super_basic_cnn,
             building_model_requires_development_data=True,
+            cv=ChronologicalSplit,
+            cv_kwargs={'test_size': 1 / 3},
             optimizer={
                 'name': tf.keras.optimizers.Adam,
                 'kwargs': {'learning_rate': 3e-4}

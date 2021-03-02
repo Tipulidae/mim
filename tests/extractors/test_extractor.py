@@ -4,12 +4,12 @@ import numpy as np
 import tensorflow as tf
 
 import mim.config
-from mim.fakes.fake_extractors import FakeExtractor
 from mim.extractors.extractor import Data, Container, infer_shape
 from mim.extractors.ab_json import LazyECGsFromFiles
-from mim.fakes.generate_fake_carlsson_ecg import \
-    filename_generator as fake_carlsson_ecg_filename_generator, \
+from mim.fakes.generate_fake_carlsson_ecg import (
+    filename_generator as fake_carlsson_ecg_filename_generator,
     N_FILES as N_FAKE_ECG_FILES
+)
 
 
 class TestData:
@@ -122,6 +122,12 @@ class TestData:
     def test_dataset_has_correct_type(self):
         pass
 
+    def test_predefined_folds(self):
+        x = Data([1, 2, 3, 4, 5], predefined_splits=[0, 0, 1, 1, 1])
+
+        assert x.predefined_splits == [0, 0, 1, 1, 1]
+        assert x.lazy_slice([3, 2, 1, 0]).predefined_splits == [1, 1, 0, 0]
+
 
 class TestInferShape:
     def test_shape_ignores_first_dimension(self):
@@ -162,18 +168,23 @@ class TestContainer:
         with pytest.raises(TypeError):
             Container('asdf')
 
+    def test_attributes_are_not_reset_after_lazy_slice(self):
+        data_dict = {
+            'x': Data([1, 2, 3]),
+            'y': Data([2, 3, 4])
+        }
+        container = Container(data_dict, fits_in_memory=False)
 
-class TestFoo:
+        assert container.fits_in_memory is False
+        assert container.lazy_slice([1, 0, 0, 0]).fits_in_memory is False
 
-    def test_fake_extractor(self):
-        n_samples = 100
-        fe = FakeExtractor(**{"index": dict(n_samples=n_samples)})
-        dp_kwargs = {"train_frac": 0.6, "val_frac": 0.2, "test_frac": 0.2,
-                     "mode": "cv", "cv_folds": 5, "cv_set": "all"}
-        dp = fe.get_data_provider(dp_kwargs)
-        for s in ["train", "val", "test"]:
-            assert len(dp.get_set(s)) == \
-                   int(dp_kwargs[f"{s}_frac"] * n_samples)
+        container = Container(data_dict, fits_in_memory=True)
+        assert container.fits_in_memory is True
+        assert container.lazy_slice([1, 0, 0, 0]).fits_in_memory is True
+
+        container = Container(data_dict, predefined_splits=[-1, -1, 0, 0])
+        assert container.predefined_splits == [-1, -1, 0, 0]
+        assert container.lazy_slice([1, 2, 0]).predefined_splits == [-1, 0, -1]
 
 
 class TestECGMatLabData:

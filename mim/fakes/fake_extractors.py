@@ -1,8 +1,7 @@
 from sklearn.datasets import make_classification
 from tensorflow import float64
 
-from mim.extractors.extractor import Container, Data, Extractor, \
-    DataProvider, SingleContainerLinearSplitProvider
+from mim.extractors.extractor import Container, Data, Extractor
 
 
 class FakeExtractor(Extractor):
@@ -13,18 +12,16 @@ class FakeExtractor(Extractor):
         else:
             self.mc_kwargs = {}
 
-    def get_data_provider(self, dp_kwargs) -> DataProvider:
+    def get_data(self) -> Container:
         x, y = make_classification(**self.mc_kwargs)
         index = range(len(x))
         x = Data(x, index=index, dtype=float64)
         y = Data(y, index=index, dtype=float64)
-        # c = Container.from_dict({'x': x, 'y': y})
-        c = Container({'x': x, 'y': y})
-        return SingleContainerLinearSplitProvider(c, **dp_kwargs)
+        return Container({'x': x, 'y': y})
 
 
 class FakeECG(Extractor):
-    def get_data_provider(self, dp_kwargs) -> DataProvider:
+    def get_data(self,) -> Container:
         rows, cols = self.index['shape']
         n_features = rows * cols
         n_samples = self.index['n_samples']
@@ -45,4 +42,4 @@ class FakeECG(Extractor):
             'y': Data(y)
         })
 
-        return SingleContainerLinearSplitProvider(c, **dp_kwargs)
+        return c

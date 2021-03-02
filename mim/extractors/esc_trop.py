@@ -1,10 +1,10 @@
 from mim.massage.esc_trop import make_ed_table, make_troponin_table
-from mim.extractors.extractor import Data, Container, ECGData, Extractor, \
-    DataProvider, SingleContainerLinearSplitProvider
+from mim.extractors.extractor import Data, Container, ECGData, Extractor
+from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
 
 
 class EscTrop(Extractor):
-    def get_data_provider(self, dp_kwargs) -> DataProvider:
+    def get_data(self) -> Container:
         ed = make_ed_table()
         tnt = make_troponin_table()
         ed = ed.join(tnt).reset_index()
@@ -47,4 +47,8 @@ class EscTrop(Extractor):
             fits_in_memory=self.fits_in_memory
         )
 
-        return SingleContainerLinearSplitProvider(data, **dp_kwargs)
+        hold_out_splitter = CrossValidationWrapper(
+            ChronologicalSplit(test_size=1/4)
+        )
+        dev, _ = next(hold_out_splitter.split(data))
+        return dev

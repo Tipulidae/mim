@@ -5,6 +5,7 @@ from sklearn.metrics import roc_auc_score
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
 from mim.models.simple_nn import basic_cnn
+from mim.cross_validation import ChronologicalSplit
 
 
 # Here's an attempt at a structure for experiment names:
@@ -36,7 +37,14 @@ class MultipleECG(Experiment, Enum):
             },
             "index": {}
         },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
         scoring=roc_auc_score,
+    )
+
+    FOO = ESC_B1_MACE30_BCNN2_V1._replace(
+        description='Foo'
     )
 
     # AB: Shouldn't this jsut be a copy of the above experiment, with the
