@@ -12,22 +12,19 @@ from tensorflow.keras.layers import (
     BatchNormalization,
     Concatenate,
     ReLU,
-    Lambda,
 )
 
 
 def super_basic_cnn(train, validation=None, dropout=0, filters=32,
-                    kernel_size=16, pool_size=8):
+                    kernel_size=16, pool_size=8, hidden_size=10):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
-    m = 4.057771e-05
-    s = 0.0001882498
     x = inp['ecg']
-    x = Lambda(lambda v: (v - m) / s)(x)
     x = Conv1D(
         filters=filters,
         kernel_size=kernel_size,
         kernel_regularizer="l2",
         padding='same')(x)
+    x = BatchNormalization()(x)
     x = ReLU()(x)
     x = MaxPool1D(pool_size=pool_size)(x)
     x = Dropout(dropout)(x)
@@ -37,17 +34,21 @@ def super_basic_cnn(train, validation=None, dropout=0, filters=32,
         kernel_size=kernel_size,
         kernel_regularizer="l2",
         padding='same')(x)
+    x = BatchNormalization()(x)
     x = ReLU()(x)
     x = MaxPool1D(pool_size=pool_size)(x)
     x = Dropout(dropout)(x)
 
     x = Flatten()(x)
+    x = Dense(hidden_size, activation="relu")(x)
+    x = Dropout(dropout)(x)
+
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
 
 
 def basic_cnn2(train, validation=None, dropout=0, layers=None,
-               hidden_layer=None):
+               hidden_layer=None, batch_norm=True):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     x = inp['ecg']
     for layer in layers:
@@ -56,7 +57,9 @@ def basic_cnn2(train, validation=None, dropout=0, layers=None,
             kernel_size=layer['kernel_size'],
             kernel_regularizer="l2",
             padding='same')(x)
-        x = BatchNormalization()(x)
+        if batch_norm:
+            x = BatchNormalization()(x)
+
         x = ReLU()(x)
         x = MaxPool1D(pool_size=2)(x)
         x = Dropout(dropout)(x)
@@ -99,7 +102,7 @@ def basic_cnn3(train, validation=None, dropout=0, layers=None,
 
 
 def basic_cnn(train, validation=None, num_conv_layers=2, dropout=0.3,
-              filters=32, kernel_size=16):
+              filters=32, kernel_size=16, pool_size=16, hidden_size=10):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     layers = []
     if 'ecg' in inp:
@@ -109,7 +112,9 @@ def basic_cnn(train, validation=None, num_conv_layers=2, dropout=0.3,
                 num_conv_layers,
                 dropout=dropout,
                 filters=filters,
-                kernel_size=kernel_size
+                kernel_size=kernel_size,
+                pool_size=pool_size,
+                output_size=hidden_size
             )
         )
     if 'old_ecg' in inp:
@@ -119,7 +124,9 @@ def basic_cnn(train, validation=None, num_conv_layers=2, dropout=0.3,
                 num_conv_layers,
                 dropout=dropout,
                 filters=filters,
-                kernel_size=kernel_size
+                kernel_size=kernel_size,
+                pool_size=pool_size,
+                output_size=hidden_size
             )
         )
     if 'features' in inp:
@@ -127,6 +134,7 @@ def basic_cnn(train, validation=None, num_conv_layers=2, dropout=0.3,
 
     if len(layers) > 1:
         x = Concatenate()(layers)
+        x = Dense(10, activation='relu')(x)
     else:
         x = layers[0]
 
@@ -134,21 +142,22 @@ def basic_cnn(train, validation=None, num_conv_layers=2, dropout=0.3,
     return keras.Model(inp, output)
 
 
-def _ecg_network(ecg, num_conv_layers, dropout=0.2, filters=32,
-                 kernel_size=16):
-    ecg = BatchNormalization()(ecg)
+def _ecg_network(x, num_conv_layers, dropout=0.3, filters=32,
+                 kernel_size=16, output_size=10, pool_size=16):
     for _ in range(num_conv_layers):
-        ecg = Conv1D(
+        x = Conv1D(
             filters=filters,
             kernel_size=kernel_size,
             kernel_regularizer="l2",
-            padding='same')(ecg)
-        ecg = BatchNormalization()(ecg)
-        ecg = ReLU()(ecg)
-        ecg = MaxPool1D(pool_size=16)(ecg)
-        ecg = Dropout(dropout)(ecg)
+            padding='same')(x)
+        x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = MaxPool1D(pool_size=pool_size)(x)
+        x = Dropout(dropout)(x)
 
-    return Flatten()(ecg)
+    x = Flatten()(x)
+    x = Dense(output_size, activation="relu")(x)
+    return Dropout(dropout)(x)
 
 
 def basic_ff():

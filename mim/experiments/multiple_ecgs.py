@@ -1,5 +1,6 @@
 from enum import Enum
 
+from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
@@ -19,23 +20,30 @@ from mim.cross_validation import ChronologicalSplit
 
 
 class MultipleECG(Experiment, Enum):
-    ESC_B1_MACE30_BCNN2_V1 = Experiment(
+    BASELINE_BEAT = Experiment(
         description='Baseline CNN model using only current ECG median beat to '
                     'predict MACE within 30 days.',
         model=basic_cnn,
         model_kwargs={
             'num_conv_layers': 2,
+            'dropout': 0.3,
+            'filters': 32,
+            'kernel_size': 16,
+            'pool_size': 16,
+            'hidden_size': 10
         },
         epochs=200,
         batch_size=64,
-        optimizer='sgd',
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-4}
+        },
         extractor=EscTrop,
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'beat',
                 'ecgs': ['index']
             },
-            "index": {}
         },
         building_model_requires_development_data=True,
         cv=ChronologicalSplit,
@@ -43,67 +51,70 @@ class MultipleECG(Experiment, Enum):
         scoring=roc_auc_score,
     )
 
-    FOO = ESC_B1_MACE30_BCNN2_V1._replace(
-        description='Foo'
-    )
-
-    # AB: Shouldn't this jsut be a copy of the above experiment, with the
-    # features changed?
-    # SANITY1 = Experiment(
-    #     description='Try to predict mace 30 using only the old ecg...',
-    #     model=basic_cnn,
-    #     model_kwargs={
-    #         'num_conv_layers': 2,
-    #         'epochs': 200,
-    #         'batch_size': 64
-    #     },
-    #     extractor=EscTrop,
-    #     features={
-    #         'ecg_mode': 'beat',
-    #         'ecgs': ['old']
-    #     },
-    #     scoring=roc_auc_score,
-    # )
-
-    ESC_B1_MACE30_BCNN2_V2 = ESC_B1_MACE30_BCNN2_V1._replace(
-        model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64,
+    BASELINE_RAW = BASELINE_BEAT._replace(
+        description='Basic CNN model using only current ECG raw signal to '
+                    'predict MACE within 30 days.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index']
+            },
         },
     )
 
-    ESC_B1AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
+    BASELINE_NOTCH = BASELINE_BEAT._replace(
+        description='Uses notch-filter and clipping to remove outliers and '
+                    'baseline wander. Slightly increases dropout to '
+                    'compensate for less regularization overall.',
+        model=basic_cnn,
+        model_kwargs={
+            'dropout': 0.5,
+            'filters': 32,
+            'kernel_size': 16,
+            'pool_size': 16,
+            'hidden_size': 10
+        },
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index']
+            },
+            "processing": {
+                'notch-filter',
+                'clip_outliers'
+            },
+        }
+    )
+
+    SANITY1 = BASELINE_BEAT._replace(
+        description='Try to predict mace 30 using only the old ecg...',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'beat',
+                'ecgs': ['old']
+            },
+        },
+    )
+
+    BASELINE_AGE_SEX = BASELINE_BEAT._replace(
         description='Baseline CNN model using a 2 conv layer network on '
                     '1 ECG median beat plus age and sex features concatenated '
                     'at the end, predicting MACE within 30 days.',
-        model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64
-        },
-        extractor_kwargs=ESC_B1_MACE30_BCNN2_V1.extractor_kwargs.copy().update(
-            {"features": {
+        extractor_kwargs={
+            "features": {
                 'ecg_mode': 'beat',
                 'ecgs': ['index'],
                 'features': ['age', 'sex']
-            }}
-        )
+            }
+        },
     )
 
-    ESC_B2AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
-        description='Running two CNNs in parallel on two ECG beat signals. '
-                    'Also uses age and sex as features.',
-        model_kwargs={
-            'num_conv_layers': 2,
-            'epochs': 200,
-            'batch_size': 64
-        },
-        extractor_kwargs=ESC_B1_MACE30_BCNN2_V1.extractor_kwargs.copy().update(
-            {"features": {
+    BASELINE_DOUBLE_ECG = BASELINE_BEAT._replace(
+        description='Running two CNNs in parallel on two ECG beat signals. ',
+        extractor_kwargs={
+            "features": {
                 'ecg_mode': 'beat',
-                'ecgs': ['index', 'old'],
-                'features': ['age', 'sex']
-            }}
-        )
+                'ecgs': ['index', 'old']
+            },
+        },
     )
