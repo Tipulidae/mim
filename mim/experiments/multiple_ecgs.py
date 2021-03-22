@@ -150,7 +150,7 @@ class MultipleECG(Experiment, Enum):
         batch_size=128,
     )
 
-    R2_TUNED_BN = BASELINE_RAW._replace(
+    R1_TUNED_BN = R1_TUNED._replace(
         description='Best model after hyperband tuning, but with batch-norm.',
         model_kwargs={
             'num_layers': 2,
