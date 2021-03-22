@@ -135,18 +135,16 @@ class MultipleECG(Experiment, Enum):
     R1_TUNED = BASELINE_RAW._replace(
         description='Best model after hyperband tuning. ',
         model_kwargs={
-            'cnn_kwargs': {
-                'num_layers': 2,
-                'dropout': 0.4,
-                'filter_first': 44,
-                'filter_last': 31,
-                'kernel_first': 5,
-                'kernel_last': 7,
-                'batch_norm': False,
-                'dense': True,
-                'downsample': True,
-                'output_size': 10
-            }
+            'num_layers': 2,
+            'dropout': 0.4,
+            'filter_first': 44,
+            'filter_last': 31,
+            'kernel_first': 5,
+            'kernel_last': 7,
+            'batch_norm': False,
+            'dense': True,
+            'downsample': True,
+            'output_size': 10
         },
         epochs=500,
         batch_size=128,
