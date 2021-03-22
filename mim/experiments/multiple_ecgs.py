@@ -150,6 +150,24 @@ class MultipleECG(Experiment, Enum):
         batch_size=128,
     )
 
+    R2_TUNED_BN = BASELINE_RAW._replace(
+        description='Best model after hyperband tuning, but with batch-norm.',
+        model_kwargs={
+            'num_layers': 2,
+            'dropout': 0.4,
+            'filter_first': 44,
+            'filter_last': 31,
+            'kernel_first': 5,
+            'kernel_last': 7,
+            'batch_norm': True,
+            'dense': True,
+            'downsample': True,
+            'output_size': 10
+        },
+        epochs=500,
+        batch_size=128,
+    )
+
     R2_TUNED = R1_TUNED._replace(
         description='Trying the same model but with two ECGs.',
         extractor_kwargs={
