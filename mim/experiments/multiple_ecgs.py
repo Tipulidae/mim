@@ -25,12 +25,18 @@ class MultipleECG(Experiment, Enum):
                     'predict MACE within 30 days.',
         model=basic_cnn,
         model_kwargs={
-            'num_conv_layers': 2,
-            'dropout': 0.3,
-            'filters': 32,
-            'kernel_size': 16,
-            'pool_size': 16,
-            'hidden_size': 10
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.3,
+                'filter_first': 32,
+                'filter_last': 32,
+                'kernel_first': 16,
+                'kernel_last': 16,
+                'pool_size': 16,
+                'batch_norm': True,
+                'dense': True,
+                'output_size': 10
+            }
         },
         epochs=200,
         batch_size=64,
@@ -68,11 +74,18 @@ class MultipleECG(Experiment, Enum):
                     'compensate for less regularization overall.',
         model=basic_cnn,
         model_kwargs={
-            'dropout': 0.5,
-            'filters': 32,
-            'kernel_size': 16,
-            'pool_size': 16,
-            'hidden_size': 10
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.5,
+                'filter_first': 32,
+                'filter_last': 32,
+                'kernel_first': 16,
+                'kernel_last': 16,
+                'pool_size': 16,
+                'batch_norm': True,
+                'dense': True,
+                'output_size': 10
+            }
         },
         extractor_kwargs={
             "features": {
@@ -117,4 +130,48 @@ class MultipleECG(Experiment, Enum):
                 'ecgs': ['index', 'old']
             },
         },
+    )
+
+    R1_TUNED = BASELINE_RAW._replace(
+        description='Best model after hyperband tuning. ',
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.4,
+                'filter_first': 44,
+                'filter_last': 31,
+                'kernel_first': 5,
+                'kernel_last': 7,
+                'batch_norm': False,
+                'dense': True,
+                'downsample': True,
+                'output_size': 10
+            }
+        },
+        epochs=500,
+        batch_size=128,
+    )
+
+    R2_TUNED = R1_TUNED._replace(
+        description='Trying the same model but with two ECGs.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index', 'old']
+            },
+        },
+    )
+
+    R1_TUNED_NOTCH = R1_TUNED._replace(
+        description='Trying the best model with pre-processing.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index']
+            },
+            "processing": {
+                'notch-filter',
+                'clip_outliers'
+            },
+        }
     )

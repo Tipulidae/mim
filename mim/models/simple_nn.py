@@ -1,6 +1,7 @@
 import os
 import math
 
+import numpy as np
 from tensorflow import keras
 from tensorflow.keras.layers import (
     Input,
@@ -12,6 +13,7 @@ from tensorflow.keras.layers import (
     BatchNormalization,
     Concatenate,
     ReLU,
+    AveragePooling1D
 )
 
 
@@ -101,34 +103,13 @@ def basic_cnn3(train, validation=None, dropout=0, layers=None,
     return keras.Model(inp, output)
 
 
-def basic_cnn(train, validation=None, num_conv_layers=2, dropout=0.3,
-              filters=32, kernel_size=16, pool_size=16, hidden_size=10):
+def basic_cnn(train, validation=None, **cnn_kwargs):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     layers = []
     if 'ecg' in inp:
-        layers.append(
-            _ecg_network(
-                inp['ecg'],
-                num_conv_layers,
-                dropout=dropout,
-                filters=filters,
-                kernel_size=kernel_size,
-                pool_size=pool_size,
-                output_size=hidden_size
-            )
-        )
+        layers.append(ecg_network2(inp['ecg'], **cnn_kwargs))
     if 'old_ecg' in inp:
-        layers.append(
-            _ecg_network(
-                inp['old_ecg'],
-                num_conv_layers,
-                dropout=dropout,
-                filters=filters,
-                kernel_size=kernel_size,
-                pool_size=pool_size,
-                output_size=hidden_size
-            )
-        )
+        layers.append(ecg_network2(inp['old_ecg'], **cnn_kwargs))
     if 'features' in inp:
         layers.append(BatchNormalization()(inp['features']))
 
@@ -157,6 +138,35 @@ def _ecg_network(x, num_conv_layers, dropout=0.3, filters=32,
 
     x = Flatten()(x)
     x = Dense(output_size, activation="relu")(x)
+    return Dropout(dropout)(x)
+
+
+def ecg_network2(x, num_layers=2, dropout=0.3, filter_first=16,
+                 filter_last=16, kernel_first=5, kernel_last=5,
+                 dense=True, batch_norm=True, pool_size=None,
+                 downsample=False, output_size=10):
+    if downsample:
+        x = AveragePooling1D(2, padding='same')(x)
+    if pool_size is None:
+        pool_size = math.floor(500 ** (1 / num_layers))
+
+    filters = map(round, np.linspace(filter_first, filter_last, num_layers))
+    kernels = map(round, np.linspace(kernel_first, kernel_last, num_layers))
+    for filter_size, kernel_size in zip(filters, kernels):
+        x = Conv1D(
+            filters=filter_size,
+            kernel_size=kernel_size,
+            kernel_regularizer="l2",
+            padding='same')(x)
+        if batch_norm:
+            x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = MaxPool1D(pool_size=pool_size)(x)
+        x = Dropout(dropout)(x)
+
+    x = Flatten()(x)
+    if dense:
+        x = Dense(output_size, activation="relu")(x)
     return Dropout(dropout)(x)
 
 
