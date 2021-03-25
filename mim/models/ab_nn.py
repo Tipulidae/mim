@@ -27,6 +27,18 @@ def ab_simple_lr(train=None, validation=None, **kwargs):
     return keras.Model(inp, output)
 
 
+def ab_simple_one_hidden_layer(train=None, hidden_layer_n=-1, **kwargs):
+    inp = {key: Input(shape=value, name=key)
+           for key, value in train['x'].shape.items()}
+    normalization = Normalization(axis=1)
+    normalization.adapt(train['x']['numeric'].as_numpy)
+    normalized = normalization(inp['numeric'])
+    concatenated = Concatenate()([normalized, inp['categorical']])
+    dense = Dense(hidden_layer_n, activation="relu")(concatenated)
+    output = Dense(1, activation="sigmoid")(dense)
+    return keras.Model(inp, output)
+
+
 def dyn_cnn(train=None, validation=None,
             conv_dropout=None,
             conv_filters=None,

@@ -48,6 +48,32 @@ class ABGlucose(Experiment, Enum):
         }
     )
 
+    KERAS_HIDDEN_10 = Experiment(
+        description="Neural network with one hidden layer, 10 neurons"
+                    "simple inputs",
+        extractor=ABJSONExtractor,
+        extractor_kwargs=copy_update_dict(BASE_EXTRACTOR_KWARGS, {
+            "features": {"gender",
+                         "age",
+                         "bl-Glukos", "bl-Krea", "bl-Hb"}
+        }),
+        building_model_requires_development_data=True,
+        ignore_callbacks=False,
+        model=ab_nn.ab_simple_one_hidden_layer,
+        model_kwargs={
+            "hidden_layer_n": 10,
+        },
+        epochs=200,
+        batch_size=32,
+        optimizer={
+            'name': tf.keras.optimizers.Adam,
+            'kwargs': {'learning_rate': 0.003}
+        },
+        data_provider_kwargs={
+            "mode": "train_val"
+        }
+    )
+
     ECG_BEAT = Experiment(
         description="ECG beat model",
         model=ab_nn.dyn_cnn,
