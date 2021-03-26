@@ -1,4 +1,5 @@
 import os
+import shutil
 from copy import copy
 from time import time
 from pathlib import Path
@@ -6,15 +7,14 @@ from typing import Any, NamedTuple, Callable, Union
 
 import numpy as np
 import pandas as pd
-# noinspection PyUnresolvedReferences
 import silence_tensorflow.auto  # noqa: F401
 import tensorflow as tf
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import PredefinedSplit, KFold
 
-from mim.extractors.extractor import Extractor
-from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
+from mim.extractors.extractor import Extractor, Container
+from mim.cross_validation import CrossValidationWrapper
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
@@ -28,14 +28,19 @@ log = get_logger("Experiment")
 class Experiment(NamedTuple):
     description: str
     extractor: Callable[[Any], Extractor] = None
-    index: Any = None
-    features: Any = None
-    labels: Any = None
-    post_processing: Any = None
+    extractor_kwargs: dict = {
+        "index": {},
+        "features": None,
+        "labels": None,
+        "processing": None,
+    }
+    use_predefined_splits: bool = False
+    cv: Any = KFold
+    cv_kwargs: dict = {}
     model: Any = RandomForestClassifier
     model_kwargs: dict = {}
     building_model_requires_development_data: bool = False
-    optimizer: Any = 'adam',
+    optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
     epochs: Union[int, hp.Param] = None
     initial_epoch: int = 0
@@ -44,11 +49,7 @@ class Experiment(NamedTuple):
     ignore_callbacks: bool = False
     skip_compile: bool = False
     random_state: Union[int, hp.Param] = 123
-    cv: Any = KFold
-    cv_kwargs: dict = {}
     scoring: Any = roc_auc_score
-    hold_out: Any = ChronologicalSplit
-    hold_out_size: float = 0.25
     log_conda_env: bool = True
     alias: str = ''
     parent_base: str = None
@@ -57,6 +58,14 @@ class Experiment(NamedTuple):
 
     def run(self):
         try:
+            # Wipe all old results here!
+            if os.path.exists(self.base_path):
+                log.debug(f'Removing old experiment results from '
+                          f'{self.base_path}')
+                shutil.rmtree(self.base_path, ignore_errors=True)
+            else:
+                log.debug('No old experiment results found.')
+
             results = self._run()
             pd.to_pickle(results, self.result_path)
             log.debug(f'Saved results in {self.result_path}')
@@ -68,8 +77,7 @@ class Experiment(NamedTuple):
         log.info(f'Running experiment {self.name}: {self.description}')
         t = time()
 
-        data, hold_out = self.get_data()
-        cv = self.cross_validation
+        data = self.get_data()
 
         # TODO:
         #  Add feature names to dataset somewhere so it can be
@@ -89,6 +97,8 @@ class Experiment(NamedTuple):
             'history': [],
         }
 
+        cv = self.get_cross_validation(data.predefined_splits)
+
         for i, (train, validation) in enumerate(cv.split(data)):
             result = _validate(
                 train,
@@ -106,24 +116,30 @@ class Experiment(NamedTuple):
                  f'{time() - t}s. ')
         return results
 
-    def get_data(self):
+    def get_data(self) -> Container:
         """
         Uses the extractor and specifications to create the X and y data
         set.
 
-        :return: Data object
+        :return: Container object
         """
-        specification = {
-            'index': self.index,
-            'features': self.features,
-            'labels': self.labels,
-            'processing': self.post_processing,
-            'fits_in_memory': self.data_fits_in_memory
-        }
-        data = self.extractor(**specification).get_data()
-        splitter = self.hold_out(test_size=self.hold_out_size)
-        develop_index, test_index = next(splitter.split(data))
-        return data.split(develop_index, test_index)
+        return self.extractor(**self.extractor_kwargs).get_data()
+
+    def get_cross_validation(self, predefined_splits=None):
+        if not self.use_predefined_splits and self.cv is None:
+            raise ValueError("Must specify cv or use predefined splits!")
+
+        elif self.use_predefined_splits or self.cv is None:
+            if predefined_splits is None:
+                raise ValueError(
+                    "Data must contain predefined_splits when using "
+                    "PredefinedSplit cross-validation."
+                )
+            cv = PredefinedSplit(predefined_splits)
+        else:
+            cv = self.cv(**self.cv_kwargs)
+
+        return CrossValidationWrapper(cv)
 
     def get_model(self, train, validation, split_number):
         model_kwargs = copy(self.model_kwargs)
@@ -178,12 +194,8 @@ class Experiment(NamedTuple):
         return callable_to_string(self._asdict())
 
     @property
-    def cross_validation(self):
-        return CrossValidationWrapper(self.cv, **self.cv_kwargs)
-
-    @property
     def is_binary(self):
-        return self.labels['is_binary']
+        return self.extractor_kwargs["labels"]['is_binary']
 
     @property
     def name(self):

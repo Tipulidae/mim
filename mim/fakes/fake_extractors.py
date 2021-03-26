@@ -6,25 +6,22 @@ from mim.extractors.extractor import Container, Data, Extractor
 
 class FakeExtractor(Extractor):
     def __init__(self, **kwargs):
-        super().__init__(None, None, None, None)
-        if 'index' in kwargs:
-            if kwargs['index'] is not None:
-                self.kwargs = kwargs['index']
-            else:
-                self.kwargs = {}
+        super().__init__(**kwargs)
+        if "index" in kwargs:
+            self.mc_kwargs = kwargs["index"]
         else:
-            self.kwargs = kwargs
+            self.mc_kwargs = {}
 
-    def get_data(self):
-        x, y = make_classification(**self.kwargs)
+    def get_data(self) -> Container:
+        x, y = make_classification(**self.mc_kwargs)
         index = range(len(x))
         x = Data(x, index=index, dtype=float64)
         y = Data(y, index=index, dtype=float64)
-        return Container.from_dict({'x': x, 'y': y})
+        return Container({'x': x, 'y': y})
 
 
 class FakeECG(Extractor):
-    def get_data(self):
+    def get_data(self,) -> Container:
         rows, cols = self.index['shape']
         n_features = rows * cols
         n_samples = self.index['n_samples']
@@ -36,10 +33,13 @@ class FakeECG(Extractor):
             n_classes=self.index['n_classes'],
             random_state=1234
         )
-        return Container({
+
+        c = Container({
             'x': Container(
                 {'ecg': Data(x.reshape((n_samples, rows, cols)),
                              dtype=float64)}
             ),
             'y': Data(y)
         })
+
+        return c

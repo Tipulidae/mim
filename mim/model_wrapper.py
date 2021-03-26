@@ -199,12 +199,6 @@ class KerasWrapper(Model):
         log.info("\n\n" + keras_model_summary_as_string(model))
 
     def fit(self, data, validation_data=None, split_number=None, **kwargs):
-        # TODO:
-        # Option 1:
-        # Store everything in a temporary folder, then move it to this folder
-        # once training is completed, and clear that folder then
-        # Option 2:
-        # Just as below, only clear the folder first. Maybe a bit more risky.
         if self.ignore_callbacks:
             callbacks = None
         else:
@@ -226,6 +220,8 @@ class KerasWrapper(Model):
                 ),
                 TensorBoard(log_dir=tensorboard)
             ]
+        if self.batch_size < 0:
+            self.batch_size = len(data)
         return super().fit(
             data,
             validation_data=validation_data,

@@ -1,9 +1,15 @@
+import numpy as np
+from scipy.signal import iirnotch, filtfilt
+
+from tqdm import tqdm
+
 from mim.massage.esc_trop import make_ed_table, make_troponin_table
 from mim.extractors.extractor import Data, Container, ECGData, Extractor
+from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
 
 
 class EscTrop(Extractor):
-    def get_data(self):
+    def get_data(self) -> Container:
         ed = make_ed_table()
         tnt = make_troponin_table()
         ed = ed.join(tnt).reset_index()
@@ -23,17 +29,19 @@ class EscTrop(Extractor):
 
         x_dict = {}
         if 'index' in self.features['ecgs']:
-            x_dict['ecg'] = ECGData(
+            ecgs = ECGData(
                 ecg_path,
                 mode=mode,
                 index=ed.ecg_id.astype(int).values
             )
+            x_dict['ecg'] = preprocess_ecg(ecgs, self.processing)
         if 'old' in self.features['ecgs']:
-            x_dict['old_ecg'] = ECGData(
+            ecgs = ECGData(
                 ecg_path,
                 mode=mode,
                 index=ed.old_ecg_id.astype(int).values
             )
+            x_dict['old_ecg'] = preprocess_ecg(ecgs, self.processing)
         if 'features' in self.features:
             x_dict['features'] = Data(ed[self.features['features']].values)
 
@@ -46,4 +54,36 @@ class EscTrop(Extractor):
             fits_in_memory=self.fits_in_memory
         )
 
-        return data
+        hold_out_splitter = CrossValidationWrapper(
+            ChronologicalSplit(test_size=1/4)
+        )
+        dev, _ = next(hold_out_splitter.split(data))
+        return dev
+
+
+def preprocess_ecg(ecg_data, processing):
+    data = ecg_data.as_numpy
+
+    if processing is not None:
+        if 'notch-filter' in processing:
+            filtered_data = np.zeros_like(data)
+            for ecg in tqdm(range(len(data)), desc='applying notch-filter'):
+                filtered_data[ecg] = notch_ecg(data[ecg])
+                filtered_data[ecg] -= np.median(filtered_data[ecg], axis=0)
+
+            data = filtered_data
+        if 'clip_outliers' in processing:
+            data = np.clip(data, -0.0004, 0.0004)
+
+    # I will scale regardless, as not doing so will lead to problems.
+    data *= 5000
+    return Data(data)
+
+
+def notch_ecg(data):
+    filtered_data = np.zeros_like(data)
+    for lead in range(8):
+        b, a = iirnotch(0.05, Q=0.005, fs=1000)
+        filtered_data[:, lead] = filtfilt(b, a, data[:, lead])
+
+    return filtered_data

@@ -1,15 +1,17 @@
+from mim.extractors.extractor import Container
 from mim.util.logs import get_logger
 
 log = get_logger('Cross Validation')
 
 
 class CrossValidationWrapper:
-    def __init__(self, cv, **cv_args):
-        self.cv = cv(**cv_args)
+    def __init__(self, cv):
+        self.cv = cv
 
-    def split(self, data):
+    def split(self, data: Container):
         x = data.index
         y = data['y'].as_numpy
+
         groups = data.groups
         for train, val in self.cv.split(x, y=y, groups=groups):
             yield data.split(train, val)

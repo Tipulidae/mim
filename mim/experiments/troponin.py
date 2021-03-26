@@ -1,6 +1,5 @@
 from enum import Enum
 
-from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
@@ -18,6 +17,8 @@ class MyocardialInfarction(Experiment, Enum):
         description='Gradient Boosting Classifier similar to that of '
                     'Than et. al, Circulation 2019',
         model=GradientBoostingClassifier,
+        scoring=roc_auc_score,
+
         model_kwargs={
             'n_estimators': 1000,
             'learning_rate': 0.01,
@@ -25,17 +26,14 @@ class MyocardialInfarction(Experiment, Enum):
             'min_samples_leaf': 7,
             'subsample': 0.5
         },
-        features={
-            'troponin',
-            'age',
-            'gender'
+        extractor=Expect,
+        extractor_kwargs={
+            "index": {'source': 'two_tnt_gen-all.json'},
+            "labels": {'target': 'label-index-mi'},
+            "features": {'troponin',
+                         'age',
+                         'gender'},
         },
-        labels={'target': 'label-index-mi'},
-        index={'source': 'two_tnt_gen-all.json'},
-        cv=KFold,
-        cv_kwargs={'n_splits': 5},
-        scoring=roc_auc_score,
-        extractor=Expect
     )
 
     THAN_EXPECT_RF = THAN_EXPECT_GB._replace(
@@ -46,12 +44,14 @@ class MyocardialInfarction(Experiment, Enum):
 
     THAN_EXPECT_RF2 = THAN_EXPECT_RF._replace(
         description='Classifies index MI using additional features',
-        features={
-            'troponin',
-            'previous_conditions',
-            'age',
-            'gender'
-        },
+        extractor_kwargs=THAN_EXPECT_RF.extractor_kwargs.copy().update(
+            {"features": {
+                'troponin',
+                'previous_conditions',
+                'age',
+                'gender'
+            }}
+        )
     )
 
     PTBXL_SMALL = Experiment(
@@ -64,8 +64,8 @@ class MyocardialInfarction(Experiment, Enum):
             'batch_size': 32
         },
         extractor=PTBXL,
-        index={'size': 'XS'},
-        cv=KFold,
-        cv_kwargs={'n_splits': 2},
+        extractor_kwargs={
+            "index": {'size': 'XSS'}
+        },
         scoring=roc_auc_score,
     )

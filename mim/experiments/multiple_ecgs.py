@@ -1,11 +1,11 @@
 from enum import Enum
 
-import tensorflow as tf
+from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.models.simple_nn import basic_cnn, super_basic_cnn
+from mim.models.simple_nn import basic_cnn
 from mim.cross_validation import ChronologicalSplit
 
 
@@ -20,137 +20,174 @@ from mim.cross_validation import ChronologicalSplit
 
 
 class MultipleECG(Experiment, Enum):
-    ESC_B1_MACE30_BCNN2_V1 = Experiment(
+    BASELINE_BEAT = Experiment(
         description='Baseline CNN model using only current ECG median beat to '
                     'predict MACE within 30 days.',
-        model=super_basic_cnn,
-        model_kwargs={
-            'dropout': 0.3,
-            'filters': 32,
-            'kernel_size': 16,
-            'pool_size': 8,
-            'dense': True
-        },
-        epochs=200,
-        batch_size=128,
-        building_model_requires_development_data=True,
-        optimizer={
-            'name': tf.keras.optimizers.Adam,
-            'kwargs': {'learning_rate': 3e-4},
-        },
-        extractor=EscTrop,
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['index']
-        },
-        index={},
-        cv=ChronologicalSplit,
-        cv_kwargs={
-            'test_size': 0.333
-        },
-        hold_out_size=0.25,
-        scoring=roc_auc_score,
-    )
-
-    ESC_B1_MACE30_BCNN2_V2 = ESC_B1_MACE30_BCNN2_V1._replace(
-        description='Trying without dense layer at the end',
-        model_kwargs={
-            'dropout': 0.3,
-            'filters': 32,
-            'kernel_size': 16,
-            'pool_size': 8,
-            'dense': False
-        },
-    )
-
-    ESC_B1_MACE30_BCNN2_V3 = ESC_B1_MACE30_BCNN2_V1._replace(
-        description='Trying with dense and relu activation',
-        model_kwargs={
-            'dropout': 0.3,
-            'filters': 32,
-            'kernel_size': 16,
-            'pool_size': 8,
-            'dense': True,
-            'dense_activation': 'relu'
-        },
-    )
-
-    SANITY1 = Experiment(
-        description='Try to predict mace 30 using only the old ecg...',
         model=basic_cnn,
         model_kwargs={
-            'num_conv_layers': 2
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.3,
+                'filter_first': 32,
+                'filter_last': 32,
+                'kernel_first': 16,
+                'kernel_last': 16,
+                'pool_size': 16,
+                'batch_norm': True,
+                'dense': True,
+                'output_size': 10
+            }
         },
         epochs=200,
         batch_size=64,
-        optimizer='sgd',
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-4}
+        },
         extractor=EscTrop,
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['old']
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'beat',
+                'ecgs': ['index']
+            },
         },
-        index={},
+        building_model_requires_development_data=True,
         cv=ChronologicalSplit,
-        cv_kwargs={
-            'test_size': 0.333
-        },
-        hold_out_size=0.25,
+        cv_kwargs={'test_size': 1/3},
         scoring=roc_auc_score,
-        building_model_requires_development_data=True
     )
 
-    ESC_B1AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
+    BASELINE_RAW = BASELINE_BEAT._replace(
+        description='Basic CNN model using only current ECG raw signal to '
+                    'predict MACE within 30 days.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index']
+            },
+        },
+    )
+
+    BASELINE_NOTCH = BASELINE_BEAT._replace(
+        description='Uses notch-filter and clipping to remove outliers and '
+                    'baseline wander. Slightly increases dropout to '
+                    'compensate for less regularization overall.',
+        model=basic_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.5,
+                'filter_first': 32,
+                'filter_last': 32,
+                'kernel_first': 16,
+                'kernel_last': 16,
+                'pool_size': 16,
+                'batch_norm': True,
+                'dense': True,
+                'output_size': 10
+            }
+        },
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index']
+            },
+            "processing": {
+                'notch-filter',
+                'clip_outliers'
+            },
+        }
+    )
+
+    SANITY1 = BASELINE_BEAT._replace(
+        description='Try to predict mace 30 using only the old ecg...',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'beat',
+                'ecgs': ['old']
+            },
+        },
+    )
+
+    BASELINE_AGE_SEX = BASELINE_BEAT._replace(
         description='Baseline CNN model using a 2 conv layer network on '
                     '1 ECG median beat plus age and sex features concatenated '
                     'at the end, predicting MACE within 30 days.',
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['index'],
-            'features': ['age', 'sex']
-        }
-    )
-
-    ESC_B2AS_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
-        description='Running two CNNs in parallel on two ECG beat signals. '
-                    'Also uses age and sex as features.',
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['index', 'old'],
-            'features': ['age', 'sex']
-        }
-    )
-
-    ESC_R1_MACE30_BCNN2_V1 = ESC_B1_MACE30_BCNN2_V1._replace(
-        description='Baseline CNN model using only current raw ECG signal to '
-                    'predict MACE within 30 days.',
-        features={
-            'ecg_mode': 'raw',
-            'ecgs': ['index']
-        }
-    )
-
-    TEMP = Experiment(
-        description="foo",
-        extractor=EscTrop,
-        features={
-            'ecg_mode': 'beat',
-            'ecgs': ['index']
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'beat',
+                'ecgs': ['index'],
+                'features': ['age', 'sex']
+            }
         },
-        model=super_basic_cnn,
+    )
+
+    BASELINE_DOUBLE_ECG = BASELINE_BEAT._replace(
+        description='Running two CNNs in parallel on two ECG beat signals. ',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'beat',
+                'ecgs': ['index', 'old']
+            },
+        },
+    )
+
+    R1_TUNED = BASELINE_RAW._replace(
+        description='Best model after hyperband tuning. ',
         model_kwargs={
-            'dropout': 0.5,
+            'num_layers': 2,
+            'dropout': 0.4,
+            'filter_first': 44,
+            'filter_last': 31,
+            'kernel_first': 5,
+            'kernel_last': 7,
+            'batch_norm': False,
+            'dense': True,
+            'downsample': True,
+            'output_size': 10
         },
-        building_model_requires_development_data=True,
-        optimizer={
-            'name': tf.keras.optimizers.Adam,
-            'kwargs': {'learning_rate': 3e-4},
+        epochs=500,
+        batch_size=128,
+    )
+
+    R1_TUNED_BN = R1_TUNED._replace(
+        description='Best model after hyperband tuning, but with batch-norm.',
+        model_kwargs={
+            'num_layers': 2,
+            'dropout': 0.4,
+            'filter_first': 44,
+            'filter_last': 31,
+            'kernel_first': 5,
+            'kernel_last': 7,
+            'batch_norm': True,
+            'dense': True,
+            'downsample': True,
+            'output_size': 10
         },
-        loss='binary_crossentropy',
-        metrics=['accuracy', 'auc'],
-        epochs=200,
-        batch_size=256,
-        data_fits_in_memory=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 0.3},
-        hold_out_size=0
+        epochs=500,
+        batch_size=128,
+    )
+
+    R2_TUNED = R1_TUNED._replace(
+        description='Trying the same model but with two ECGs.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index', 'old']
+            },
+        },
+    )
+
+    R1_TUNED_NOTCH = R1_TUNED._replace(
+        description='Trying the best model with pre-processing.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index']
+            },
+            "processing": {
+                'notch-filter',
+                'clip_outliers'
+            },
+        }
     )

@@ -55,7 +55,6 @@ class Expect(Extractor):
             },
             index=index
         )
-
         return data
 
     def _parse_json(self):

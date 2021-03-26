@@ -3,7 +3,13 @@ import pytest
 import numpy as np
 import tensorflow as tf
 
+import mim.config
 from mim.extractors.extractor import Data, Container, infer_shape
+from mim.extractors.ab_json import LazyECGsFromFiles
+from mim.fakes.generate_fake_carlsson_ecg import (
+    filename_generator as fake_carlsson_ecg_filename_generator,
+    N_FILES as N_FAKE_ECG_FILES
+)
 
 
 class TestData:
@@ -116,6 +122,12 @@ class TestData:
     def test_dataset_has_correct_type(self):
         pass
 
+    def test_predefined_folds(self):
+        x = Data([1, 2, 3, 4, 5], predefined_splits=[0, 0, 1, 1, 1])
+
+        assert x.predefined_splits == [0, 0, 1, 1, 1]
+        assert x.lazy_slice([3, 2, 1, 0]).predefined_splits == [1, 1, 0, 0]
+
 
 class TestInferShape:
     def test_shape_ignores_first_dimension(self):
@@ -155,3 +167,81 @@ class TestContainer:
             Container([0])
         with pytest.raises(TypeError):
             Container('asdf')
+
+    def test_attributes_are_not_reset_after_lazy_slice(self):
+        data_dict = {
+            'x': Data([1, 2, 3]),
+            'y': Data([2, 3, 4])
+        }
+        container = Container(data_dict, fits_in_memory=False)
+
+        assert container.fits_in_memory is False
+        assert container.lazy_slice([1, 0, 0, 0]).fits_in_memory is False
+
+        container = Container(data_dict, fits_in_memory=True)
+        assert container.fits_in_memory is True
+        assert container.lazy_slice([1, 0, 0, 0]).fits_in_memory is True
+
+        container = Container(data_dict, predefined_splits=[-1, -1, 0, 0])
+        assert container.predefined_splits == [-1, -1, 0, 0]
+        assert container.lazy_slice([1, 2, 0]).predefined_splits == [-1, 0, -1]
+
+
+class TestECGMatLabData:
+    SOME_ECG_FILES = list(
+        fake_carlsson_ecg_filename_generator(mim.config.ROOT_PATH)
+    )
+
+    def test_load_ecgs_no_caching(self):
+        data: LazyECGsFromFiles = LazyECGsFromFiles("ecg_raw_12",
+                                                    self.SOME_ECG_FILES,
+                                                    caching=False)
+        assert len(data) == N_FAKE_ECG_FILES
+        assert data.cache_size == 0
+        assert np.array_equal(data[0], data[0])
+
+        d10 = data[10]
+        assert d10.shape == (10000, 12)
+        assert data.cache_size == 0
+
+        assert not np.array_equal(data[10], data[11])
+
+        s1 = data.lazy_slice([3, 2, 1])
+        s2 = data.lazy_slice([2, 4, 6, 8])
+        assert np.array_equal(s1[1], s2[0])
+
+        array = s1.as_numpy
+        assert array.shape == (3, 10000, 12)
+        assert data.cache_size == 0
+
+    def test_load_ecgs_caching(self):
+        data: LazyECGsFromFiles = LazyECGsFromFiles("ecg_beat_8",
+                                                    self.SOME_ECG_FILES,
+                                                    caching=True)
+        assert len(data) == N_FAKE_ECG_FILES
+        assert data.cache_size == 0
+
+        assert np.array_equal(data[1], data[1])
+        assert data.cache_size == 1
+
+        d8 = data[8]
+        assert d8.shape == (1200, 8)
+        assert data.cache_size == 2
+
+        assert not np.array_equal(data[1], d8)
+
+        s1 = data.lazy_slice([2, 4, 5, 10])
+        s2 = data.lazy_slice([0, 5, 7, 9])
+        assert data.cache_size == 2
+        assert np.array_equal(s1[2], s2[1])
+        assert data.cache_size == 3
+
+        array = s1.as_numpy
+        assert array.shape == (4, 1200, 8)
+        assert data.cache_size == 6
+
+        data.clear_cache()
+        assert data.cache_size == 0
+
+        with pytest.raises(IndexError):
+            _ = data[N_FAKE_ECG_FILES]

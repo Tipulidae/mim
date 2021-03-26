@@ -9,10 +9,11 @@ from typing import Dict
 
 class Data:
     def __init__(self, data, index=None, dtype=tf.int64, fits_in_memory=True,
-                 groups=None):
+                 groups=None, predefined_splits=None):
         self.data = data
         self.dtype = dtype
         self.groups = groups
+        self.predefined_splits = predefined_splits
         self._fits_in_memory = fits_in_memory
         if index is None:
             self._index = np.array(range(len(data)))
@@ -27,6 +28,12 @@ class Data:
     def lazy_slice(self, index):
         new_data = copy(self)
         new_data._index = np.array([self._index[i] for i in index])
+        if new_data.groups is not None:
+            new_data.groups = [self.groups[i] for i in index]
+        if new_data.predefined_splits is not None:
+            new_data.predefined_splits = [
+                self.predefined_splits[i] for i in index]
+
         return new_data
 
     @property
@@ -57,6 +64,7 @@ class Data:
     @property
     def shape(self):
         return tf.TensorShape(self._shape)
+        # return tf.TensorShape(infer_shape(self.data))
 
     @property
     def fits_in_memory(self):
@@ -97,10 +105,15 @@ class Container(Data):
         self.fits_in_memory = fits_in_memory
 
     def lazy_slice(self, index):
-        return self.__class__(
+        c = self.__class__(
             {key: value.lazy_slice(index) for key, value in self.data.items()},
             dtype=self.type
         )
+        if self.predefined_splits is not None:
+            c.predefined_splits = [self.predefined_splits[i] for i in index]
+        if self.groups is not None:
+            c.groups = [self.groups[i] for i in index]
+        return c
 
     @classmethod
     def from_dict(cls, data_dict):
@@ -173,22 +186,20 @@ class ECGData(Data):
         else:
             self._shape = [10000, 8]
 
-        self.f = h5py.File(self.data, 'r')
-
     def __getitem__(self, item):
-        # return self.f[self.mode][self._index[item]]
         with h5py.File(self.data, 'r') as f:
             return f[self.mode][self._index[item]]
 
 
 class Extractor:
     def __init__(self, index=None, features=None, labels=None,
-                 processing=None, fits_in_memory=True):
+                 processing=None, fits_in_memory=True, cv_kwargs=None):
         self.index = index
         self.features = features
         self.labels = labels
         self.processing = processing
         self.fits_in_memory = fits_in_memory
+        self.cv_kwargs = cv_kwargs
 
-    def get_data(self) -> Data:
+    def get_data(self) -> Container:
         raise NotImplementedError

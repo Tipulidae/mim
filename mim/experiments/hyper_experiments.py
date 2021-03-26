@@ -56,19 +56,18 @@ class HyperSearch(HyperExperiment, Enum):
             description="Experiment using variations of a basic CNN for "
                         "predicing MACE using a single ECG record.",
             extractor=EscTrop,
-            features={
-                'ecg_mode': 'beat',
-                'ecgs': ['index']
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'beat',
+                    'ecgs': ['index']
+                },
+                'index': {},
             },
-            index={},
-            cv=ChronologicalSplit,
-            cv_kwargs={
-                'test_size': 0.333
-            },
-            hold_out_size=0.25,
 
             model=basic_cnn3,
             building_model_requires_development_data=True,
+            cv=ChronologicalSplit,
+            cv_kwargs={'test_size': 1 / 3},
             optimizer={
                 'name': hp.Choice([
                     tf.keras.optimizers.Adam,
@@ -112,18 +111,17 @@ class HyperSearch(HyperExperiment, Enum):
             description="Experiment using very simple cnn, testing different "
                         "learning rates, batch sizes and dropout rates.",
             extractor=EscTrop,
-            features={
-                'ecg_mode': 'beat',
-                'ecgs': ['index']
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'beat',
+                    'ecgs': ['index']
+                },
+                'index': {},
             },
-            index={},
-            cv=ChronologicalSplit,
-            cv_kwargs={
-                'test_size': 0.333
-            },
-            hold_out_size=0.25,
             model=super_basic_cnn,
             building_model_requires_development_data=True,
+            cv=ChronologicalSplit,
+            cv_kwargs={'test_size': 1 / 3},
             optimizer={
                 'name': tf.keras.optimizers.Adam,
                 'kwargs': {
@@ -154,18 +152,17 @@ class HyperSearch(HyperExperiment, Enum):
             description="Experiment using very simple cnn, testing different "
                         "filters, kernel sizes and pool sizes.",
             extractor=EscTrop,
-            features={
-                'ecg_mode': 'beat',
-                'ecgs': ['index']
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'beat',
+                    'ecgs': ['index']
+                },
+                'index': {},
             },
-            index={},
-            cv=ChronologicalSplit,
-            cv_kwargs={
-                'test_size': 0.333
-            },
-            hold_out_size=0.25,
             model=super_basic_cnn,
             building_model_requires_development_data=True,
+            cv=ChronologicalSplit,
+            cv_kwargs={'test_size': 1 / 3},
             optimizer={
                 'name': tf.keras.optimizers.Adam,
                 'kwargs': {'learning_rate': 3e-4}
