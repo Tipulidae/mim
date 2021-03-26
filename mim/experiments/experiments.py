@@ -1,4 +1,5 @@
 import os
+import shutil
 from copy import copy
 from time import time
 from pathlib import Path
@@ -14,7 +15,6 @@ from sklearn.model_selection import PredefinedSplit, KFold
 
 from mim.extractors.extractor import Extractor, Container
 from mim.cross_validation import CrossValidationWrapper
-# from mim.extractors.extractor import DataProvider
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
@@ -58,6 +58,14 @@ class Experiment(NamedTuple):
 
     def run(self):
         try:
+            # Wipe all old results here!
+            if os.path.exists(self.base_path):
+                log.debug(f'Removing old experiment results from '
+                          f'{self.base_path}')
+                shutil.rmtree(self.base_path, ignore_errors=True)
+            else:
+                log.debug('No old experiment results found.')
+
             results = self._run()
             pd.to_pickle(results, self.result_path)
             log.debug(f'Saved results in {self.result_path}')

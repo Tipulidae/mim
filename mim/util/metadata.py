@@ -159,6 +159,7 @@ class Validator:
             allow_different_commits=False,
             allow_different_branches=False,
             allow_different_files=False,
+            allow_different_environments=False,
             max_age_difference=None)
 
     def validate_consistency(self, metadata):
