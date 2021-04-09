@@ -1,5 +1,5 @@
-import os
 import math
+from copy import deepcopy
 
 import numpy as np
 from tensorflow import keras
@@ -15,6 +15,8 @@ from tensorflow.keras.layers import (
     ReLU,
     AveragePooling1D
 )
+
+from mim.models.load import load_model_from_experiment_result
 
 
 def super_basic_cnn(train, validation=None, dropout=0, filters=32,
@@ -179,10 +181,77 @@ def basic_ff():
     return model
 
 
-def load_keras_model(base_path, split_number, **kwargs):
-    path = os.path.join(
-        base_path,
-        f"split_{split_number}",
-        "last.ckpt"
+def serial_ecg(train, validation=None, feature_extraction=None,
+               combiner='cat', classifier=None):
+    # keras.backend.clear_session()
+    number_of_ecgs = 2
+    # number_of_ecgs = len(train['x'].shape)
+    feature_extractor = load_model_from_experiment_result(**feature_extraction)
+
+    if combiner == 'diff':
+        combiner = difference_combiner
+    else:
+        combiner = Concatenate()
+
+    inputs, x = stack_model(
+        model=feature_extractor,
+        combiner=combiner,
+        stack_size=number_of_ecgs,
     )
-    return keras.models.load_model(filepath=path)
+
+    x = Dense(10, activation="relu")(x)
+    y = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+
+    model = keras.Model(inputs, y)
+    return model
+
+
+def stack_model(model, combiner, stack_size=2):
+    features = []
+    inputs = {}
+
+    for k in range(stack_size):
+        feature = rename_model_layers(model, suffix=f'_ecg_{k}')
+        features.append(feature.layers[-3].output)
+        inputs[f'ecg_{k}'] = feature.input['ecg']
+
+    return inputs, combiner(features)
+
+
+def difference_combiner(features):
+    diffs = []
+    diffs.append(features[0])
+    for f in features[1:]:
+        diffs.append(keras.layers.subtract([features[0], f]))
+
+    return Concatenate()(diffs)
+
+
+def rename_model_layers(model, prefix='', suffix='_bar'):
+    config = rename_config(model.get_config(), prefix, suffix)
+    new_model = model.from_config(config)
+    new_model.set_weights(model.get_weights())
+    return new_model
+
+
+def rename_config(config, prefix, suffix):
+    new_config = deepcopy(config)
+    name_map = {
+        layer['name']: prefix + layer['name'] + suffix
+        for layer in config['layers']
+    }
+
+    for layer in new_config['layers']:
+        old_name = layer['name']
+        layer['config']['name'] = name_map[old_name]
+        layer['name'] = name_map[old_name]
+        for node in layer['inbound_nodes']:
+            node[0][0] = name_map[node[0][0]]
+
+    for layer in new_config['output_layers']:
+        layer[0] = name_map[layer[0]]
+
+    for layer in new_config['input_layers'].values():
+        layer[0] = name_map[layer[0]]
+
+    return new_config

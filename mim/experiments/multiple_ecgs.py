@@ -5,7 +5,7 @@ from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.models.simple_nn import basic_cnn
+from mim.models.simple_nn import basic_cnn, serial_ecg
 from mim.cross_validation import ChronologicalSplit
 
 
@@ -190,4 +190,48 @@ class MultipleECG(Experiment, Enum):
                 'clip_outliers'
             },
         }
+    )
+
+    R2_PRETRAINED = Experiment(
+        description='Loads the pre-trained R1_TUNED model and uses it for '
+                    'feature engineering on each input ECG. The resulting '
+                    'vectors are stacked (concatenated) and fed to FFNN with '
+                    'one hidden layer. The pre-trained model is not updated.',
+        model=serial_ecg,
+        model_kwargs={
+            'feature_extraction': {
+                'xp_name': 'MultipleECG/R1_TUNED',
+                'commit': 'f7dffd5ed9f3b98e6b1666d238a3933f551cf9fe'
+            }
+        },
+        epochs=300,
+        batch_size=64,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-4}
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index', 'old']
+            },
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        scoring=roc_auc_score,
+    )
+
+    R2_PRETRAINED_DIFF = R2_PRETRAINED._replace(
+        description='Uses R1_TUNED as feature engineering, then combines the '
+                    'outputs from each ECG by stacking the differences from '
+                    'the first ECG together. ',
+        model_kwargs={
+            'feature_extraction': {
+                'xp_name': 'MultipleECG/R1_TUNED',
+                'commit': 'f7dffd5ed9f3b98e6b1666d238a3933f551cf9fe'
+            },
+            'combiner': 'diff'
+        },
     )

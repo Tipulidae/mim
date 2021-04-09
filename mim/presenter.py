@@ -86,6 +86,24 @@ class Presenter:
                 name=name))
         return pd.DataFrame(results)
 
+    def predictions(self, like='.*'):
+        # Return dataframe with the true targets and predictions for each
+        # experiment
+        all_predictions = []
+        all_targets = []
+        for name, xp in self._results_that_match_pattern(like):
+            targets, predictions = self._target_predictions(xp)
+            all_targets.append(targets.values)
+            all_predictions.append(
+                predictions.iloc[:, 0].rename(name)
+            )
+        # return all_targets
+        assert all_columns_equal(np.concatenate(all_targets, axis=1))
+
+        target = pd.DataFrame(all_targets[0], columns=['y'])
+        return target.join(pd.DataFrame(all_predictions).T)
+        # return target, pd.DataFrame(all_predictions).T
+
     def threshold_scores(self, like='.*', threshold=0.5):
         results = []
         for name, xp in self._results_that_match_pattern(like):
@@ -206,3 +224,13 @@ class Presenter:
         predictions = pd.concat(xp['predictions']['prediction'], axis=0)
         targets = pd.DataFrame(np.concatenate(xp['targets']))
         return targets, predictions
+
+
+def all_columns_equal(array):
+    """
+    :param array: 2D numpy-array
+    :return: True if all columns in input array are equal, False otherwise
+    """
+    first_column = array[:, 0].reshape((array.shape[0], 1))
+    expected = first_column * np.ones((1, array.shape[1]))  # outer product
+    return np.array_equal(array, expected)

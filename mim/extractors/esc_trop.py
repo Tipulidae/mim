@@ -34,14 +34,16 @@ class EscTrop(Extractor):
                 mode=mode,
                 index=ed.ecg_id.astype(int).values
             )
-            x_dict['ecg'] = preprocess_ecg(ecgs, self.processing)
+            x_dict['ecg_0'] = preprocess_ecg(ecgs, self.processing)
+            # x_dict['ecg_0'] = ecgs
         if 'old' in self.features['ecgs']:
             ecgs = ECGData(
                 ecg_path,
                 mode=mode,
                 index=ed.old_ecg_id.astype(int).values
             )
-            x_dict['old_ecg'] = preprocess_ecg(ecgs, self.processing)
+            x_dict['ecg_1'] = preprocess_ecg(ecgs, self.processing)
+            # x_dict['ecg_1'] = ecgs
         if 'features' in self.features:
             x_dict['features'] = Data(ed[self.features['features']].values)
 

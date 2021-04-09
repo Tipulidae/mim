@@ -7,7 +7,7 @@ import pandas as pd
 
 from mim.experiments import hyper_parameter as hp
 from mim.experiments.experiments import Experiment
-from mim.models.simple_nn import load_keras_model
+from mim.models.load import load_keras_model
 from mim.util.logs import get_logger
 
 log = get_logger("Search Strategies")

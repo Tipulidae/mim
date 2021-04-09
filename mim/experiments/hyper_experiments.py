@@ -6,7 +6,7 @@ import tensorflow as tf
 import mim.experiments.hyper_parameter as hp
 from mim.experiments.experiments import Experiment
 from mim.experiments.search_strategies import Hyperband, RandomSearch
-from mim.models.simple_nn import basic_cnn3, super_basic_cnn, sequential_cnn
+from mim.models.simple_nn import basic_cnn3, super_basic_cnn, basic_cnn
 from mim.extractors.esc_trop import EscTrop
 from mim.cross_validation import ChronologicalSplit
 from mim.util.logs import get_logger
@@ -190,17 +190,18 @@ class HyperSearch(HyperExperiment, Enum):
         template=Experiment(
             description="Testing ",
             extractor=EscTrop,
-            features={
-                'ecg_mode': 'raw',
-                'ecgs': ['index']
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'raw',
+                    'ecgs': ['index']
+                },
+                'index': {}
             },
-            index={},
             cv=ChronologicalSplit,
             cv_kwargs={
-                'test_size': 0.333
+                'test_size': 1/3
             },
-            hold_out_size=0.25,
-            model=sequential_cnn,
+            model=basic_cnn,
             building_model_requires_development_data=True,
             optimizer={
                 'name': tf.keras.optimizers.Adam,
@@ -233,17 +234,18 @@ class HyperSearch(HyperExperiment, Enum):
         template=Experiment(
             description="",
             extractor=EscTrop,
-            features={
-                'ecg_mode': 'raw',
-                'ecgs': ['index']
+            extractor_kwargs={
+                "features": {
+                    'ecg_mode': 'raw',
+                    'ecgs': ['index']
+                },
+                "index": {},
             },
-            index={},
             cv=ChronologicalSplit,
             cv_kwargs={
-                'test_size': 0.333
+                'test_size': 1/3
             },
-            hold_out_size=0.25,
-            model=sequential_cnn,
+            model=basic_cnn,
             building_model_requires_development_data=True,
             optimizer={
                 'name': tf.keras.optimizers.Adam,
