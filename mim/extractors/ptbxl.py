@@ -6,11 +6,11 @@ import wfdb
 from tqdm import tqdm
 
 from mim.config import PATH_TO_DATA
-from mim.extractors.extractor import Extractor, DataProvider
+from mim.extractors.extractor import Extractor, Data, Container
 
 
 class PTBXL(Extractor):
-    def get_data_provider(self, dp_kwargs) -> DataProvider:
+    def get_data(self) -> Container:
         path = PATH_TO_DATA+'/ptbxl/'
         info = pd.read_csv(path+'ptbxl_database.csv', index_col='ecg_id')
         if self.index['size'] == 'XS':
@@ -29,7 +29,16 @@ class PTBXL(Extractor):
         y = info.scp_codes.apply(is_mi)
         x = np.array([wfdb.rdsamp(path+f)[0] for f in tqdm(info.filename_lr)])
 
+        # Holding out the last fold
         x = x[info.strat_fold < 9]
         y = y[info.strat_fold < 9]
 
-        return None  # XXX: This needs to be fixed
+        data = Container(
+            {
+                'x': Data(x),
+                'y': Data(y)
+            },
+            predefined_splits=info.strat_fold[info.strat_fold < 9]
+        )
+
+        return data

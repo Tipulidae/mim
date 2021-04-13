@@ -4,20 +4,13 @@ from typing import List
 import numpy as np
 import tensorflow as tf
 
-from mim.extractors.extractor import (
-    Data,
-    Container,
-    Extractor,
-    DataProvider,
-    IndividualContainerDataProvider
-)
+from mim.extractors.extractor import Data, Container, Extractor
 from mim.massage.ecg import ECG
 import mim.util.ab_util
 from mim.util.ab_util import parse_iso8601_datetime
 
 CATEGORICAL_FEATURES = ["gender"]
-NUMERICAL_FEATURES = ["age"] + ["bl-" + sample
-                                for sample in
+NUMERICAL_FEATURES = ["age"] + [f"bl-{sample}" for sample in
                                 ["Glukos", "Krea", "TnT", "Hb"]
                                 ]
 ECG_FEATURES = ["ecg_raw_12", "ecg_raw_8", "ecg_beat_12", "ecg_beat_8"]
@@ -50,11 +43,9 @@ class JSONDataPoint:
                 self.reals_absolute["bl-" + key] = value
         if "ecg" in m and m["ecg"] is not None:
             self.ecg_timestamp = parse_iso8601_datetime(m["ecg"][0])
-#            self.ecg = ecg
             self.ecg_path = m["ecg"][1]
         else:
             self.ecg_timestamp = None
-#            self.ecg = None
 
     @staticmethod
     def extract_tnts(m):
@@ -71,26 +62,44 @@ class JSONDataPoint:
 
 
 class ABJSONExtractor(Extractor):
-    def get_data_provider(self, dp_kwargs) -> DataProvider:
-        d = {
-            "train": self._get_container_from_json(self.index["train"]),
-            "val": self._get_container_from_json(self.index["val"]),
-            "test": self._get_container_from_json(self.index["test"])
-        }
-        dp = IndividualContainerDataProvider(container_dict=d, **dp_kwargs)
-        return dp
+    def get_data(self) -> Container:
+        train_json = []
+        for train_file in self.index['train_files']:
+            train_json.extend(_parse_json(train_file))
 
-    def _get_container_from_json(self, json_file):
-        json_data = _parse_json(json_file)
-        x_container_dict = _extract_x(json_data, self.features)
-        y = _get_labels(json_data, self.labels)
-        c = Container(
+        val_json = []
+        for val_file in self.index['val_files']:
+            val_json.extend(_parse_json(val_file))
+
+        dev_json = train_json + val_json
+
+        x = _extract_x(dev_json, self.features)
+
+        data = Container(
             {
-                "x": Container(x_container_dict, index=range(len(json_data))),
-                "y": Data(y)
-            }
+                'x': Container(x, index=range(len(dev_json))),
+                'y': Data(_get_labels(dev_json, self.labels))
+            },
+            predefined_splits=_define_split(len(train_json), len(val_json))
         )
-        return c
+
+        return data
+
+
+def _define_split(train_len, val_len):
+    """
+    The entry ``split[i]`` represents the index of the test set that
+    sample ``i`` belongs to. It is possible to exclude sample ``i`` from
+    any test set (i.e. include sample ``i`` in every training set) by
+    setting ``split[i]`` equal to -1.
+
+    This function defines a split by setting the first train_len elements to
+    -1, thus always including them in the training set, and then setting the
+    remaining val_len elements to 0, using them in the test set for the first
+    (and only) split.
+    """
+    split = [-1] * train_len + [0] * val_len
+    return split
 
 
 class LazyECGsFromFiles(Data):

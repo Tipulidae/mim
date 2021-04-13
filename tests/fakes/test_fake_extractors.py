@@ -3,20 +3,21 @@ from mim.fakes.fake_extractors import FakeExtractor
 
 
 def test_data_is_correct_format():
-    dp = FakeExtractor().get_data_provider({})
-    data = dp.get_set("all")
+    data = FakeExtractor().get_data()
     assert isinstance(data, Data)
     assert data['x'].as_numpy.shape == (100, 20)
     assert data['y'].as_numpy.shape == (100,)
 
 
 def test_can_specify_inputs():
-    ext = FakeExtractor(**{"index": dict(n_samples=10,
-                                         n_features=5,
-                                         n_informative=3)})
-    dp = ext.get_data_provider({})
-    data = dp.get_set("all")
-
+    ext = FakeExtractor(
+        index=dict(
+            n_samples=10,
+            n_features=5,
+            n_informative=3
+        )
+    )
+    data = ext.get_data()
     assert data['x'].as_numpy.shape == (10, 5)
 
 
@@ -31,8 +32,5 @@ def test_can_specify_inputs_like_experiment():
         labels=labels,
         processing=processing
     )
-    dp = FakeExtractor(**extractors_kwargs).get_data_provider({})
-
-    data = dp.get_set("all")
-
+    data = FakeExtractor(**extractors_kwargs).get_data()
     assert data['x'].as_numpy.shape == (10, 5)

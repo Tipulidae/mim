@@ -4,8 +4,8 @@ from mim.fakes.fake_extractors import FakeExtractor
 
 class TestModel:
     def test_rf_binary_classification_output_is_one_dimensional(self):
-        dp = FakeExtractor().get_data_provider({})
-        data = dp.get_set("all")
+        data = FakeExtractor().get_data()
+        # data = dp.get_set("all")
         clf = mw.RandomForestClassifier(n_estimators=10)
         clf.fit(data)
         assert clf.only_last_prediction_column_is_used
@@ -14,10 +14,10 @@ class TestModel:
         assert 1 == len(prediction.columns)
 
     def test_rf_multiclass_classification_output_is_multi_dimensional(self):
-        dp = FakeExtractor(
+        data = FakeExtractor(
             **{"index": dict(n_informative=3, n_classes=3)}
-        ).get_data_provider({})
-        data = dp.get_set("all")
+        ).get_data()
+        # data = dp.get_set("all")
         clf = mw.RandomForestClassifier(n_estimators=10)
         clf.fit(data)
         assert not clf.only_last_prediction_column_is_used

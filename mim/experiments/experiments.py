@@ -10,9 +10,11 @@ import silence_tensorflow.auto  # noqa: F401
 import tensorflow as tf
 from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import PredefinedSplit, KFold
 
-from mim.extractors.extractor import Extractor
-from mim.extractors.extractor import DataProvider
+from mim.extractors.extractor import Extractor, Container
+from mim.cross_validation import CrossValidationWrapper
+# from mim.extractors.extractor import DataProvider
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
@@ -26,10 +28,15 @@ log = get_logger("Experiment")
 class Experiment(NamedTuple):
     description: str
     extractor: Callable[[Any], Extractor] = None
-    index: Any = None
-    features: Any = None
-    labels: Any = None
-    post_processing: Any = None
+    extractor_kwargs: dict = {
+        "index": {},
+        "features": None,
+        "labels": None,
+        "processing": None,
+    }
+    use_predefined_splits: bool = False
+    cv: Any = KFold
+    cv_kwargs: dict = {}
     model: Any = RandomForestClassifier
     model_kwargs: dict = {}
     building_model_requires_development_data: bool = False
@@ -49,22 +56,6 @@ class Experiment(NamedTuple):
     parent_name: str = None
     data_fits_in_memory: bool = True
 
-    extractor_kwargs: dict = {
-        "index": {},
-        "features": None,
-        "labels": None,
-        "processing": None,
-    }
-
-    data_provider_kwargs: dict = {
-        "train_frac": 0.50,
-        "val_frac": 0.25,
-        "test_frac": 0.25,
-        "mode": 'cv',  # cv, train_val, dev_test, ...
-        "cv_folds": 5,
-        "cv_set": 'dev'
-    }
-
     def run(self):
         try:
             results = self._run()
@@ -78,7 +69,7 @@ class Experiment(NamedTuple):
         log.info(f'Running experiment {self.name}: {self.description}')
         t = time()
 
-        data_provider = self.get_data()
+        data = self.get_data()
 
         # TODO:
         #  Add feature names to dataset somewhere so it can be
@@ -98,7 +89,9 @@ class Experiment(NamedTuple):
             'history': [],
         }
 
-        for i, (train, validation) in enumerate(data_provider.split()):
+        cv = self.get_cross_validation(data.predefined_splits)
+
+        for i, (train, validation) in enumerate(cv.split(data)):
             result = _validate(
                 train,
                 validation,
@@ -115,16 +108,30 @@ class Experiment(NamedTuple):
                  f'{time() - t}s. ')
         return results
 
-    def get_data(self) -> DataProvider:
+    def get_data(self) -> Container:
         """
         Uses the extractor and specifications to create the X and y data
         set.
 
-        :return: Data object
+        :return: Container object
         """
-        extractor = self.extractor(**self.extractor_kwargs)
-        data_provider = extractor.get_data_provider(self.data_provider_kwargs)
-        return data_provider
+        return self.extractor(**self.extractor_kwargs).get_data()
+
+    def get_cross_validation(self, predefined_splits=None):
+        if not self.use_predefined_splits and self.cv is None:
+            raise ValueError("Must specify cv or use predefined splits!")
+
+        elif self.use_predefined_splits or self.cv is None:
+            if predefined_splits is None:
+                raise ValueError(
+                    "Data must contain predefined_splits when using "
+                    "PredefinedSplit cross-validation."
+                )
+            cv = PredefinedSplit(predefined_splits)
+        else:
+            cv = self.cv(**self.cv_kwargs)
+
+        return CrossValidationWrapper(cv)
 
     def get_model(self, train, validation, split_number):
         model_kwargs = copy(self.model_kwargs)
@@ -177,10 +184,6 @@ class Experiment(NamedTuple):
 
     def asdict(self):
         return callable_to_string(self._asdict())
-
-    # @property
-    # def cross_validation(self, data_provider):
-    #     return CrossValidationWrapper(**self.cv_kwargs)
 
     @property
     def is_binary(self):
