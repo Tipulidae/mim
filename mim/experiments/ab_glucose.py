@@ -6,6 +6,7 @@ from os.path import join
 import tensorflow as tf
 from sklearn.model_selection import KFold
 
+from mim.cross_validation import PredefinedSplitsRepeated
 from mim.experiments.experiments import Experiment
 from mim.config import GLUCOSE_ROOT
 from mim.extractors.ab_json import ABJSONExtractor
@@ -82,23 +83,25 @@ class ABGlucose(Experiment, Enum):
         extractor_kwargs=copy_update_dict(BASE_EXTRACTOR_KWARGS, {
             "features": {"gender",
                          "age",
-                         "bl-Glukos", "bl-Krea", "bl-Hb"}
+                         "bl-Glukos", "bl-Krea", "bl-Hb", "bl-TnT"}
         }),
         building_model_requires_development_data=True,
-        ignore_callbacks=False,
+        ignore_callbacks=True,
         model=ab_nn.ab_simple_one_hidden_layer,
         model_kwargs={
             "hidden_layer_n": 10,
+            "l2": 0.01,
+            "dense_dropout": 0.4
         },
-        epochs=200,
+        epochs=300,
         batch_size=32,
         optimizer={
             'name': tf.keras.optimizers.Adam,
-            'kwargs': {'learning_rate': 0.003}
+            'kwargs': {'learning_rate': 0.001}
         },
-        data_provider_kwargs={
-            "mode": "train_val"
-        }
+        use_predefined_splits=True,
+        cv=PredefinedSplitsRepeated,
+        cv_kwargs={'repeats': 5}
     )
 
     ECG_BEAT = Experiment(

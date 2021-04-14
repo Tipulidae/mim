@@ -27,15 +27,20 @@ def ab_simple_lr(train=None, validation=None, **kwargs):
     return keras.Model(inp, output)
 
 
-def ab_simple_one_hidden_layer(train=None, hidden_layer_n=-1, **kwargs):
+def ab_simple_one_hidden_layer(train=None, **kwargs):
     inp = {key: Input(shape=value, name=key)
            for key, value in train['x'].shape.items()}
     normalization = Normalization(axis=1)
     normalization.adapt(train['x']['numeric'].as_numpy)
     normalized = normalization(inp['numeric'])
     concatenated = Concatenate()([normalized, inp['categorical']])
-    dense = Dense(hidden_layer_n, activation="relu")(concatenated)
-    output = Dense(1, activation="sigmoid")(dense)
+    layer = Dense(kwargs["hidden_layer_n"], activation="relu",
+                  kernel_regularizer=l2(l2=kwargs["l2"]),
+                  bias_regularizer=l2(l2=kwargs["l2"])
+                  )(concatenated)
+    if "dense_dropout" in kwargs and 0 < kwargs["dense_dropout"] < 1:
+        layer = Dropout(kwargs["dense_dropout"])(layer)
+    output = Dense(1, activation="sigmoid")(layer)
     return keras.Model(inp, output)
 
 
