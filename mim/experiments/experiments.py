@@ -131,7 +131,6 @@ class Experiment(NamedTuple):
                     "PredefinedSplit cross-validation."
                 )
             if self.cv == PredefinedSplitsRepeated:
-                print("hello!")
                 cv = self.cv(predefined_splits, **self.cv_kwargs)
             else:
                 cv = PredefinedSplit(predefined_splits)
