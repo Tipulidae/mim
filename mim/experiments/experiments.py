@@ -13,7 +13,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import PredefinedSplit, KFold
 
 from mim.extractors.extractor import Extractor, Container
-from mim.cross_validation import CrossValidationWrapper
+from mim.cross_validation import (
+    CrossValidationWrapper,
+    PredefinedSplitsRepeated
+)
 # from mim.extractors.extractor import DataProvider
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
@@ -127,7 +130,11 @@ class Experiment(NamedTuple):
                     "Data must contain predefined_splits when using "
                     "PredefinedSplit cross-validation."
                 )
-            cv = PredefinedSplit(predefined_splits)
+            if self.cv == PredefinedSplitsRepeated:
+                print("hello!")
+                cv = self.cv(predefined_splits, **self.cv_kwargs)
+            else:
+                cv = PredefinedSplit(predefined_splits)
         else:
             cv = self.cv(**self.cv_kwargs)
 
@@ -148,8 +155,9 @@ class Experiment(NamedTuple):
         # Releases keras global state. Ref:
         # https://www.tensorflow.org/api_docs/python/tf/keras/backend/clear_session
         tf.keras.backend.clear_session()
-        np.random.seed(self.random_state)
-        tf.random.set_seed(self.random_state)
+        rand_state = self.random_state + split_number
+        np.random.seed(rand_state)
+        tf.random.set_seed(rand_state)
         model = self.model(**model_kwargs)
 
         if isinstance(model, tf.keras.Model):

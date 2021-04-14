@@ -1,3 +1,5 @@
+from sklearn.model_selection import PredefinedSplit
+
 from mim.extractors.extractor import Container
 from mim.util.logs import get_logger
 
@@ -27,3 +29,15 @@ class ChronologicalSplit:
         train = list(range(k))
         test = list(range(k, n))
         yield train, test
+
+
+class PredefinedSplitsRepeated:
+    def __init__(self, predefined_splits, repeats=5):
+        self.predefined_splits = predefined_splits
+        self.repeats = repeats
+
+    def split(self, x, y=None, groups=None):
+        for i in range(self.repeats):
+            ps = PredefinedSplit(self.predefined_splits)
+            for train, test in ps.split(x, y, groups):
+                yield train, test
