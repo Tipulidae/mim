@@ -17,6 +17,9 @@ from tensorflow.keras.layers import (
 )
 
 from mim.models.load import load_model_from_experiment_result
+from mim.util.logs import get_logger
+
+log = get_logger('simple_nn')
 
 
 def super_basic_cnn(train, validation=None, dropout=0, filters=32,
@@ -182,10 +185,7 @@ def basic_ff():
 
 
 def serial_ecg(train, validation=None, feature_extraction=None,
-               combiner='cat', classifier=None):
-    # keras.backend.clear_session()
-    number_of_ecgs = 2
-    # number_of_ecgs = len(train['x'].shape)
+               combiner='cat', classifier=None, number_of_ecgs=2):
     feature_extractor = load_model_from_experiment_result(**feature_extraction)
 
     if combiner == 'diff':
@@ -198,6 +198,13 @@ def serial_ecg(train, validation=None, feature_extraction=None,
         combiner=combiner,
         stack_size=number_of_ecgs,
     )
+
+    shape = train['x'].shape
+    if 'features' in shape:
+        feature_vector = Input(shape=shape['features'])
+        inputs['features'] = feature_vector
+        feature_vector = BatchNormalization()(feature_vector)
+        x = Concatenate()([x, feature_vector])
 
     x = Dense(10, activation="relu")(x)
     y = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
@@ -215,12 +222,16 @@ def stack_model(model, combiner, stack_size=2):
         features.append(feature.layers[-3].output)
         inputs[f'ecg_{k}'] = feature.input['ecg']
 
-    return inputs, combiner(features)
+    if len(features) > 1:
+        outputs = combiner(features)
+    else:
+        outputs = features[0]
+
+    return inputs, outputs
 
 
 def difference_combiner(features):
-    diffs = []
-    diffs.append(features[0])
+    diffs = [features[0]]
     for f in features[1:]:
         diffs.append(keras.layers.subtract([features[0], f]))
 

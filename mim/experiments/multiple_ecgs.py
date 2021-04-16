@@ -1,6 +1,7 @@
 from enum import Enum
 
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers.schedules import ExponentialDecay
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
@@ -223,6 +224,41 @@ class MultipleECG(Experiment, Enum):
         scoring=roc_auc_score,
     )
 
+    R2_PT_DT = R2_PRETRAINED._replace(
+        description='Uses 2 raw ECG signals with the pre-trained CNN, and '
+                    'adds time since last ecg (delta-t) as feature in the '
+                    'end. ',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index', 'old'],
+                'features': ['delta_t']
+            },
+        },
+    )
+
+    R2_PT_AGE_SEX = R2_PRETRAINED._replace(
+        description='Two ECGs + age + sex, but no delta-t.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index', 'old'],
+                'features': ['age', 'sex']
+            },
+        },
+    )
+
+    R2_PT_DT_AGE_SEX = R2_PT_DT._replace(
+        description='Adds age and sex as features in addition to delta-t.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index', 'old'],
+                'features': ['age', 'sex', 'delta_t']
+            },
+        },
+    )
+
     R2_PRETRAINED_DIFF = R2_PRETRAINED._replace(
         description='Uses R1_TUNED as feature engineering, then combines the '
                     'outputs from each ECG by stacking the differences from '
@@ -233,5 +269,80 @@ class MultipleECG(Experiment, Enum):
                 'commit': 'f7dffd5ed9f3b98e6b1666d238a3933f551cf9fe'
             },
             'combiner': 'diff'
+        },
+    )
+
+    R2_PRETRAINED_DIFF2 = R2_PRETRAINED_DIFF._replace(
+        description='This time, allow backpropagation to update the '
+                    'pre-trained feature-extraction model.',
+        model_kwargs={
+            'feature_extraction': {
+                'xp_name': 'MultipleECG/R1_TUNED',
+                'commit': 'f7dffd5ed9f3b98e6b1666d238a3933f551cf9fe',
+                'trainable': True
+            },
+            'combiner': 'diff'
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': ExponentialDecay,
+                    'scheduler_kwargs': {
+                        'initial_learning_rate': 1e-4,
+                        'decay_steps': 152,  # Corresponds to once per epoch
+                        'decay_rate': 0.96
+                    }
+                },
+            }
+        },
+        epochs=10
+    )
+
+    R1_TUNED_DT = R1_TUNED._replace(
+        description='Wonder what happens if we add time since last ECG but '
+                    'without the old ECG...',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index'],
+                'features': ['delta_t']
+            },
+        },
+    )
+
+    R1_TUNED_DT2 = R1_TUNED_DT._replace(
+        description='Is there a difference if we use the pre-trained network '
+                    'instead?',
+        model=serial_ecg,
+        model_kwargs={
+            'feature_extraction': {
+                'xp_name': 'MultipleECG/R1_TUNED',
+                'commit': 'f7dffd5ed9f3b98e6b1666d238a3933f551cf9fe'
+            },
+            'number_of_ecgs': 1
+        },
+        epochs=300
+    )
+
+    R1_TUNED_DT_AGE_SEX = R1_TUNED_DT2._replace(
+        description='Same as R2_PT_DT_AGE_SEX, but uses only the first ECG.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index'],
+                'features': ['age', 'sex', 'delta_t']
+            },
+        },
+    )
+
+    R1_TUNED_AGE_SEX = R1_TUNED_DT2._replace(
+        description='Index ECG + age + sex.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index'],
+                'features': ['age', 'sex']
+            },
         },
     )

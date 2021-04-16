@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import h5py
 
@@ -153,3 +154,20 @@ def make_troponin_table():
             rsuffix='_2'
         )
     )
+
+
+def make_double_ecg_table():
+    ed = make_ed_table()
+    tnt = make_troponin_table()
+    ed = ed.join(tnt).reset_index()
+
+    # Include only those that have a first valid tnt measurement!
+    # This drops total from 20506 to 19444. There are 8722 patients with
+    # two valid tnts.
+    ed = ed.dropna(subset=['tnt_1'])
+
+    ed['delta_t'] = (ed.ecg_date - ed.old_ecg_date).dt.total_seconds()
+    ed.delta_t /= 24 * 3600  # delta_t unit is now days
+    ed.delta_t = (np.log10(ed.delta_t) - 2.5) / 2  # Normalizing
+    ed.sex = ed.sex.apply(lambda x: 1 if x == 'M' else 0)
+    return ed

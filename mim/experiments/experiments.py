@@ -161,8 +161,16 @@ class Experiment(NamedTuple):
         model = self.model(**model_kwargs)
 
         if isinstance(model, tf.keras.Model):
+            # TODO: refactor this! :(
             if isinstance(self.optimizer, dict):
-                optimizer = self.optimizer['name'](**self.optimizer['kwargs'])
+                optimizer_kwargs = copy(self.optimizer['kwargs'])
+                optimizer = self.optimizer['name']
+                if 'learning_rate' in optimizer_kwargs:
+                    lr = optimizer_kwargs.pop('learning_rate')
+                    if isinstance(lr, dict):
+                        lr = lr['scheduler'](**lr['scheduler_kwargs'])
+                    optimizer_kwargs['learning_rate'] = lr
+                optimizer = optimizer(**optimizer_kwargs)
             else:
                 optimizer = self.optimizer
 

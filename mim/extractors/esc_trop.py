@@ -3,28 +3,20 @@ from scipy.signal import iirnotch, filtfilt
 
 from tqdm import tqdm
 
-from mim.massage.esc_trop import make_ed_table, make_troponin_table
+from mim.massage.esc_trop import make_double_ecg_table
 from mim.extractors.extractor import Data, Container, ECGData, Extractor
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
+from mim.util.logs import get_logger
+
+log = get_logger("ESC-Trop extractor")
 
 
 class EscTrop(Extractor):
     def get_data(self) -> Container:
-        ed = make_ed_table()
-        tnt = make_troponin_table()
-        ed = ed.join(tnt).reset_index()
-
-        # Include only those that have a first valid tnt measurement!
-        # This drops total from 20506 to 19444. There are 8722 patients with
-        # two valid tnts.
-        ed = ed.dropna(subset=['tnt_1'])
-
-        # ed['days_since_last_ecg'] = (ed.ecg_date - ed.old_ecg_date
-        #                              ).dt.total_seconds() // (24 * 3600)
-        ed.sex = ed.sex.apply(lambda x: 1 if x == 'M' else 0)
+        log.debug("Preparing ED and TnT data...")
+        ed = make_double_ecg_table()
 
         ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
-
         mode = self.features['ecg_mode']
 
         x_dict = {}
@@ -35,7 +27,6 @@ class EscTrop(Extractor):
                 index=ed.ecg_id.astype(int).values
             )
             x_dict['ecg_0'] = preprocess_ecg(ecgs, self.processing)
-            # x_dict['ecg_0'] = ecgs
         if 'old' in self.features['ecgs']:
             ecgs = ECGData(
                 ecg_path,
@@ -43,7 +34,6 @@ class EscTrop(Extractor):
                 index=ed.old_ecg_id.astype(int).values
             )
             x_dict['ecg_1'] = preprocess_ecg(ecgs, self.processing)
-            # x_dict['ecg_1'] = ecgs
         if 'features' in self.features:
             x_dict['features'] = Data(ed[self.features['features']].values)
 

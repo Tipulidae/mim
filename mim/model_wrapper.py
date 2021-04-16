@@ -168,6 +168,22 @@ class NullModel:
         return None
 
 
+class LearningRateLogger(tf.keras.callbacks.Callback):
+    def __init__(self):
+        super().__init__()
+        self._supports_tf_logs = True
+
+    def on_epoch_end(self, epoch, logs=None):
+        if logs is None or "learning_rate" in logs:
+            return
+        optimizer = self.model.optimizer
+        # This is a bit daft, but the best (only) way I found that works.
+        if isinstance(optimizer.learning_rate,
+                      tf.keras.optimizers.schedules.LearningRateSchedule):
+            lr = optimizer._decayed_lr('float32').numpy()
+            logs['learning_rate'] = lr
+
+
 class KerasWrapper(Model):
     def __init__(
             self,
@@ -218,7 +234,8 @@ class KerasWrapper(Model):
                     filepath=os.path.join(checkpoint, 'best.ckpt'),
                     save_best_only=True
                 ),
-                TensorBoard(log_dir=tensorboard)
+                TensorBoard(log_dir=tensorboard),
+                LearningRateLogger()
             ]
         if self.batch_size < 0:
             self.batch_size = len(data)
