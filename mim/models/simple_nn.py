@@ -108,7 +108,7 @@ def basic_cnn3(train, validation=None, dropout=0, layers=None,
     return keras.Model(inp, output)
 
 
-def basic_cnn(train, validation=None, **cnn_kwargs):
+def basic_cnn(train, validation=None, cat_dense_size=10, **cnn_kwargs):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     layers = []
     if 'ecg' in inp:
@@ -120,7 +120,7 @@ def basic_cnn(train, validation=None, **cnn_kwargs):
 
     if len(layers) > 1:
         x = Concatenate()(layers)
-        x = Dense(10, activation='relu')(x)
+        x = Dense(cat_dense_size, activation='relu')(x)
     else:
         x = layers[0]
 
@@ -149,7 +149,7 @@ def _ecg_network(x, num_conv_layers, dropout=0.3, filters=32,
 def ecg_network2(x, num_layers=2, dropout=0.3, filter_first=16,
                  filter_last=16, kernel_first=5, kernel_last=5,
                  dense=True, batch_norm=True, pool_size=None,
-                 downsample=False, output_size=10):
+                 downsample=False, dense_size=10):
     if downsample:
         x = AveragePooling1D(2, padding='same')(x)
     if pool_size is None:
@@ -171,7 +171,7 @@ def ecg_network2(x, num_layers=2, dropout=0.3, filter_first=16,
 
     x = Flatten()(x)
     if dense:
-        x = Dense(output_size, activation="relu")(x)
+        x = Dense(dense_size, activation="relu")(x)
     return Dropout(dropout)(x)
 
 
@@ -185,7 +185,8 @@ def basic_ff():
 
 
 def serial_ecg(train, validation=None, feature_extraction=None,
-               combiner='cat', classifier=None, number_of_ecgs=2):
+               combiner='cat', classifier=None, number_of_ecgs=2,
+               dense_size=10):
     feature_extractor = load_model_from_experiment_result(**feature_extraction)
 
     if combiner == 'diff':
@@ -206,7 +207,7 @@ def serial_ecg(train, validation=None, feature_extraction=None,
         feature_vector = BatchNormalization()(feature_vector)
         x = Concatenate()([x, feature_vector])
 
-    x = Dense(10, activation="relu")(x)
+    x = Dense(dense_size, activation="relu")(x)
     y = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
 
     model = keras.Model(inputs, y)

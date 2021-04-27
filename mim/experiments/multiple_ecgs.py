@@ -36,7 +36,7 @@ class MultipleECG(Experiment, Enum):
                 'pool_size': 16,
                 'batch_norm': True,
                 'dense': True,
-                'output_size': 10
+                'dense_size': 10
             }
         },
         epochs=200,
@@ -85,7 +85,7 @@ class MultipleECG(Experiment, Enum):
                 'pool_size': 16,
                 'batch_norm': True,
                 'dense': True,
-                'output_size': 10
+                'dense_size': 10
             }
         },
         extractor_kwargs={
@@ -145,7 +145,25 @@ class MultipleECG(Experiment, Enum):
             'batch_norm': False,
             'dense': True,
             'downsample': True,
-            'output_size': 10
+            'dense_size': 10
+        },
+        epochs=500,
+        batch_size=128,
+    )
+
+    R1_TUNED_D100 = BASELINE_RAW._replace(
+        description='Best model after hyperband tuning. ',
+        model_kwargs={
+            'num_layers': 2,
+            'dropout': 0.4,
+            'filter_first': 44,
+            'filter_last': 31,
+            'kernel_first': 5,
+            'kernel_last': 7,
+            'batch_norm': False,
+            'dense': True,
+            'downsample': True,
+            'dense_size': 100,
         },
         epochs=500,
         batch_size=128,
@@ -163,7 +181,7 @@ class MultipleECG(Experiment, Enum):
             'batch_norm': True,
             'dense': True,
             'downsample': True,
-            'output_size': 10
+            'dense_size': 10
         },
         epochs=500,
         batch_size=128,
