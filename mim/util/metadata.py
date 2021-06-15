@@ -22,7 +22,7 @@ class Metadata:
     def __init__(self, folders=tuple()):
         self.metadata_folders = folders
 
-    def report(self, **include):
+    def report(self, as_string=False, **include):
         """
         Generates a report of the current metadata situation for the
         project, in the form of a dictionary. Contains current branch,
@@ -42,7 +42,10 @@ class Metadata:
             if name not in include or include[name]:
                 report_dict[name] = f()
 
-        return report_dict
+        if as_string:
+            return dict_to_string(report_dict)
+        else:
+            return report_dict
 
     def current_branch(self):
         """

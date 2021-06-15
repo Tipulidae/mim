@@ -6,7 +6,15 @@ import pandas as pd
 import h5py
 from tqdm import tqdm
 
-from mim.massage.carlson_ecg import ECGStatus, ecg_status
+from mim.util.metadata import Metadata
+from mim.massage.carlson_ecg import (
+    ECGStatus,
+    ecg_status,
+    expected_lead_names,
+    glasgow_scalar_names,
+    glasgow_vector_names,
+    extract_field
+)
 
 
 class ECG:
@@ -57,7 +65,8 @@ class ECG:
 
     def init_device(self):
         if self.is_device_ok:
-            return self.ecg_dict['Recording']['Device'][0][0][0]
+            return extract_field(self.ecg_dict['Recording'], 'Device')[0][0][0]
+            # return self.ecg_dict['Recording']['Device'][0][0][0]
         else:
             return "Unknown device"
 
@@ -66,6 +75,24 @@ class ECG:
             return self.ecg_dict['Recording']['Lead_system'][0][0][0]
         else:
             return "Unknown lead system"
+
+    def init_glasgow_vectors(self):
+        if self.is_glasgow_ok:
+            return np.vstack(
+                [self.ecg_dict['Measurements'][0][0][x][0]
+                 for x in glasgow_vector_names]
+            )
+        else:
+            return np.zeros((len(glasgow_vector_names), 12))
+
+    def init_glasgow_scalars(self):
+        if self.is_glasgow_ok:
+            return np.array(
+                [self.ecg_dict['Measurements'][0][0][x][0][0]
+                 for x in glasgow_scalar_names]
+            )
+        else:
+            return np.zeros(len(glasgow_scalar_names))
 
     @property
     def is_raw_ecg_ok(self):
@@ -109,7 +136,17 @@ class ECG:
     def is_lead_system_ok(self):
         return self.status.isdisjoint({
             ECGStatus.MISSING_RECORDING,
-            ECGStatus.MISSING_LEAD_SYSTEM
+            ECGStatus.MISSING_LEAD_SYSTEM,
+            ECGStatus.MISSING_LEAD_NAMES,
+            ECGStatus.BAD_LEAD_NAMES
+        })
+
+    @property
+    def is_glasgow_ok(self):
+        return self.status.isdisjoint({
+            ECGStatus.MISSING_MEASUREMENTS,
+            ECGStatus.MISSING_GLASGOW,
+            ECGStatus.BAD_GLASGOW
         })
 
 
@@ -139,6 +176,21 @@ def to_hdf5(ecg_paths, target_path):
             chunks=(1, 1200, 8),
             fletcher32=True
         )
+
+        glasgow = data.create_group('glasgow')
+        glasgow.create_dataset(
+            'vectors',
+            (n, len(glasgow_vector_names), 12),
+            chunks=(1, len(glasgow_vector_names), 12),
+            fletcher32=True
+        )
+        glasgow.create_dataset(
+            'scalars',
+            (n, len(glasgow_scalar_names)),
+            chunks=(1, len(glasgow_scalar_names)),
+            fletcher32=True
+        )
+
         meta = data.create_group('meta')
         meta.create_dataset(
             "date",
@@ -167,22 +219,49 @@ def to_hdf5(ecg_paths, target_path):
         )
         meta.create_dataset(
             "status",
-            (n, 25),
+            (n, len(ECGStatus)),
             dtype=np.bool
         )
         meta.create_dataset(
             "status_keys",
-            (25,),
+            (len(ECGStatus),),
+            dtype=h5py.string_dtype(encoding='utf-8')
+        )
+        meta.create_dataset(
+            "glasgow_vector_names",
+            (len(glasgow_vector_names),),
+            dtype=h5py.string_dtype(encoding='utf-8')
+        )
+        meta.create_dataset(
+            "glasgow_scalar_names",
+            (len(glasgow_scalar_names),),
+            dtype=h5py.string_dtype(encoding='utf-8')
+        )
+        meta.create_dataset(
+            "lead_names",
+            (len(expected_lead_names),),
+            dtype=h5py.string_dtype(encoding='utf-8')
+        )
+        meta.create_dataset(
+            "report",
+            (1,),
             dtype=h5py.string_dtype(encoding='utf-8')
         )
 
         data['meta']['status_keys'][()] = [x.name for x in ECGStatus]
         data['meta']['path'][()] = ecg_paths
+        data['meta']['glasgow_vector_names'][()] = glasgow_vector_names
+        data['meta']['glasgow_scalar_names'][()] = glasgow_scalar_names
+        data['meta']['lead_names'][()] = expected_lead_names
+        data['meta']['report'][()] = Metadata().report(
+            conda=False, file_data=False, as_string=True)
 
         for i, path in tqdm(enumerate(ecg_paths), total=n):
             ecg = ECG(path)
             data['raw'][i] = ecg.raw
             data['beat'][i] = ecg.beat
+            data['glasgow']['scalars'][i] = ecg.init_glasgow_scalars()
+            data['glasgow']['vectors'][i] = ecg.init_glasgow_vectors()
             meta = ecg.metadata
             data['meta']['date'][i] = meta['date']
             data['meta']['alias'][i] = meta['alias']
