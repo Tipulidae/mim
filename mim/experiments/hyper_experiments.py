@@ -275,3 +275,51 @@ class HyperSearch(HyperExperiment, Enum):
             'resource_unit': 10
         }
     )
+
+    RawMultiLayerHyperband2 = HyperExperiment(
+        template=Experiment(
+            description="",
+            extractor=EscTrop,
+            extractor_kwargs={
+                "features": {
+                    'ecg_mode': 'raw',
+                    'ecgs': ['index']
+                },
+                "index": {},
+            },
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 1/3
+            },
+            model=basic_cnn,
+            building_model_requires_development_data=True,
+            optimizer={
+                'name': tf.keras.optimizers.Adam,
+                'kwargs': {'learning_rate': 1e-4}
+            },
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            epochs=0,
+            random_state=hp.Int(0, 1000000000),
+            batch_size=128,
+            model_kwargs={
+                'dropout': hp.Choice([0.2, 0.3, 0.4, 0.5]),
+                'filter_first': hp.Int(16, 64),
+                'filter_last': hp.Int(16, 64),
+                'kernel_first': hp.Int(5, 31, step=2),
+                'kernel_last': hp.Int(5, 31, step=2),
+                'num_layers': hp.Choice([2, 3, 4]),
+                'downsample': True,
+                'dense': True,
+                'dense_size': hp.Choice([50, 100, 150, 200]),
+                'batch_norm': False
+            },
+        ),
+        random_seed=42,
+        strategy=Hyperband,
+        strategy_kwargs={
+            'iterations': 100,
+            'maximum_resource': 50,
+            'resource_unit': 10
+        }
+    )

@@ -8,9 +8,17 @@ from typing import Dict
 
 
 class Data:
-    def __init__(self, data, index=None, dtype=tf.int64, fits_in_memory=True,
-                 groups=None, predefined_splits=None):
+    def __init__(
+            self,
+            data,
+            index=None,
+            columns=None,
+            dtype=tf.int64,
+            fits_in_memory=True,
+            groups=None,
+            predefined_splits=None):
         self.data = data
+        self._columns = columns
         self.dtype = dtype
         self.groups = groups
         self.predefined_splits = predefined_splits
@@ -28,6 +36,7 @@ class Data:
     def lazy_slice(self, index):
         new_data = copy(self)
         new_data._index = np.array([self._index[i] for i in index])
+
         if new_data.groups is not None:
             new_data.groups = [self.groups[i] for i in index]
         if new_data.predefined_splits is not None:
@@ -39,6 +48,10 @@ class Data:
     @property
     def index(self):
         return np.array(range(len(self)))
+
+    @property
+    def columns(self):
+        return self._columns
 
     @property
     def as_dataset(self):
@@ -132,6 +145,10 @@ class Container(Data):
         return {key: value.type for key, value in self.data.items()}
 
     @property
+    def columns(self):
+        return {key: value.columns for key, value in self.data.items()}
+
+    @property
     def shape(self):
         return {key: value.shape for key, value in self.data.items()}
 
@@ -179,7 +196,13 @@ class ECGData(Data):
             with h5py.File(data, 'r') as f:
                 index = np.array(range(len(f[mode])))
 
-        super().__init__(data, index=index, dtype=dtype, **kwargs)
+        super().__init__(
+            data,
+            index=index,
+            dtype=dtype,
+            columns=['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'I', 'II'],
+            **kwargs
+        )
 
         if mode == 'beat':
             self._shape = [1200, 8]

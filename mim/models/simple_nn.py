@@ -120,10 +120,10 @@ def basic_cnn(train, validation=None, cat_dense_size=10, **cnn_kwargs):
 
     if len(layers) > 1:
         x = Concatenate()(layers)
-        x = Dense(cat_dense_size, activation='relu')(x)
     else:
         x = layers[0]
 
+    x = Dense(cat_dense_size, activation='relu')(x)
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
 
@@ -221,7 +221,7 @@ def stack_model(model, combiner, stack_size=2):
     for k in range(stack_size):
         feature = rename_model_layers(model, suffix=f'_ecg_{k}')
         features.append(feature.layers[-3].output)
-        inputs[f'ecg_{k}'] = feature.input['ecg']
+        inputs[f'ecg_{k}'] = feature.input['ecg_0']
 
     if len(features) > 1:
         outputs = combiner(features)

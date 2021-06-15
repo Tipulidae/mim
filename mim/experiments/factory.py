@@ -1,5 +1,5 @@
 from mim.experiments.troponin import MyocardialInfarction
-from mim.experiments.multiple_ecgs import MultipleECG
+from mim.experiments.serial_ecg import ESCT
 from mim.experiments.ab_glucose import ABGlucose
 from mim.experiments.hyper_experiments import HyperSearch
 
@@ -13,7 +13,7 @@ def experiment_from_name(name):
     if name == 'myocardialinfarction':
         return MyocardialInfarction
     elif name == 'multipleecg':
-        return MultipleECG
+        return ESCT
     elif name == 'ab':
         return ABGlucose
     elif name == 'hypersearch':

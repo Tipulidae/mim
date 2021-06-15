@@ -1,9 +1,16 @@
 import numpy as np
+import pandas as pd
 from scipy.signal import iirnotch, filtfilt
 
 from tqdm import tqdm
 
-from mim.massage.esc_trop import make_double_ecg_table
+from mim.massage.esc_trop import (
+    make_mace_table,
+    make_index_visits,
+    make_ed_features,
+    make_lab_features,
+    make_double_ecg_features
+)
 from mim.extractors.extractor import Data, Container, ECGData, Extractor
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
 from mim.util.logs import get_logger
@@ -12,37 +19,81 @@ log = get_logger("ESC-Trop extractor")
 
 
 class EscTrop(Extractor):
-    def get_data(self) -> Container:
-        log.debug("Preparing ED and TnT data...")
-        ed = make_double_ecg_table()
+    def make_index(self):
+        index = make_index_visits(
+            exclude_stemi=True,
+            exclude_missing_tnt=True,
+            exclude_missing_ecg=True,
+            exclude_missing_old_ecg=True
+        )
+        return index.sort_index()
 
-        ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
-        mode = self.features['ecg_mode']
+    def make_labels(self, index):
+        mace = make_mace_table(
+            index,
+            include_interventions=True,
+            include_deaths=True,
+            icd_definition='new',
+            use_melior=True,
+            use_sos=True,
+            use_hia=True
+        )
+
+        assert index.index.equals(mace.index)
+
+        return mace.mace30.astype(int).values
+
+    def make_features(self, index):
+        ed_features = make_ed_features(index)
+        lab_features = make_lab_features(index)
+        ecg_features = make_double_ecg_features(index)
+
+        assert index.index.equals(ed_features.index)
+        assert index.index.equals(lab_features.index)
+        assert index.index.equals(ecg_features.index)
+
+        features = pd.concat([
+            ed_features,
+            lab_features,
+            ecg_features
+        ], axis=1)
 
         x_dict = {}
-        if 'index' in self.features['ecgs']:
-            ecgs = ECGData(
-                ecg_path,
-                mode=mode,
-                index=ed.ecg_id.astype(int).values
+        if 'ecgs' in self.features:
+            for ecg in [f'ecg_{x}' for x in range(2)]:
+                if ecg in self.features['ecgs']:
+                    x_dict[ecg] = self.make_ecg_data(ecg_features[ecg])
+
+        if 'flat_features' in self.features:
+            x_dict['flat_features'] = Data(
+                features[self.features['flat_features']].values,
+                columns=self.features['flat_features']
             )
-            x_dict['ecg_0'] = preprocess_ecg(ecgs, self.processing)
-        if 'old' in self.features['ecgs']:
-            ecgs = ECGData(
-                ecg_path,
-                mode=mode,
-                index=ed.old_ecg_id.astype(int).values
-            )
-            x_dict['ecg_1'] = preprocess_ecg(ecgs, self.processing)
-        if 'features' in self.features:
-            x_dict['features'] = Data(ed[self.features['features']].values)
+
+        return x_dict
+
+    def make_ecg_data(self, ecg):
+        return preprocess_ecg(
+            ECGData(
+                '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5',
+                mode=self.features['ecg_mode'],
+                index=ecg,
+            ),
+            self.processing
+        )
+
+    def get_data(self) -> Container:
+        index = self.make_index()
+        labels = self.make_labels(index)
+        feature_dict = self.make_features(index)
 
         data = Container(
             {
-                'x': Container(x_dict),
-                'y': Data(ed.mace_30_days.astype(int).values)
+                'x': Container(feature_dict),
+                'y': Data(labels, columns=['mace30']),
+                'index': Data(index.index, columns=['Alias'])
             },
-            index=ed.index,
+            index=index.reset_index().index,
             fits_in_memory=self.fits_in_memory
         )
 
@@ -69,7 +120,7 @@ def preprocess_ecg(ecg_data, processing):
 
     # I will scale regardless, as not doing so will lead to problems.
     data *= 5000
-    return Data(data)
+    return Data(data, columns=ecg_data.columns)
 
 
 def notch_ecg(data):

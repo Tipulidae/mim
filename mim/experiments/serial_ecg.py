@@ -19,8 +19,11 @@ from mim.cross_validation import ChronologicalSplit
 # Model: Some short hand for the models that I use
 # Version: If I run multiple variations of this experiment, a version is handy
 
+# {R/B}{#}_{BASELINE, }
 
-class MultipleECG(Experiment, Enum):
+
+class ESCT(Experiment, Enum):
+    # Serial ECG analysis experiments on the ESC-Trop data
     BASELINE_BEAT = Experiment(
         description='Baseline CNN model using only current ECG median beat to '
                     'predict MACE within 30 days.',
@@ -152,7 +155,8 @@ class MultipleECG(Experiment, Enum):
     )
 
     R1_TUNED_D100 = BASELINE_RAW._replace(
-        description='Best model after hyperband tuning. ',
+        description='Playing around with dense layers. Also learning rate '
+                    'decay.',
         model_kwargs={
             'num_layers': 2,
             'dropout': 0.4,
@@ -164,8 +168,23 @@ class MultipleECG(Experiment, Enum):
             'dense': True,
             'downsample': True,
             'dense_size': 100,
+            'cat_dense_size': 20,
         },
-        epochs=500,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                # 'learning_rate': 1e-4
+                'learning_rate': {
+                    'scheduler': ExponentialDecay,
+                    'scheduler_kwargs': {
+                        'initial_learning_rate': 3e-4,
+                        'decay_steps': 76,  # Every epoch
+                        'decay_rate': 0.99  # Decay by 1%
+                    }
+                },
+            }
+        },
+        epochs=200,
         batch_size=128,
     )
 
@@ -364,3 +383,46 @@ class MultipleECG(Experiment, Enum):
             },
         },
     )
+
+    FOO = R1_TUNED_DT2._replace(
+        description='Index ECG + age + sex.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index'],
+                'features': ['age', 'sex']
+            },
+        },
+    )
+
+    R2_D100 = Experiment(
+        description='',
+        model=serial_ecg,
+        model_kwargs={
+            'feature_extraction': {
+                'xp_name': 'MultipleECG/R1_TUNED_D100',
+                'commit': 'b515785522118ad7f6b78df95fdd102904f29b8f',
+                'final_layer_index': -2,
+            },
+            'dense_size': 20
+        },
+        epochs=300,
+        batch_size=64,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-4}
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['index', 'old']
+            },
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        scoring=roc_auc_score,
+    )
+
+# b515785522118ad7f6b78df95fdd102904f29b8f

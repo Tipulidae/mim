@@ -34,7 +34,7 @@ def load_model_from_experiment_result(
     )
     metadata = pd.read_pickle(xp_results_path)['metadata']
     expected_metadata = {
-        'has_uncommitted_changes': False,
+        # 'has_uncommitted_changes': False,
         'current_commit': commit
     }
     v = Validator(
