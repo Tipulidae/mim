@@ -44,7 +44,7 @@ class ESCT(Experiment, Enum):
                 'downsample': False
             }
         },
-        epochs=10,
+        epochs=200,
         batch_size=64,
         optimizer={
             'name': Adam,
@@ -154,7 +154,7 @@ class ESCT(Experiment, Enum):
                 'dense_size': 10
             }
         },
-        epochs=5,
+        epochs=200,
         batch_size=128,
     )
 
