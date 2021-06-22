@@ -9,7 +9,7 @@ from mim.model_wrapper import (
 )
 from mim.extractors.expect import Expect
 from mim.extractors.ptbxl import PTBXL
-from mim.models.simple_nn import basic_cnn
+from mim.models.simple_nn import ecg_cnn
 
 
 class MyocardialInfarction(Experiment, Enum):
@@ -56,7 +56,7 @@ class MyocardialInfarction(Experiment, Enum):
 
     PTBXL_SMALL = Experiment(
         description='Small experiment using a CNN with PTBXL',
-        model=basic_cnn,
+        model=ecg_cnn,
         model_kwargs={
             'num_conv_layers': 2,
             'input_shape': (1000, 12),

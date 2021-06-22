@@ -108,22 +108,24 @@ def basic_cnn3(train, validation=None, dropout=0, layers=None,
     return keras.Model(inp, output)
 
 
-def basic_cnn(train, validation=None, cat_dense_size=10, **cnn_kwargs):
+def ecg_cnn(train, validation=None, dense_size=10, dropout=0.3,
+            cnn_kwargs=None):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     layers = []
-    if 'ecg' in inp:
-        layers.append(ecg_network2(inp['ecg'], **cnn_kwargs))
-    if 'old_ecg' in inp:
-        layers.append(ecg_network2(inp['old_ecg'], **cnn_kwargs))
-    if 'features' in inp:
-        layers.append(BatchNormalization()(inp['features']))
+    if 'ecg_0' in inp:
+        layers.append(ecg_network2(inp['ecg_0'], **cnn_kwargs))
+    if 'ecg_1' in inp:
+        layers.append(ecg_network2(inp['ecg_1'], **cnn_kwargs))
+    if 'flat_features' in inp:
+        layers.append(BatchNormalization()(inp['flat_features']))
 
     if len(layers) > 1:
         x = Concatenate()(layers)
     else:
         x = layers[0]
 
-    x = Dense(cat_dense_size, activation='relu')(x)
+    x = Dense(dense_size, activation='relu')(x)
+    x = Dropout(dropout)(x)
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
 
@@ -150,10 +152,15 @@ def ecg_network2(x, num_layers=2, dropout=0.3, filter_first=16,
                  filter_last=16, kernel_first=5, kernel_last=5,
                  dense=True, batch_norm=True, pool_size=None,
                  downsample=False, dense_size=10):
+
     if downsample:
         x = AveragePooling1D(2, padding='same')(x)
     if pool_size is None:
-        pool_size = math.floor(500 ** (1 / num_layers))
+        pool_size = _calculate_appropriate_pool_size(
+            input_size=x.shape[1],
+            num_pools=num_layers,
+            minimum_output_size=4
+        )
 
     filters = map(round, np.linspace(filter_first, filter_last, num_layers))
     kernels = map(round, np.linspace(kernel_first, kernel_last, num_layers))
@@ -173,6 +180,20 @@ def ecg_network2(x, num_layers=2, dropout=0.3, filter_first=16,
     if dense:
         x = Dense(dense_size, activation="relu")(x)
     return Dropout(dropout)(x)
+
+
+def _calculate_appropriate_pool_size(
+        input_size, num_pools, minimum_output_size=4):
+    """
+    Calculate what the pool size should be if we start with input_size and
+    pool num_pools times, and want to end up with a size that is at least
+    minimum_output_size.
+    :param input_size:
+    :param num_pools:
+    :param minimum_output_size:
+    :return:
+    """
+    return math.floor((input_size / minimum_output_size) ** (1 / num_pools))
 
 
 def basic_ff():
@@ -212,6 +233,29 @@ def serial_ecg(train, validation=None, feature_extraction=None,
 
     model = keras.Model(inputs, y)
     return model
+
+
+def ffnn(train, validation=None, dense_layers=None, dropout=0):
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    layers = []
+    if 'ecg_0' in inp:
+        layers.append(inp['ecg_0'])
+    if 'ecg_1' in inp:
+        layers.append(inp['ecg_1'])
+    if 'flat_features' in inp:
+        layers.append(BatchNormalization()(inp['flat_features']))
+
+    if len(layers) > 1:
+        x = Concatenate()(layers)
+    else:
+        x = layers[0]
+
+    for size in dense_layers:
+        x = Dense(size, activation='relu')(x)
+        x = Dropout(dropout)(x)
+
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
 
 
 def stack_model(model, combiner, stack_size=2):

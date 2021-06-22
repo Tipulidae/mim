@@ -30,9 +30,9 @@ important_status_labels = {
     ECGStatus.MISSING_ID,
     ECGStatus.MISSING_DATE,
     ECGStatus.BAD_DATE,
-    ECGStatus.MISSING_PATIENT
+    ECGStatus.MISSING_PATIENT,
+    ECGStatus.BAD_LEAD_NAMES
 }
-
 
 mace_codes_new = [
     "I200",
@@ -47,7 +47,6 @@ mace_codes_new = [
     "J819",
     "R570"
 ]
-
 
 mace_codes_paul = [
     "I200",
@@ -132,7 +131,6 @@ mace_codes_paul_new = [
     "R570",
     "R579",
 ]
-
 
 mace_codes_anders = [
     "I200",
@@ -252,82 +250,16 @@ def make_lab_features(index):
     return tnt.set_index('Alias').drop(columns=['admission_date'])
 
 
-def make_ed_table():
-    ed_path = '/mnt/air-crypt/air-crypt-raw/andersb/data/ESC_Trop_' \
-              '17-18-2020-09-21/data/ESC_TROP_Vårdkontakt_' \
-              'InkluderadeIndexBesök_2017_2018.csv'
-
-    col_map = {
-        'KontaktId': 'id',
-        'Alias': 'Alias',
-        'Vardkontakt_InskrivningDatum': 'admission_date',
-        'Kön': 'sex',
-        'Ålder vid inklusion': 'age',
-        'MACE inom 30 dagar': 'mace_30_days'
-    }
-
-    ed = pd.read_csv(ed_path, encoding='latin1', sep='|')
-    ed = ed.loc[:, list(col_map)].rename(columns=col_map)
-    ed.admission_date = pd.to_datetime(
-        ed.admission_date, format="%Y-%m-%d %H:%M:%S.%f")
-
-    ed = (
-        ed.sort_values(by='admission_date')
-        .drop_duplicates(subset=['Alias'], keep='first')
-        .set_index('Alias')
-    )
-    ecg = (
-        make_ecg_table()
-        .rename_axis('ecg_id')
-        .reset_index()
-        .set_index('patient_id')
-    )
-
-    ed = ed.join(ecg, how='left')
-    ed = ed.dropna(subset=['ecg_date']).sort_values(by=['id', 'ecg_date'])
-    return ed
-    # dt = (ed.ecg_date - ed.admission_date).dt.total_seconds()
-    #
-    # before = ed.loc[(dt > -3600) & (dt < 0), :].drop_duplicates(
-    #     subset=['id'], keep='last')
-    # after = ed.loc[(dt > 0) & (dt < 2*3600), :].drop_duplicates(
-    #     subset=['id'], keep='first')
-    #
-    # table = (
-    #     pd.concat([before, after], axis=0)
-    #     .sort_values(by=['id', 'ecg_date'])
-    #     .drop_duplicates(subset=['id'], keep='last')
-    #     .rename_axis('Alias')
-    #     .reset_index()
-    #     .set_index('id')
-    #  )
-    #
-    # old = (
-    #     ed.loc[(dt < -7 * 24 * 3600), ['id', 'ecg_id', 'ecg_date']]
-    #     .drop_duplicates(subset=['id'], keep='last')
-    #     .rename(columns={'ecg_id': 'old_ecg_id', 'ecg_date': 'old_ecg_date'})
-    #     .set_index('id')
-    # )
-    #
-    # table = table.join(old, how='inner').sort_values(by='admission_date')
-    # return table
-
-
 def make_troponin_table():
-    path = (
-        '/mnt/air-crypt/air-crypt-raw/andersb/data/'
-        'ESC_Trop_17-18-2020-09-21/data/'
-        'ESC_TROP_LabAnalysSvar_InkluderadeIndexBesök_2017_2018.csv'
-    )
-
     col_map = {
         'KontaktId': 'ed_id',
         'Analyssvar_ProvtagningDatum': 'tnt_date',
         'Labanalys_Namn': 'name',
         'Analyssvar_Varde': 'tnt'
     }
-
-    lab = pd.read_csv(path, encoding='latin1', sep='|')
+    lab = _read_esc_trop_csv(
+        'ESC_TROP_LabAnalysSvar_InkluderadeIndexBesök_2017_2018.csv'
+    )
     lab = lab.loc[:, list(col_map)].rename(columns=col_map)
     lab.tnt_date = pd.to_datetime(lab.tnt_date, format="%Y-%m-%d %H:%M:%S.%f")
 
@@ -365,24 +297,20 @@ def make_double_ecg_features(index):
     return ecg[['ecg_0', 'ecg_1', 'log_dt']]
 
 
-def _read_esc_trop_csv(name):
+def _read_esc_trop_csv(name, **kwargs):
     base_path = "/mnt/air-crypt/air-crypt-raw/andersb/data/" \
                 "ESC_Trop_17-18-2020-09-21/data/"
     return pd.read_csv(
         join(base_path, name),
         encoding='latin1',
-        sep='|'
+        sep='|',
+        **kwargs
     )
 
 
 def make_mace_table(index_visits, include_interventions=True,
                     include_deaths=True, icd_definition='new',
-                    use_melior=True, use_sos=True, use_hia=True):
-    # Creates a table with index Alias, one row per index visit and one
-    # column for each ICD/ATC code that is included in our definition of MACE
-    # Also one column "mace30" which is true if any of the other columns are
-    # true.
-    # index_visits = make_index_visits()
+                    use_melior=False, use_sos=True, use_hia=True):
     sources_of_mace = []
 
     if icd_definition == 'paul':
@@ -418,16 +346,20 @@ def make_mace_table(index_visits, include_interventions=True,
 
 
 def _make_diagnoses_from_sos():
+    diagnosis_cols = ['hdia'] + [f'DIA{x}' for x in range(1, 31)]
+
     sos_sv = pd.read_csv(
         '/mnt/air-crypt/air-crypt-raw/andersb/data/'
-        'Socialstyrelsen-2020-03-10/csv_files/sv_esctrop.csv'
+        'Socialstyrelsen-2020-03-10/csv_files/sv_esctrop.csv',
+        usecols=['Alias', 'INDATUM'] + diagnosis_cols,
+        dtype=str
     )
     sos_sv = sos_sv.dropna(subset=['Alias']).set_index('Alias')
     sos_sv['diagnosis_date'] = pd.to_datetime(sos_sv.INDATUM)
 
     diagnoses = (
         sos_sv.set_index('diagnosis_date', append=True)
-        .filter(regex='(hdia)|(DIA[0-9]+)', axis=1)
+        .loc[:, diagnosis_cols]
         .stack()
         .rename('icd10')
         .reset_index(level=2, drop=True)
@@ -437,7 +369,10 @@ def _make_diagnoses_from_sos():
 
 
 def _make_diagnoses_from_rikshia():
-    rikshia = _read_esc_trop_csv('ESC_TROP_SWEDEHEART_DAT221_rikshia_pop1.csv')
+    rikshia = _read_esc_trop_csv(
+        'ESC_TROP_SWEDEHEART_DAT221_rikshia_pop1.csv',
+        dtype=str
+    )
 
     rikshia.ADMISSION_ER_DATE = rikshia.ADMISSION_ER_DATE.fillna(
         rikshia.ADMISSION_DATE)
@@ -526,6 +461,13 @@ def make_index_visits(exclude_stemi=True, exclude_missing_tnt=True,
     index_visits = _read_esc_trop_csv(
         "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv"
     )
+    n = len(index_visits)
+    log.debug(f'{n} index visits loaded from file.')
+
+    index_visits = index_visits.dropna(subset=['BesokOrsakId'])
+    n = len(index_visits)
+    log.debug(f'{n} patients with chest pain')
+
     index_visits = index_visits[[
         'Alias', 'Vardkontakt_InskrivningDatum', 'KontaktId']]
     index_visits = index_visits.rename(
@@ -534,9 +476,6 @@ def make_index_visits(exclude_stemi=True, exclude_missing_tnt=True,
             'KontaktId': 'id'
         }
     )
-    n = len(index_visits)
-    log.debug(f'{n} index visits loaded from file.')
-
     index_visits.admission_date = pd.to_datetime(index_visits.admission_date)
     index_visits = (
         index_visits
@@ -576,16 +515,12 @@ def make_index_visits(exclude_stemi=True, exclude_missing_tnt=True,
             n = len(index_visits)
             log.debug(f'{n} patients after excluding missing old ECG')
 
-    return index_visits.sort_values(by=['admission_date', 'id'])
+    index_visits = index_visits.sort_values(by=['admission_date', 'id'])
+    assert index_visits.admission_date.is_monotonic_increasing
+    return index_visits
 
 
 def _make_mace_interventions(index_visits):
-    # combine tables
-    # calculate dt
-    # filter on dt
-    # calculate new columns
-    # groupby alias and combine columns
-    # return results as new table
     actions_current = _make_actions(
         "ESC_TROP_PatientÅtgärder_InkluderadeIndexBesök_2017_2018.csv"
     )
@@ -605,7 +540,7 @@ def _make_mace_interventions(index_visits):
 
     actions = actions[(dt >= 0) & (dt <= 30)]
 
-    mace_kva_new = [
+    mace_kva = [
         "DF005",
         "DF017",
         "DF025",
@@ -629,23 +564,25 @@ def _make_mace_interventions(index_visits):
         "FPE10",
         "TFP00",
     ]
-    for action in mace_kva_new:
+    for action in mace_kva:
         actions[action] = actions.action.str.contains(action)
 
     mace_actions = pd.DataFrame(index=index_visits.index)
     mace_actions = mace_actions.join(
-        actions.groupby('Alias')[mace_kva_new].any(),
+        actions.groupby('Alias')[mace_kva].any(),
         how='left'
     )
     return mace_actions.fillna(False)
 
 
 def _make_actions(csv_name):
-    actions = _read_esc_trop_csv(csv_name)
+    actions = _read_esc_trop_csv(
+        csv_name,
+        usecols=[
+            "Alias", "PatientAtgard_Kod", "PatientAtgard_ModifieradDatum"
+        ]
+    )
 
-    actions = actions[
-        ["Alias", "PatientAtgard_Kod", "PatientAtgard_ModifieradDatum"]
-    ]
     actions = actions.rename(
         columns={
             'PatientAtgard_Kod': 'action',
@@ -657,10 +594,13 @@ def _make_actions(csv_name):
 
 
 def _make_diagnoses(csv_name):
-    diagnoses = _read_esc_trop_csv(csv_name)
-    diagnoses = diagnoses[
-        ['Alias', 'PatientDiagnos_Kod', 'PatientDiagnos_ModifieradDatum']
-    ]
+    diagnoses = _read_esc_trop_csv(
+        csv_name,
+        usecols=[
+            'Alias', 'PatientDiagnos_Kod', 'PatientDiagnos_ModifieradDatum'
+        ]
+    )
+
     diagnoses = diagnoses.rename(
         columns={
             'PatientDiagnos_Kod': 'icd10',
@@ -672,15 +612,26 @@ def _make_diagnoses(csv_name):
 
 
 def _make_mace_deaths(index_visits):
+    def fix_bad_date(s):
+        if s[-4:] == '0000':
+            return s[:-4] + '1201'
+        elif s[-2:] == '00':
+            return s[:-2] + '01'
+        else:
+            return s
+
     deaths = _read_esc_trop_csv('ESC_TROP_SOS_R_DORS__14204_2019.csv')
     deaths = deaths.set_index('Alias')[['DODSDAT']].rename(
         columns={'DODSDAT': 'diagnosis_date'})
-    deaths.diagnosis_date = pd.to_datetime(deaths.diagnosis_date,
-                                           format='%Y%m%d', errors='coerce')
+
+    deaths.diagnosis_date = pd.to_datetime(
+        deaths.diagnosis_date.astype(str).apply(fix_bad_date),
+        format='%Y%m%d'
+    )
     deaths = index_visits.join(deaths)
-    dt = (deaths.diagnosis_date - deaths.admission_date).dt.total_seconds() / (
-                3600 * 24)
-    deaths['death'] = (dt >= 0) & (dt <= 30)
+    dt = (deaths.diagnosis_date -
+          deaths.admission_date).dt.total_seconds() / (3600 * 24)
+    deaths['death'] = (dt >= -30) & (dt <= 30)
     return deaths[['death']]
 
 
@@ -708,10 +659,18 @@ def _make_diagnoses_from_dors():
 
 
 def _make_index_stemi():
-    hia = _read_esc_trop_csv('ESC_TROP_SWEDEHEART_DAT221_rikshia_pop1.csv')
-    hia = hia[
-        ['Alias', 'ECG_STT_CHANGES', 'INFARCTTYPE', 'ADMISSION_ER_DATE',
-         'ADMISSION_ER_TIME', 'ADMISSION_DATE', 'ADMISSION_TIME']]
+    hia = _read_esc_trop_csv(
+        'ESC_TROP_SWEDEHEART_DAT221_rikshia_pop1.csv',
+        usecols=[
+            'Alias',
+            'ECG_STT_CHANGES',
+            'INFARCTTYPE',
+            'ADMISSION_ER_DATE',
+            'ADMISSION_ER_TIME',
+            'ADMISSION_DATE',
+            'ADMISSION_TIME'
+        ]
+    )
 
     hia.ADMISSION_ER_DATE = hia.ADMISSION_ER_DATE.fillna(hia.ADMISSION_DATE)
     hia.ADMISSION_ER_TIME = hia.ADMISSION_ER_TIME.fillna(hia.ADMISSION_TIME)

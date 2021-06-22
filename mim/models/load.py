@@ -3,8 +3,12 @@ import os
 import pandas as pd
 from tensorflow import keras
 
+from mim.extractors.extractor import Data, Container
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.util.metadata import Validator
+from mim.util.logs import get_logger
+
+log = get_logger('model-loader')
 
 
 def load_keras_model(base_path, split_number, **kwargs):
@@ -48,3 +52,63 @@ def load_model_from_experiment_result(
 
     model = keras.Model(model.input, model.layers[final_layer_index].output)
     return model
+
+
+def pre_process_using_xp(**kwargs):
+    model = load_model_from_experiment_result(**kwargs)
+
+    def pre_process(data):
+        return process_ecg(model, data)
+
+    return pre_process
+
+
+def process_ecg(model, data):
+    """
+    The point of this function is to take all the ecg-data from the input
+    dataset and pass it through the given model. The output is our processed
+    data, and we return a new dataset that is the same as the input, except
+    all the ecg-data is replaced with the processed data instead.
+
+    The reason we do this is to speed up training when using pre-trained
+    models, so that the pre-trained model can process the data a single time,
+    rather than once per epoch. This should significantly reduce the
+    processing and (perhaps more importantly) memory footprint of the final
+    model, providing a significant speedup when training such models.
+
+    :param model: a keras model that takes a single ECG as input, and returns
+    some tensor (perhaps a vector) as output.
+    :param data: a Container object of the usual form, where we expect some
+    ecg-records. Should have keys 'x', 'y' and 'index', where 'x' can be an
+    appropriately nested container, but containing at least one ECG record
+    (otherwise there is no point to this function).
+    :return: New Data (Container) object with a similar layout as the input
+    data, but where all the ecg fields have been processed using the input
+    model.
+    """
+    # TODO:
+    # Maybe add a "data.keys" or similar and verify that the format is
+    # correct here? Or we could make a special type of Data/Container, that
+    # enforces the x, y, index structure?
+
+    log.debug('Processing ECGs using pre-trained model')
+    new_dict = {}
+    for feature in data['x'].shape.keys():
+        if feature.startswith('ecg'):
+            new_dict[feature] = Data(
+                model.predict(data['x'][feature].as_numpy)
+            )
+        else:
+            new_dict[feature] = data['x'][feature]
+
+    new_data = Container(
+        {
+            'x': Container(new_dict),
+            'y': data['y'],
+            'index': data['index']
+        },
+        index=data.index,
+        fits_in_memory=True
+    )
+    log.debug('Finished processing ECGs')
+    return new_data

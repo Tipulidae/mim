@@ -55,6 +55,8 @@ class Experiment(NamedTuple):
     parent_base: str = None
     parent_name: str = None
     data_fits_in_memory: bool = True
+    pre_processor: Any = None
+    pre_processor_kwargs: dict = {}
 
     def run(self):
         try:
@@ -79,11 +81,7 @@ class Experiment(NamedTuple):
 
         data = self.get_data()
 
-        # TODO:
-        #  Add feature names to dataset somewhere so it can be
-        #  logged here
-        feature_names = None
-
+        feature_names = data.columns
         results = {
             'fit_time': [],
             'score_time': [],
@@ -100,6 +98,9 @@ class Experiment(NamedTuple):
         cv = self.get_cross_validation(data.predefined_splits)
 
         for i, (train, validation) in enumerate(cv.split(data)):
+            pre_process = self.get_pre_processor(i)
+            train = pre_process(train)
+            validation = pre_process(validation)
             result = _validate(
                 train,
                 validation,
@@ -115,6 +116,13 @@ class Experiment(NamedTuple):
         log.info(f'Finished computing scores for {self.name} in '
                  f'{time() - t}s. ')
         return results
+
+    def get_pre_processor(self, split=0):
+        if self.pre_processor is None:
+            return lambda x: x
+
+        return self.pre_processor(
+            split_number=split, **self.pre_processor_kwargs)
 
     def get_data(self) -> Container:
         """
@@ -244,9 +252,10 @@ class Experiment(NamedTuple):
             return None
 
 
-def _validate(train, val, model, scoring, split_number=None):
+def _validate(train, val, model, scoring, split_number=None, pre_process=None):
     t0 = time()
     log.info(f'\n\nFitting classifier, split {split_number}')
+
     history = model.fit(train, validation_data=val, split_number=split_number)
     fit_time = time() - t0
 
@@ -259,6 +268,11 @@ def _validate(train, val, model, scoring, split_number=None):
     )
 
     y_val = val['y'].as_numpy
+    targets = pd.DataFrame(
+        y_val,
+        index=pd.Index(val['index'].as_numpy, name=val['index'].columns[0]),
+        columns=val['y'].columns
+    )
     test_score = scoring(y_val, prediction['prediction'])
     log.debug(f'test score: {test_score}, train score: {train_score}')
 
@@ -274,7 +288,7 @@ def _validate(train, val, model, scoring, split_number=None):
         'feature_importance': feature_importance,
         'fit_time': fit_time,
         'score_time': score_time,
-        'targets': y_val,
+        'targets': targets,
         'history': history,
         'model_summary': model.summary
     }

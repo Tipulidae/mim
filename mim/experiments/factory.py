@@ -12,7 +12,7 @@ def experiment_from_name(name):
     name = name.lower()
     if name == 'myocardialinfarction':
         return MyocardialInfarction
-    elif name == 'multipleecg':
+    elif name == 'esct':
         return ESCT
     elif name == 'ab':
         return ABGlucose

@@ -6,7 +6,8 @@ from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.models.simple_nn import basic_cnn, serial_ecg
+from mim.models.simple_nn import ecg_cnn, serial_ecg, ffnn
+from mim.models.load import pre_process_using_xp
 from mim.cross_validation import ChronologicalSplit
 
 
@@ -24,10 +25,10 @@ from mim.cross_validation import ChronologicalSplit
 
 class ESCT(Experiment, Enum):
     # Serial ECG analysis experiments on the ESC-Trop data
-    BASELINE_BEAT = Experiment(
+    B1_CNN1 = Experiment(
         description='Baseline CNN model using only current ECG median beat to '
                     'predict MACE within 30 days.',
-        model=basic_cnn,
+        model=ecg_cnn,
         model_kwargs={
             'cnn_kwargs': {
                 'num_layers': 2,
@@ -39,10 +40,11 @@ class ESCT(Experiment, Enum):
                 'pool_size': 16,
                 'batch_norm': True,
                 'dense': True,
-                'dense_size': 10
+                'dense_size': 10,
+                'downsample': False
             }
         },
-        epochs=200,
+        epochs=10,
         batch_size=64,
         optimizer={
             'name': Adam,
@@ -52,7 +54,7 @@ class ESCT(Experiment, Enum):
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'beat',
-                'ecgs': ['index']
+                'ecgs': ['ecg_0']
             },
         },
         building_model_requires_development_data=True,
@@ -61,22 +63,22 @@ class ESCT(Experiment, Enum):
         scoring=roc_auc_score,
     )
 
-    BASELINE_RAW = BASELINE_BEAT._replace(
+    R1_CNN1 = B1_CNN1._replace(
         description='Basic CNN model using only current ECG raw signal to '
                     'predict MACE within 30 days.',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
-                'ecgs': ['index']
+                'ecgs': ['ecg_0']
             },
         },
     )
 
-    BASELINE_NOTCH = BASELINE_BEAT._replace(
+    R1_NOTCH_CNN1 = B1_CNN1._replace(
         description='Uses notch-filter and clipping to remove outliers and '
                     'baseline wander. Slightly increases dropout to '
                     'compensate for less regularization overall.',
-        model=basic_cnn,
+        model=ecg_cnn,
         model_kwargs={
             'cnn_kwargs': {
                 'num_layers': 2,
@@ -94,7 +96,7 @@ class ESCT(Experiment, Enum):
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
-                'ecgs': ['index']
+                'ecgs': ['ecg_0']
             },
             "processing": {
                 'notch-filter',
@@ -103,71 +105,75 @@ class ESCT(Experiment, Enum):
         }
     )
 
-    SANITY1 = BASELINE_BEAT._replace(
+    B1_CNN1_SANITY1 = B1_CNN1._replace(
         description='Try to predict mace 30 using only the old ecg...',
         extractor_kwargs={
             'features': {
                 'ecg_mode': 'beat',
-                'ecgs': ['old']
+                'ecgs': ['ecg_1']
             },
         },
     )
 
-    BASELINE_AGE_SEX = BASELINE_BEAT._replace(
+    B1_AGE_SEX_CNN1 = B1_CNN1._replace(
         description='Baseline CNN model using a 2 conv layer network on '
                     '1 ECG median beat plus age and sex features concatenated '
                     'at the end, predicting MACE within 30 days.',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'beat',
-                'ecgs': ['index'],
-                'features': ['age', 'sex']
+                'ecgs': ['ecg_0'],
+                'flat_features': ['age', 'male']
             }
         },
     )
 
-    BASELINE_DOUBLE_ECG = BASELINE_BEAT._replace(
+    B2_CNN1 = B1_CNN1._replace(
         description='Running two CNNs in parallel on two ECG beat signals. ',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'beat',
-                'ecgs': ['index', 'old']
+                'ecgs': ['ecg_0', 'ecg_1']
             },
         },
     )
 
-    R1_TUNED = BASELINE_RAW._replace(
+    R1_CNN2 = R1_CNN1._replace(
         description='Best model after hyperband tuning. ',
         model_kwargs={
-            'num_layers': 2,
-            'dropout': 0.4,
-            'filter_first': 44,
-            'filter_last': 31,
-            'kernel_first': 5,
-            'kernel_last': 7,
-            'batch_norm': False,
-            'dense': True,
-            'downsample': True,
-            'dense_size': 10
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.4,
+                'filter_first': 44,
+                'filter_last': 31,
+                'kernel_first': 5,
+                'kernel_last': 7,
+                'batch_norm': False,
+                'dense': True,
+                'downsample': True,
+                'dense_size': 10
+            }
         },
-        epochs=500,
+        epochs=5,
         batch_size=128,
     )
 
-    R1_TUNED_D100 = BASELINE_RAW._replace(
+    R1_CNN2a = R1_CNN1._replace(
         description='Playing around with dense layers. Also learning rate '
                     'decay.',
         model_kwargs={
-            'num_layers': 2,
-            'dropout': 0.4,
-            'filter_first': 44,
-            'filter_last': 31,
-            'kernel_first': 5,
-            'kernel_last': 7,
-            'batch_norm': False,
-            'dense': True,
-            'downsample': True,
-            'dense_size': 100,
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.4,
+                'filter_first': 44,
+                'filter_last': 31,
+                'kernel_first': 5,
+                'kernel_last': 7,
+                'batch_norm': False,
+                'dense': True,
+                'downsample': True,
+                'dense_size': 100,
+            },
             'cat_dense_size': 20,
         },
         optimizer={
@@ -188,40 +194,42 @@ class ESCT(Experiment, Enum):
         batch_size=128,
     )
 
-    R1_TUNED_BN = R1_TUNED._replace(
+    R1_CNN2b = R1_CNN1._replace(
         description='Best model after hyperband tuning, but with batch-norm.',
         model_kwargs={
-            'num_layers': 2,
-            'dropout': 0.4,
-            'filter_first': 44,
-            'filter_last': 31,
-            'kernel_first': 5,
-            'kernel_last': 7,
-            'batch_norm': True,
-            'dense': True,
-            'downsample': True,
-            'dense_size': 10
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.4,
+                'filter_first': 44,
+                'filter_last': 31,
+                'kernel_first': 5,
+                'kernel_last': 7,
+                'batch_norm': True,
+                'dense': True,
+                'downsample': True,
+                'dense_size': 10
+            }
         },
         epochs=500,
         batch_size=128,
     )
 
-    R2_TUNED = R1_TUNED._replace(
+    R2_CNN2 = R1_CNN2._replace(
         description='Trying the same model but with two ECGs.',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
-                'ecgs': ['index', 'old']
+                'ecgs': ['ecg_0', 'ecg_1']
             },
         },
     )
 
-    R1_TUNED_NOTCH = R1_TUNED._replace(
+    R1_NOTCH_CNN2 = R1_CNN2._replace(
         description='Trying the best model with pre-processing.',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
-                'ecgs': ['index']
+                'ecgs': ['ecg_0']
             },
             "processing": {
                 'notch-filter',
@@ -230,17 +238,21 @@ class ESCT(Experiment, Enum):
         }
     )
 
-    R2_PRETRAINED = Experiment(
-        description='Loads the pre-trained R1_TUNED model and uses it for '
-                    'feature engineering on each input ECG. The resulting '
-                    'vectors are stacked (concatenated) and fed to FFNN with '
-                    'one hidden layer. The pre-trained model is not updated.',
-        model=serial_ecg,
+    R2_ECNN2 = Experiment(
+        description='Loads the pre-trained R1_CNN2 model and uses it '
+                    'to encode each input ECG. The resulting vectors '
+                    'are stacked (concatenated) and fed to a FFNN with '
+                    'two hidden layers. The pre-trained model is not updated.',
+        model=ffnn,
         model_kwargs={
-            'feature_extraction': {
-                'xp_name': 'MultipleECG/R1_TUNED',
-                'commit': 'f7dffd5ed9f3b98e6b1666d238a3933f551cf9fe'
-            }
+            'dense_layers': [20, 10],
+            'dropout': 0.3
+        },
+        pre_processor=pre_process_using_xp,
+        pre_processor_kwargs={
+            'xp_name': 'ESCT/R1_CNN2',
+            'commit': 'bb076fbf682a9df358ed9a2c6731ad7fc108d1f5',
+            'final_layer_index': -2
         },
         epochs=300,
         batch_size=64,
@@ -252,7 +264,7 @@ class ESCT(Experiment, Enum):
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
-                'ecgs': ['index', 'old']
+                'ecgs': ['ecg_0', 'ecg_1']
             },
         },
         building_model_requires_development_data=True,
@@ -261,136 +273,49 @@ class ESCT(Experiment, Enum):
         scoring=roc_auc_score,
     )
 
-    R2_PT_DT = R2_PRETRAINED._replace(
+    R2_ECNN2_DT = R2_ECNN2._replace(
         description='Uses 2 raw ECG signals with the pre-trained CNN, and '
-                    'adds time since last ecg (delta-t) as feature in the '
+                    'adds time since last ecg (log_dt) as feature in the '
                     'end. ',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
-                'ecgs': ['index', 'old'],
-                'features': ['delta_t']
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'features': ['log_dt']
             },
         },
     )
 
-    R2_PT_AGE_SEX = R2_PRETRAINED._replace(
+    R2_ECNN2_AGE_SEX = R2_ECNN2._replace(
         description='Two ECGs + age + sex, but no delta-t.',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
-                'ecgs': ['index', 'old'],
-                'features': ['age', 'sex']
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'features': ['age', 'male']
             },
         },
     )
 
-    R2_PT_DT_AGE_SEX = R2_PT_DT._replace(
+    R2_ECNN2_DT_AGE_SEX = R2_ECNN2._replace(
         description='Adds age and sex as features in addition to delta-t.',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
-                'ecgs': ['index', 'old'],
-                'features': ['age', 'sex', 'delta_t']
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'features': ['age', 'male', 'log_dt']
             },
         },
     )
 
-    R2_PRETRAINED_DIFF = R2_PRETRAINED._replace(
-        description='Uses R1_TUNED as feature engineering, then combines the '
-                    'outputs from each ECG by stacking the differences from '
-                    'the first ECG together. ',
-        model_kwargs={
-            'feature_extraction': {
-                'xp_name': 'MultipleECG/R1_TUNED',
-                'commit': 'f7dffd5ed9f3b98e6b1666d238a3933f551cf9fe'
-            },
-            'combiner': 'diff'
-        },
-    )
-
-    R2_PRETRAINED_DIFF2 = R2_PRETRAINED_DIFF._replace(
-        description='This time, allow backpropagation to update the '
-                    'pre-trained feature-extraction model.',
-        model_kwargs={
-            'feature_extraction': {
-                'xp_name': 'MultipleECG/R1_TUNED',
-                'commit': 'f7dffd5ed9f3b98e6b1666d238a3933f551cf9fe',
-                'trainable': True
-            },
-            'combiner': 'diff'
-        },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': ExponentialDecay,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 1e-4,
-                        'decay_steps': 152,  # Corresponds to once per epoch
-                        'decay_rate': 0.96
-                    }
-                },
-            }
-        },
-        epochs=10
-    )
-
-    R1_TUNED_DT = R1_TUNED._replace(
+    R1_CNN2_DT = R1_CNN2._replace(
         description='Wonder what happens if we add time since last ECG but '
                     'without the old ECG...',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
-                'ecgs': ['index'],
-                'features': ['delta_t']
-            },
-        },
-    )
-
-    R1_TUNED_DT2 = R1_TUNED_DT._replace(
-        description='Is there a difference if we use the pre-trained network '
-                    'instead?',
-        model=serial_ecg,
-        model_kwargs={
-            'feature_extraction': {
-                'xp_name': 'MultipleECG/R1_TUNED',
-                'commit': 'f7dffd5ed9f3b98e6b1666d238a3933f551cf9fe'
-            },
-            'number_of_ecgs': 1
-        },
-        epochs=300
-    )
-
-    R1_TUNED_DT_AGE_SEX = R1_TUNED_DT2._replace(
-        description='Same as R2_PT_DT_AGE_SEX, but uses only the first ECG.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['index'],
-                'features': ['age', 'sex', 'delta_t']
-            },
-        },
-    )
-
-    R1_TUNED_AGE_SEX = R1_TUNED_DT2._replace(
-        description='Index ECG + age + sex.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['index'],
-                'features': ['age', 'sex']
-            },
-        },
-    )
-
-    FOO = R1_TUNED_DT2._replace(
-        description='Index ECG + age + sex.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['index'],
-                'features': ['age', 'sex']
+                'ecgs': ['ecg_0'],
+                'features': ['log_dt']
             },
         },
     )
@@ -424,5 +349,3 @@ class ESCT(Experiment, Enum):
         cv_kwargs={'test_size': 1/3},
         scoring=roc_auc_score,
     )
-
-# b515785522118ad7f6b78df95fdd102904f29b8f

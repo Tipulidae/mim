@@ -18,7 +18,10 @@ class Data:
             groups=None,
             predefined_splits=None):
         self.data = data
-        self._columns = columns
+        if columns is None:
+            self._columns = [0]
+        else:
+            self._columns = columns
         self.dtype = dtype
         self.groups = groups
         self.predefined_splits = predefined_splits
@@ -77,7 +80,6 @@ class Data:
     @property
     def shape(self):
         return tf.TensorShape(self._shape)
-        # return tf.TensorShape(infer_shape(self.data))
 
     @property
     def fits_in_memory(self):

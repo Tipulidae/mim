@@ -266,6 +266,7 @@ def prepare_dataset(data, batch_size=1, prefetch=None, **kwargs):
     y = data['y'].as_dataset
 
     fixed_data = tf.data.Dataset.zip((x, y)).batch(batch_size)
+
     if prefetch:
         fixed_data = fixed_data.prefetch(prefetch)
 

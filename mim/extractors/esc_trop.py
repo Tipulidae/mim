@@ -26,7 +26,7 @@ class EscTrop(Extractor):
             exclude_missing_ecg=True,
             exclude_missing_old_ecg=True
         )
-        return index.sort_index()
+        return index
 
     def make_labels(self, index):
         mace = make_mace_table(
@@ -34,7 +34,7 @@ class EscTrop(Extractor):
             include_interventions=True,
             include_deaths=True,
             icd_definition='new',
-            use_melior=True,
+            use_melior=False,
             use_sos=True,
             use_hia=True
         )
@@ -83,8 +83,11 @@ class EscTrop(Extractor):
         )
 
     def get_data(self) -> Container:
+        log.debug('Making index')
         index = self.make_index()
+        log.debug('Making labels')
         labels = self.make_labels(index)
+        log.debug('Making features')
         feature_dict = self.make_features(index)
 
         data = Container(
@@ -101,6 +104,7 @@ class EscTrop(Extractor):
             ChronologicalSplit(test_size=1/4)
         )
         dev, _ = next(hold_out_splitter.split(data))
+        log.debug('Finished extracting esc-trop data')
         return dev
 
 
