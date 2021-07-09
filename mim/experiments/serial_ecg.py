@@ -75,9 +75,9 @@ class ESCT(Experiment, Enum):
         class_weight={0: 1, 1: 10},
         reduce_lr_on_plateau={
             'monitor': 'val_loss',
-            'factor': 0.2,
-            'patience': 7,
-            'min_lr': 1e-7
+            'factor': 0.5,
+            'patience': 5,
+            'min_lr': 1e-6
         },
     )
     M_R1_NOTCH_CNN3 = M_R1_CNN3._replace(
