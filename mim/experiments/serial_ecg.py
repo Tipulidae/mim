@@ -10,7 +10,7 @@ from mim.models.simple_nn import ecg_cnn
 from mim.cross_validation import ChronologicalSplit
 
 
-class ECST(Experiment, Enum):
+class ESCT(Experiment, Enum):
     M_R1_CNN1 = Experiment(
         description='Predicting MACE-30 using single raw ECG in a simple '
                     '2-layer CNN.',
