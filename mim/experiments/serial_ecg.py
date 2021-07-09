@@ -50,7 +50,8 @@ class ESCT(Experiment, Enum):
         scoring=roc_auc_score,
     )
     M_R1_CNN2 = M_R1_CNN1._replace(
-        description='Try adjusting the final dense-layer size from 10 to 100.',
+        description='Try adjusting the final dense-layer size from 10 to 100.'
+                    'Also downsamples the ECG first, to its original 500Hz.',
         model_kwargs={
             'cnn_kwargs': {
                 'num_layers': 2,
@@ -67,4 +68,29 @@ class ESCT(Experiment, Enum):
             'dense_size': 100,
             'dropout': 0.3
         }
+    )
+    M_R1_CNN3 = M_R1_CNN2._replace(
+        description='Add class-weights to the training, and also reduce '
+                    'learning-rate when validation loss plateaus.',
+        class_weight={0: 1, 1: 10},
+        reduce_lr_on_plateau={
+            'monitor': 'val_loss',
+            'factor': 0.2,
+            'patience': 7,
+            'min_lr': 1e-7
+        },
+    )
+    M_R1_NOTCH_CNN3 = M_R1_CNN3._replace(
+        description='Uses notch-filter and clipping to remove outliers and '
+                    'baseline wander.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'beat',
+                'ecgs': ['ecg_0']
+            },
+            "processing": {
+                'notch-filter',
+                'clip_outliers'
+            }
+        },
     )

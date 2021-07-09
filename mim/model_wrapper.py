@@ -58,7 +58,7 @@ class Model:
     def fit(self, data, validation_data=None, **kwargs):
         if self.can_use_tf_dataset:
             train = prepare_dataset(data, prefetch=3, **kwargs)
-            val = prepare_dataset(validation_data, prefetch=30, **kwargs)
+            val = prepare_dataset(validation_data, prefetch=3, **kwargs)
             return self.model.fit(train, validation_data=val, **kwargs).history
         else:
             x = data['x'].as_numpy
@@ -279,7 +279,11 @@ def prepare_dataset(data, batch_size=1, prefetch=None, **kwargs):
     x = data['x'].as_dataset
     y = data['y'].as_dataset
 
-    fixed_data = tf.data.Dataset.zip((x, y)).batch(batch_size)
+    fixed_data = (
+        tf.data.Dataset.zip((x, y))
+        .shuffle(len(data))
+        .batch(batch_size)
+    )
 
     if prefetch:
         fixed_data = fixed_data.prefetch(prefetch)
