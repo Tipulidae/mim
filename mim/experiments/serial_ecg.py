@@ -40,7 +40,7 @@ class ESCT(Experiment, Enum):
         extractor=EscTrop,
         extractor_kwargs={
             "features": {
-                'ecg_mode': 'beat',
+                'ecg_mode': 'raw',
                 'ecgs': ['ecg_0']
             },
         },
@@ -85,7 +85,7 @@ class ESCT(Experiment, Enum):
                     'baseline wander.',
         extractor_kwargs={
             "features": {
-                'ecg_mode': 'beat',
+                'ecg_mode': 'raw',
                 'ecgs': ['ecg_0']
             },
             "processing": {
