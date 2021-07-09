@@ -16,6 +16,10 @@ import matplotlib.pyplot as plt
 
 from mim.util.logs import get_logger
 from mim.util.util import ranksort, insensitive_iglob
+from mim.util.metrics import (
+    positive_predictive_value,
+    negative_predictive_value,
+)
 from mim.experiments.hyper_parameter import flatten
 from mim.config import PATH_TO_TEST_RESULTS
 
@@ -122,13 +126,17 @@ class Presenter:
                     precision_score(targets, predictions),
                     recall_score(targets, predictions),
                     accuracy_score(targets, predictions),
-                    f1_score(targets, predictions)
+                    f1_score(targets, predictions),
+                    positive_predictive_value(targets, predictions),
+                    negative_predictive_value(targets, predictions)
                 ],
                 index=[
                     'precision',
                     'recall',
                     'accuracy',
-                    'f1'
+                    'f1',
+                    'ppv',
+                    'npv'
                 ],
                 name=name))
         return pd.DataFrame(results)
@@ -291,7 +299,7 @@ class Presenter:
 
     def _threshold_target_predictions(self, xp, threshold):
         targets, predictions = self._target_predictions(xp)
-        predictions = (predictions > threshold).astype(int)
+        predictions = (predictions >= threshold).astype(int)
         return targets, predictions
 
     def _target_predictions(self, xp):

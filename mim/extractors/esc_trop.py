@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.signal import iirnotch, filtfilt
+from scipy.signal import iirnotch, filtfilt, resample
 
 from tqdm import tqdm
 
@@ -20,24 +20,12 @@ log = get_logger("ESC-Trop extractor")
 
 class EscTrop(Extractor):
     def make_index(self):
-        index = make_index_visits(
-            exclude_stemi=True,
-            exclude_missing_tnt=True,
-            exclude_missing_ecg=True,
-            exclude_missing_old_ecg=True
-        )
-        return index
+        return make_index_visits(**self.index)
 
     def make_labels(self, index):
-        mace = make_mace_table(
-            index,
-            include_interventions=True,
-            include_deaths=True,
-            icd_definition='new',
-            use_melior=False,
-            use_sos=True,
-            use_hia=True
-        )
+        # if 'inclusions' in self.labels:
+        #     mace = make_mace_table(index, **self.labels['inclusions'])
+        mace = make_mace_table(index, **self.labels)
 
         assert index.index.equals(mace.index)
 
@@ -108,10 +96,12 @@ class EscTrop(Extractor):
         return dev
 
 
-def preprocess_ecg(ecg_data, processing):
+def preprocess_ecg(ecg_data, processing, scale=5000):
     data = ecg_data.as_numpy
 
     if processing is not None:
+        if 'scale' in processing:
+            scale = processing['scale']
         if 'notch-filter' in processing:
             filtered_data = np.zeros_like(data)
             for ecg in tqdm(range(len(data)), desc='applying notch-filter'):
@@ -122,8 +112,17 @@ def preprocess_ecg(ecg_data, processing):
         if 'clip_outliers' in processing:
             data = np.clip(data, -0.0004, 0.0004)
 
+        if 'ribeiro' in processing:
+            shape = (len(data), 4096, 12)
+            fixed_data = np.zeros(shape)
+
+            for ecg in tqdm(range(len(data)), desc='resampling ecgs'):
+                fixed_data[ecg] = resample_pad_and_fix_leads(data[ecg])
+
+            data = fixed_data
+
     # I will scale regardless, as not doing so will lead to problems.
-    data *= 5000
+    data *= scale
     return Data(data, columns=ecg_data.columns)
 
 
@@ -134,3 +133,37 @@ def notch_ecg(data):
         filtered_data[:, lead] = filtfilt(b, a, data[:, lead])
 
     return filtered_data
+
+
+def resample_pad_and_fix_leads(data):
+    # Resample to 400Hz
+    # pad to 4096 (adding zeros on both side)
+    # add the 4 missing leads
+    # Reorder the leads so that they come in the order expected by
+    # Ribeiro et al.
+    # Maybe re-scale data to be in V instead of mV?
+    data = resample(data, 4000)
+    data = np.pad(data, pad_width=[[48, 48], [0, 0]])
+    data = calculate_four_last_leads(data)
+    data = data[:, [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5]]
+    return data
+
+
+def resample_to_400hz(data):
+    resample(data, 4000)
+
+
+def calculate_four_last_leads(data):
+    data = np.pad(data, pad_width=[[0, 0], [0, 4]])
+    i = data[:, 6]
+    ii = data[:, 7]
+    iii = ii - i
+    avr = -(i+ii)/2
+    avl = (i-iii)/2
+    avf = (ii+iii)/2
+
+    data[:, 8] = iii
+    data[:, 9] = avr
+    data[:, 10] = avl
+    data[:, 11] = avf
+    return data

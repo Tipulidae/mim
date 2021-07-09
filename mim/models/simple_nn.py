@@ -179,7 +179,8 @@ def ecg_network2(x, num_layers=2, dropout=0.3, filter_first=16,
     x = Flatten()(x)
     if dense:
         x = Dense(dense_size, activation="relu")(x)
-    return Dropout(dropout)(x)
+        x = Dropout(dropout)(x)
+    return x
 
 
 def _calculate_appropriate_pool_size(

@@ -5,7 +5,11 @@ import pandas as pd
 import sklearn.ensemble as ensemble
 import sklearn.linear_model as linear_model
 import tensorflow as tf
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.keras.callbacks import (
+    ModelCheckpoint,
+    TensorBoard,
+    ReduceLROnPlateau
+)
 
 from mim.util.logs import get_logger
 from mim.util.util import keras_model_summary_as_string
@@ -198,6 +202,8 @@ class KerasWrapper(Model):
             checkpoint_path=None,
             skip_compile=False,
             tensorboard_path=None,
+            class_weight=None,
+            reduce_lr_on_plateau=None
     ):
         super().__init__(model, can_use_tf_dataset=True)
         if not skip_compile:
@@ -212,6 +218,8 @@ class KerasWrapper(Model):
         self.epochs = epochs
         self.initial_epoch = initial_epoch
         self.ignore_callbacks = ignore_callbacks
+        self.class_weight = class_weight
+        self.reduce_lr_on_plateau = reduce_lr_on_plateau
         log.info("\n\n" + keras_model_summary_as_string(model))
 
     def fit(self, data, validation_data=None, split_number=None, **kwargs):
@@ -237,6 +245,11 @@ class KerasWrapper(Model):
                 TensorBoard(log_dir=tensorboard),
                 LearningRateLogger()
             ]
+
+            if self.reduce_lr_on_plateau is not None:
+                callbacks.append(
+                    ReduceLROnPlateau(**self.reduce_lr_on_plateau)
+                )
         if self.batch_size < 0:
             self.batch_size = len(data)
         return super().fit(
@@ -246,6 +259,7 @@ class KerasWrapper(Model):
             epochs=self.epochs,
             initial_epoch=self.initial_epoch,
             callbacks=callbacks,
+            class_weight=self.class_weight,
             **kwargs
         )
 

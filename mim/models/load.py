@@ -4,7 +4,7 @@ import pandas as pd
 from tensorflow import keras
 
 from mim.extractors.extractor import Data, Container
-from mim.config import PATH_TO_TEST_RESULTS
+from mim.config import PATH_TO_TEST_RESULTS, PATH_TO_DATA
 from mim.util.metadata import Validator
 from mim.util.logs import get_logger
 
@@ -22,7 +22,7 @@ def load_keras_model(base_path, split_number, **kwargs):
 
 def load_model_from_experiment_result(
         xp_name, commit=None, which='best', split_number=0, trainable=False,
-        final_layer_index=-1):
+        final_layer_index=-1, **kwargs):
     xp_base_path = os.path.join(
         PATH_TO_TEST_RESULTS,
         xp_name
@@ -52,6 +52,38 @@ def load_model_from_experiment_result(
 
     model = keras.Model(model.input, model.layers[final_layer_index].output)
     return model
+
+
+def load_ribeiro_model(dense_layers=None, dropout=0.0, freeze_resnet=False,
+                       **kwargs):
+    resnet = keras.models.load_model(
+        filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
+    )
+    inp = {'ecg_0': resnet.input}
+    resnet.trainable = not freeze_resnet
+    x = resnet.layers[-2].output
+
+    for size in dense_layers:
+        x = keras.layers.Dense(size, activation='relu')(x)
+        x = keras.layers.Dropout(dropout)(x)
+
+    output = keras.layers.Dense(1, activation='sigmoid')(x)
+    return keras.Model(inp, output)
+
+
+def pre_process_using_ribeiro(**kwargs):
+    model = keras.models.load_model(
+        filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
+    )
+    model = keras.Model(
+        {'ecg_0': model.input},
+        model.layers[-2].output
+    )
+
+    def pre_process(data):
+        return process_ecg(model, data)
+
+    return pre_process
 
 
 def pre_process_using_xp(**kwargs):

@@ -272,7 +272,8 @@ def make_troponin_table():
     )
 
     tnt.loc[tnt.tnt.str.match('<5'), 'tnt'] = 4
-    tnt.tnt = pd.to_numeric(tnt.tnt, errors='coerce').dropna()
+    tnt.tnt = pd.to_numeric(tnt.tnt, errors='coerce')
+    tnt = tnt.dropna()
 
     first_tnt = tnt.drop_duplicates(subset=['ed_id'], keep='first')
     second_tnt = tnt[~tnt.index.isin(first_tnt.index)].drop_duplicates(
@@ -308,9 +309,33 @@ def _read_esc_trop_csv(name, **kwargs):
     )
 
 
+def make_pauls_mace(index_visits):
+    mace = _read_esc_trop_csv(
+        "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv",
+        usecols=['MACE inom 30 dagar', 'KontaktId']
+    )
+    mace = mace.rename(
+        columns={'MACE inom 30 dagar': 'mace30', 'KontaktId': 'id'}
+    ).set_index('id')
+
+    return (
+        index_visits
+        .reset_index()
+        .set_index('id')
+        .join(mace)
+        .reset_index()
+        .set_index('Alias')
+        .loc[:, ['mace30']]
+    )
+
+
 def make_mace_table(index_visits, include_interventions=True,
                     include_deaths=True, icd_definition='new',
-                    use_melior=False, use_sos=True, use_hia=True):
+                    use_melior=False, use_sos=True, use_hia=True,
+                    use_paul=False):
+    if use_paul:
+        return make_pauls_mace(index_visits)
+
     sources_of_mace = []
 
     if icd_definition == 'paul':
@@ -452,8 +477,12 @@ def _make_mace_diagnoses(index_visits, icds_defining_mace=None,
     return mace_icd10.fillna(False)
 
 
-def make_index_visits(exclude_stemi=True, exclude_missing_tnt=True,
-                      exclude_missing_ecg=True, exclude_missing_old_ecg=True):
+def make_index_visits(
+        exclude_stemi=True,
+        exclude_missing_tnt=True,
+        exclude_missing_ecg=True,
+        exclude_missing_old_ecg=True,
+        exclude_missing_chest_pain=True):
     """
     Creates a DataFrame with Alias as index and columns, admission_date and
     id, which corresponds to KontaktId in the original CSV-file.
@@ -464,9 +493,10 @@ def make_index_visits(exclude_stemi=True, exclude_missing_tnt=True,
     n = len(index_visits)
     log.debug(f'{n} index visits loaded from file.')
 
-    index_visits = index_visits.dropna(subset=['BesokOrsakId'])
-    n = len(index_visits)
-    log.debug(f'{n} patients with chest pain')
+    if exclude_missing_chest_pain:
+        index_visits = index_visits.dropna(subset=['BesokOrsakId'])
+        n = len(index_visits)
+        log.debug(f'{n} patients with chest pain')
 
     index_visits = index_visits[[
         'Alias', 'Vardkontakt_InskrivningDatum', 'KontaktId']]
@@ -490,7 +520,8 @@ def make_index_visits(exclude_stemi=True, exclude_missing_tnt=True,
         stemi = index_visits.join(_make_index_stemi())
         dt = (stemi.admission_date - stemi.stemi_date
               ).dt.total_seconds() / (24*3600)
-        index_stemi = stemi[(dt >= -1) & (dt <= 1)].index.unique()
+        # [-48, 24] hour interval after discussion with Jenny
+        index_stemi = stemi[(dt >= -2) & (dt <= 1)].index.unique()
         index_visits = index_visits[~index_visits.index.isin(index_stemi)]
         n = len(index_visits)
         log.debug(f'{n} patients after excluding index STEMI')

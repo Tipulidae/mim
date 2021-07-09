@@ -163,7 +163,7 @@ class SuccessiveHalving(Searcher):
                 alias=self.make_alias(i+1, xp_id),
                 epochs=resource_allocation_for_round(
                     i+1, self.minimum_resource, self.resource_unit, self.eta
-                ),
+                ) + xp.epochs,
                 initial_epoch=xp.epochs,
                 model=load_keras_model,
                 model_kwargs=new_kwargs,

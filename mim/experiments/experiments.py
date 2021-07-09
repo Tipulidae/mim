@@ -42,6 +42,7 @@ class Experiment(NamedTuple):
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
+    class_weight: dict = None
     epochs: Union[int, hp.Param] = None
     initial_epoch: int = 0
     batch_size: Union[int, hp.Param] = 64
@@ -57,6 +58,7 @@ class Experiment(NamedTuple):
     data_fits_in_memory: bool = True
     pre_processor: Any = None
     pre_processor_kwargs: dict = {}
+    reduce_lr_on_plateau: Any = None
 
     def run(self):
         try:
@@ -69,6 +71,7 @@ class Experiment(NamedTuple):
                 log.debug('No old experiment results found.')
 
             results = self._run()
+            os.makedirs(self.base_path, exist_ok=True)
             pd.to_pickle(results, self.result_path)
             log.debug(f'Saved results in {self.result_path}')
         except Exception as e:
@@ -198,9 +201,11 @@ class Experiment(NamedTuple):
                 initial_epoch=self.initial_epoch,
                 optimizer=optimizer,
                 loss=self.loss,
+                class_weight=self.class_weight,
                 metrics=metric_list,
                 skip_compile=self.skip_compile,
-                ignore_callbacks=self.ignore_callbacks
+                ignore_callbacks=self.ignore_callbacks,
+                reduce_lr_on_plateau=self.reduce_lr_on_plateau,
             )
         else:
             model.random_state = self.random_state

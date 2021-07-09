@@ -219,10 +219,10 @@ class ECGData(Data):
 class Extractor:
     def __init__(self, index=None, features=None, labels=None,
                  processing=None, fits_in_memory=True, cv_kwargs=None):
-        self.index = index
-        self.features = features
-        self.labels = labels
-        self.processing = processing
+        self.index = {} if index is None else index
+        self.features = {} if features is None else features
+        self.labels = {} if labels is None else labels
+        self.processing = {} if processing is None else processing
         self.fits_in_memory = fits_in_memory
         self.cv_kwargs = cv_kwargs
 
