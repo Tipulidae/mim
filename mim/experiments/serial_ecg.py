@@ -266,3 +266,21 @@ class ESCT(Experiment, Enum):
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
     )
+    M_R1_RN3 = M_R1_RN2._replace(
+        description='Pretrained ResNet, but adding a final dense 100 at the '
+                    'end.',
+        model_kwargs={
+            'dense_layers': [100],
+            'dropout': 0.0,
+            'freeze_resnet': False
+        },
+    )
+    M_R1_RN4 = M_R1_RN2._replace(
+        description='Pretrained ResNet, but adding final dense 100 layer with '
+                    'dropout at the end.',
+        model_kwargs={
+            'dense_layers': [100],
+            'dropout': 0.3,
+            'freeze_resnet': False
+        },
+    )
