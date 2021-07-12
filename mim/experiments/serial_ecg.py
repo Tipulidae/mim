@@ -1,6 +1,7 @@
 from enum import Enum
 
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
@@ -92,5 +93,55 @@ class ESCT(Experiment, Enum):
                 'notch-filter',
                 'clip_outliers'
             }
+        },
+    )
+    M_R1_CNN4 = M_R1_CNN2._replace(
+        description='Increasing dropout, trying out a new lr schedule',
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.5,
+                'filter_first': 32,
+                'filter_last': 32,
+                'kernel_first': 16,
+                'kernel_last': 16,
+                'pool_size': 16,
+                'batch_norm': True,
+                'dense': False,
+                'downsample': True
+            },
+            'dense_size': 100,
+            'dropout': 0.5
+        },
+        class_weight={0: 1, 1: 10},
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [153*20, 153*40, 153*150],
+                        'values': [1e-3, 1e-4, 1e-5, 1e-6],
+                    }
+                },
+            }
+        },
+    )
+    M_R1_CNN5 = M_R1_CNN4._replace(
+        description='Adjusting pool-size and kernel-size.',
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.5,
+                'filter_first': 32,
+                'filter_last': 32,
+                'kernel_first': 32,
+                'kernel_last': 16,
+                'batch_norm': True,
+                'dense': False,
+                'downsample': True
+            },
+            'dense_size': 100,
+            'dropout': 0.5
         },
     )
