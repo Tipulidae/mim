@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 from tensorflow import keras
 
@@ -38,7 +39,7 @@ def load_model_from_experiment_result(
     )
     metadata = pd.read_pickle(xp_results_path)['metadata']
     expected_metadata = {
-        # 'has_uncommitted_changes': False,
+        'has_uncommitted_changes': False,
         'current_commit': commit
     }
     v = Validator(
@@ -86,16 +87,22 @@ def pre_process_using_ribeiro(**kwargs):
     return pre_process
 
 
-def pre_process_using_xp(**kwargs):
-    model = load_model_from_experiment_result(**kwargs)
+def pre_process_using_xp(flatten=False, **load_model_kwargs):
+    model = load_model_from_experiment_result(**load_model_kwargs)
+    # if flatten:
+    #     log.debug("Flattening final layer")
+    #     model = keras.Model(
+    #         model.input,
+    #         keras.layers.Flatten(model.layers[-1].output)
+    #     )
 
     def pre_process(data):
-        return process_ecg(model, data)
+        return process_ecg(model, data, flatten=flatten)
 
     return pre_process
 
 
-def process_ecg(model, data):
+def process_ecg(model, data, flatten=False):
     """
     The point of this function is to take all the ecg-data from the input
     dataset and pass it through the given model. The output is our processed
@@ -133,9 +140,15 @@ def process_ecg(model, data):
         else:
             new_dict[feature] = data['x'][feature]
 
+    if flatten:
+        x = np.concatenate([x.as_numpy for x in new_dict.values()], axis=1)
+        processed_ecgs = Data(x)
+    else:
+        processed_ecgs = Container(new_dict)
+
     new_data = Container(
         {
-            'x': Container(new_dict),
+            'x': processed_ecgs,
             'y': data['y'],
             'index': data['index']
         },

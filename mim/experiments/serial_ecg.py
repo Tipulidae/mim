@@ -6,8 +6,10 @@ from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.models.simple_nn import ecg_cnn
-
+from mim.models.simple_nn import ecg_cnn, ffnn
+from mim.models.load import pre_process_using_xp
+# from mim.model_wrapper import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from mim.cross_validation import ChronologicalSplit
 
 
@@ -144,4 +146,84 @@ class ESCT(Experiment, Enum):
             'dense_size': 100,
             'dropout': 0.5
         },
+    )
+    M_R1_CNN6 = M_R1_CNN4._replace(
+        description='Increasing dropout even further',
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.7,
+                'filter_first': 32,
+                'filter_last': 32,
+                'kernel_first': 16,
+                'kernel_last': 16,
+                'pool_size': 16,
+                'batch_norm': True,
+                'dense': False,
+                'downsample': True
+            },
+            'dense_size': 100,
+            'dropout': 0.5
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [153 * 50, 153 * 100],
+                        'values': [1e-3, 1e-4, 1e-5],
+                    }
+                },
+            }
+        },
+    )
+    M_R2_CNN4_NN1 = M_R1_CNN4._replace(
+        description='Loads the pre-trained R1_CNN4 model and uses it as a '
+                    'feature extractor for the two input ECGs. The model '
+                    'itself is a simple feed-forward neural network with '
+                    'a single hidden layer of size 100.',
+        model=ffnn,
+        model_kwargs={
+            'dense_layers': [100],
+            'dropout': 0.3
+        },
+        pre_processor=pre_process_using_xp,
+        pre_processor_kwargs={
+            'xp_name': 'ESCT/M_R1_CNN4',
+            'commit': 'eb783dc3ab36f554b194cffe463919620d123496',
+            'final_layer_index': -3
+        },
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1']
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [153 * 100],
+                        'values': [1e-4, 1e-5],
+                    }
+                },
+            }
+        },
+    )
+    M_R2_CNN4_RF1 = M_R2_CNN4_NN1._replace(
+        description='Try Random Forest instead.',
+        model=RandomForestClassifier,
+        model_kwargs={
+            'n_estimators': 1000,
+        },
+        pre_processor_kwargs={
+            'xp_name': 'ESCT/M_R1_CNN4',
+            'commit': 'eb783dc3ab36f554b194cffe463919620d123496',
+            'final_layer_index': -3,
+            'flatten': True  # We need this to avoid a dict input to RF
+        },
+        building_model_requires_development_data=False,
     )
