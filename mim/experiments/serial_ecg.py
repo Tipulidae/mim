@@ -7,7 +7,7 @@ from sklearn.metrics import roc_auc_score
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
 from mim.models.simple_nn import ecg_cnn, ffnn
-from mim.models.load import pre_process_using_xp
+from mim.models.load import pre_process_using_xp, load_ribeiro_model
 # from mim.model_wrapper import RandomForestClassifier
 from sklearn.ensemble import RandomForestClassifier
 from mim.cross_validation import ChronologicalSplit
@@ -226,4 +226,43 @@ class ESCT(Experiment, Enum):
             'flatten': True  # We need this to avoid a dict input to RF
         },
         building_model_requires_development_data=False,
+    )
+    M_R1_RN2 = Experiment(
+        description="Pretrained ResNet architecture from Ribeiro et al.",
+        model=load_ribeiro_model,
+        model_kwargs={
+            'dense_layers': [],
+            'dropout': 0.0,
+            'freeze_resnet': False
+        },
+        epochs=400,
+        batch_size=32,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [305 * 20, 305 * 100],
+                        'values': [1e-3, 1e-4, 1e-5],
+                    }
+                },
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        class_weight={0: 1, 1: 10.7},
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
     )

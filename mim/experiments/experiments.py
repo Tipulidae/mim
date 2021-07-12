@@ -194,6 +194,7 @@ class Experiment(NamedTuple):
 
             return KerasWrapper(
                 model,
+                # TODO: Add data augmentation here maybe, and use in fit
                 checkpoint_path=self.base_path,
                 tensorboard_path=self.base_path,
                 batch_size=self.batch_size,
