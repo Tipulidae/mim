@@ -227,7 +227,7 @@ class ESCT(Experiment, Enum):
         },
         building_model_requires_development_data=False,
     )
-    M_R1_RN2 = Experiment(
+    M_R1_RN1 = Experiment(
         description="Pretrained ResNet architecture from Ribeiro et al.",
         model=load_ribeiro_model,
         model_kwargs={
@@ -235,7 +235,7 @@ class ESCT(Experiment, Enum):
             'dropout': 0.0,
             'freeze_resnet': False
         },
-        epochs=400,
+        epochs=200,
         batch_size=32,
         optimizer={
             'name': Adam,
@@ -260,13 +260,16 @@ class ESCT(Experiment, Enum):
                 'ribeiro': True
             }
         },
-        class_weight={0: 1, 1: 10.7},
         building_model_requires_development_data=True,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
     )
-    M_R1_RN3 = M_R1_RN2._replace(
+    M_R1_RN2 = M_R1_RN1._replace(
+        description="Pretrained ResNet, with class-weights",
+        class_weight={0: 1, 1: 10.7},
+    )
+    M_R1_RN3 = M_R1_RN1._replace(
         description='Pretrained ResNet, but adding a final dense 100 at the '
                     'end.',
         model_kwargs={
@@ -275,7 +278,7 @@ class ESCT(Experiment, Enum):
             'freeze_resnet': False
         },
     )
-    M_R1_RN4 = M_R1_RN2._replace(
+    M_R1_RN4 = M_R1_RN1._replace(
         description='Pretrained ResNet, but adding final dense 100 layer with '
                     'dropout at the end.',
         model_kwargs={
