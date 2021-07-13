@@ -111,21 +111,24 @@ def basic_cnn3(train, validation=None, dropout=0, layers=None,
 def ecg_cnn(train, validation=None, dense_size=10, dropout=0.3,
             cnn_kwargs=None):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
-    layers = []
+    ecg_layers = []
     if 'ecg_0' in inp:
-        layers.append(ecg_network2(inp['ecg_0'], **cnn_kwargs))
+        ecg_layers.append(ecg_network2(inp['ecg_0'], **cnn_kwargs))
     if 'ecg_1' in inp:
-        layers.append(ecg_network2(inp['ecg_1'], **cnn_kwargs))
-    if 'flat_features' in inp:
-        layers.append(BatchNormalization()(inp['flat_features']))
+        ecg_layers.append(ecg_network2(inp['ecg_1'], **cnn_kwargs))
 
-    if len(layers) > 1:
-        x = Concatenate()(layers)
+    if len(ecg_layers) > 1:
+        x = Concatenate()(ecg_layers)
     else:
-        x = layers[0]
+        x = ecg_layers[0]
 
     x = Dense(dense_size, activation='relu')(x)
     x = Dropout(dropout)(x)
+
+    if 'flat_features' in inp:
+        flat_features = BatchNormalization()(inp['flat_features'])
+        x = Concatenate()([x, flat_features])
+
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
 
