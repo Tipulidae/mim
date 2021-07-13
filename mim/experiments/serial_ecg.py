@@ -287,3 +287,25 @@ class ESCT(Experiment, Enum):
             'freeze_resnet': False
         },
     )
+    M_R1_RN5 = M_R1_RN1._replace(
+        description='Adjusting the learning-rate scheduler and reducing epoch '
+                    'number. ',
+        model_kwargs={
+            'dense_layers': [100],
+            'dropout': 0.0,
+            'freeze_resnet': False
+        },
+        epochs=50,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [305 * 10, 305 * 20],
+                        'values': [1e-3, 1e-4, 1e-5],
+                    }
+                },
+            }
+        },
+    )
