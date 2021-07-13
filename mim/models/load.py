@@ -24,6 +24,7 @@ def load_keras_model(base_path, split_number, **kwargs):
 def load_model_from_experiment_result(
         xp_name, commit=None, which='best', split_number=0, trainable=False,
         final_layer_index=-1, **kwargs):
+    assert which in ['last', 'best']
     xp_base_path = os.path.join(
         PATH_TO_TEST_RESULTS,
         xp_name
@@ -89,12 +90,6 @@ def pre_process_using_ribeiro(**kwargs):
 
 def pre_process_using_xp(flatten=False, **load_model_kwargs):
     model = load_model_from_experiment_result(**load_model_kwargs)
-    # if flatten:
-    #     log.debug("Flattening final layer")
-    #     model = keras.Model(
-    #         model.input,
-    #         keras.layers.Flatten(model.layers[-1].output)
-    #     )
 
     def pre_process(data):
         return process_ecg(model, data, flatten=flatten)
