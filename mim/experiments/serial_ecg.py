@@ -376,7 +376,152 @@ class ESCT(Experiment, Enum):
             'xp_name': 'ESCT/M_R1_RN5',
             'commit': '61fb8038d91ee119a1a889c3c86b27931f1f57b5',
             'which': 'last',
-            'final_layer_index': -3
+            'final_layer_index': -3,
+            'flatten': True,
         },
         building_model_requires_development_data=False,
+    )
+
+    M_R1_CNN4_DT = M_R1_CNN4._replace(
+        description='Adds the (logarithm of the) time since last ECG.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt']
+            },
+        },
+    )
+    M_R1_CNN4_AGE = M_R1_CNN4._replace(
+        description='Adds age.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['age']
+            },
+        },
+    )
+    M_R1_CNN4_SEX = M_R1_CNN4._replace(
+        description='Adds sex (1 = male, 0 = female).',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['male']
+            },
+        },
+    )
+    M_R1_CNN4_TNT = M_R1_CNN4._replace(
+        description='Adds the first TnT lab measurement.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['tnt_1']
+            },
+        },
+    )
+    M_R1_CNN4_DT_AGE = M_R1_CNN4._replace(
+        description='Adds time since last ECG and age.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age']
+            },
+        },
+    )
+    M_R1_CNN4_DT_AGE_SEX = M_R1_CNN4._replace(
+        description='Adds time since last ECG, age and sex.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male']
+            },
+        },
+    )
+    M_R1_CNN4_DT_AGE_SEX_TNT = M_R1_CNN4._replace(
+        description='Adds time since last ECG, age, sex and TnT.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+        },
+    )
+
+    M_RF1_DT = Experiment(
+        description='Predicting MACE with Random Forest, using only the '
+                    'time since last ECG.',
+        model=RandomForestClassifier,
+        model_kwargs={
+            'n_estimators': 1000,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt']
+            },
+        },
+        building_model_requires_development_data=False,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    M_RF1_AGE = M_RF1_DT._replace(
+        description='Predicting MACE with Random Forest, using only the '
+                    'patient age.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['age']
+            },
+        },
+    )
+    M_RF1_SEX = M_RF1_DT._replace(
+        description='Predicting MACE with Random Forest, using only the '
+                    'patient sex.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['male']
+            },
+        },
+    )
+    M_RF1_TNT = M_RF1_DT._replace(
+        description='Predicting MACE with Random Forest, using only the '
+                    'first TnT lab measurement.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['tnt_1']
+            },
+        },
+    )
+    M_RF1_DT_AGE = M_RF1_DT._replace(
+        description='Predicting MACE with Random Forest, using only the '
+                    'time since last ECG and patient age.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age']
+            },
+        },
+    )
+    M_RF1_DT_AGE_SEX = M_RF1_DT._replace(
+        description='Predicting MACE with Random Forest, using only the '
+                    'time since last ECG, patient age and sex.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male']
+            },
+        },
+    )
+    M_RF1_DT_AGE_SEX_TNT = M_RF1_DT._replace(
+        description='Predicting MACE with Random Forest, using only the '
+                    'time since last ECG, age, sex and first TnT measurement.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+        },
     )
