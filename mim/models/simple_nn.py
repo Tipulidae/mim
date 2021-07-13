@@ -225,14 +225,15 @@ def serial_ecg(train, validation=None, feature_extraction=None,
         stack_size=number_of_ecgs,
     )
 
+    x = Dense(dense_size, activation="relu")(x)
+
     shape = train['x'].shape
-    if 'features' in shape:
-        feature_vector = Input(shape=shape['features'])
-        inputs['features'] = feature_vector
+    if 'flat_features' in shape:
+        feature_vector = Input(shape=shape['flat_features'])
+        inputs['flat_features'] = feature_vector
         feature_vector = BatchNormalization()(feature_vector)
         x = Concatenate()([x, feature_vector])
 
-    x = Dense(dense_size, activation="relu")(x)
     y = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
 
     model = keras.Model(inputs, y)
@@ -241,22 +242,24 @@ def serial_ecg(train, validation=None, feature_extraction=None,
 
 def ffnn(train, validation=None, dense_layers=None, dropout=0):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
-    layers = []
+    ecg_layers = []
     if 'ecg_0' in inp:
-        layers.append(inp['ecg_0'])
+        ecg_layers.append(inp['ecg_0'])
     if 'ecg_1' in inp:
-        layers.append(inp['ecg_1'])
-    if 'flat_features' in inp:
-        layers.append(BatchNormalization()(inp['flat_features']))
+        ecg_layers.append(inp['ecg_1'])
 
-    if len(layers) > 1:
-        x = Concatenate()(layers)
+    if len(ecg_layers) > 1:
+        x = Concatenate()(ecg_layers)
     else:
-        x = layers[0]
+        x = ecg_layers[0]
 
     for size in dense_layers:
         x = Dense(size, activation='relu')(x)
         x = Dropout(dropout)(x)
+
+    if 'flat_features' in inp:
+        flat_features = BatchNormalization()(inp['flat_features'])
+        x = Concatenate()([x, flat_features])
 
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
     return keras.Model(inp, output)

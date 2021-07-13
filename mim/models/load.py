@@ -1,6 +1,5 @@
 import os
 
-import numpy as np
 import pandas as pd
 from tensorflow import keras
 
@@ -88,16 +87,16 @@ def pre_process_using_ribeiro(**kwargs):
     return pre_process
 
 
-def pre_process_using_xp(flatten=False, **load_model_kwargs):
+def pre_process_using_xp(**load_model_kwargs):
     model = load_model_from_experiment_result(**load_model_kwargs)
 
     def pre_process(data):
-        return process_ecg(model, data, flatten=flatten)
+        return process_ecg(model, data)
 
     return pre_process
 
 
-def process_ecg(model, data, flatten=False):
+def process_ecg(model, data):
     """
     The point of this function is to take all the ecg-data from the input
     dataset and pass it through the given model. The output is our processed
@@ -135,11 +134,7 @@ def process_ecg(model, data, flatten=False):
         else:
             new_dict[feature] = data['x'][feature]
 
-    if flatten:
-        x = np.concatenate([x.as_numpy for x in new_dict.values()], axis=1)
-        processed_ecgs = Data(x)
-    else:
-        processed_ecgs = Container(new_dict)
+    processed_ecgs = Container(new_dict)
 
     new_data = Container(
         {
