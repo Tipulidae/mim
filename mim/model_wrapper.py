@@ -46,7 +46,7 @@ class Model:
         if self.can_use_tf_dataset:
             x = x.as_dataset
         else:
-            x = x.as_numpy
+            x = x.as_flat_numpy
         prediction = self._prediction(x)
 
         if self.only_last_prediction_column_is_used:
