@@ -74,6 +74,19 @@ class Data:
         return np.array(list(self))
 
     @property
+    def as_flat_numpy(self):
+        """Returns a flattened view of the data. Each item in the underlying
+        data structure is flattened.
+        """
+        x = self.as_numpy
+        if len(x.shape) == 1:
+            return x.reshape(-1, 1)
+        else:
+            return x.reshape(x.shape[0], np.prod(x.shape[1:]))
+        # else:
+        #     return x
+
+    @property
     def type(self):
         return self.dtype
 
@@ -157,6 +170,13 @@ class Container(Data):
     @property
     def as_numpy(self):
         return {key: value.as_numpy for key, value in self.data.items()}
+
+    @property
+    def as_flat_numpy(self):
+        return np.concatenate(
+            [x.as_flat_numpy for x in self.data.values()],
+            axis=1
+        )
 
     @property
     def fits_in_memory(self):

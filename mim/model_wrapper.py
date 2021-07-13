@@ -61,7 +61,7 @@ class Model:
             val = prepare_dataset(validation_data, prefetch=3, **kwargs)
             return self.model.fit(train, validation_data=val, **kwargs).history
         else:
-            x = data['x'].as_numpy
+            x = data['x'].as_flat_numpy
             y = data['y'].as_numpy.ravel()
             return self.model.fit(x, y)
 

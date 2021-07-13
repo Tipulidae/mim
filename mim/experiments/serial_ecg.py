@@ -8,7 +8,6 @@ from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
 from mim.models.simple_nn import ecg_cnn, ffnn
 from mim.models.load import pre_process_using_xp, load_ribeiro_model
-# from mim.model_wrapper import RandomForestClassifier
 from sklearn.ensemble import RandomForestClassifier
 from mim.cross_validation import ChronologicalSplit
 
