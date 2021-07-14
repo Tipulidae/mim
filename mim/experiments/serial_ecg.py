@@ -699,6 +699,45 @@ class ESCT(Experiment, Enum):
         },
     )
 
+    # LOGISTIC REGRESSION USING 1 ECG PROCESSED WITH RESNET + FLAT FEATURES
+    M_R1_RN5_LR1_DT_AGE_SEX_TNT = Experiment(
+        description='Loads the pre-trained R1_RN5 model and uses it as a '
+                    'feature extractor for the input ECG, giving only the '
+                    'final scalar as output for each ECG. Add the flat-'
+                    'features and plug it all into a logistic regression '
+                    'model.',
+        model=logistic_regression,
+        pre_processor=pre_process_using_xp,
+        pre_processor_kwargs={
+            'xp_name': 'ESCT/M_R1_RN5',
+            'commit': '61fb8038d91ee119a1a889c3c86b27931f1f57b5',
+            'which': 'last',
+            'final_layer_index': -1
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        epochs=300,
+        batch_size=-1,
+        optimizer={
+            'name': SGD,
+            'kwargs': {'learning_rate': 1},
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+
     # FFNN USING 2 ECGs PROCESSED WITH CNN4 + FLAT FEATURES
     M_R2_CNN4_NN1 = Experiment(
         description='Loads the pre-trained R1_CNN4 model and uses it as a '
@@ -840,7 +879,116 @@ class ESCT(Experiment, Enum):
         building_model_requires_development_data=False,
     )
 
-    # FFNN USING 1 ECG PROCESSED WITH RESNET + FLAT FEATURES
+    # LOGISTIC REGRESSION USING 2 ECGs PROCESSED WITH CNN4 + FLAT FEATURES
+    M_R2_CNN4_LR1_DT = Experiment(
+        description='Logistic regression, 2 ECGs + dt vs MACE 30',
+        model=logistic_regression,
+        pre_processor=pre_process_using_xp,
+        pre_processor_kwargs={
+            'xp_name': 'ESCT/M_R1_CNN4',
+            'commit': 'eb783dc3ab36f554b194cffe463919620d123496',
+            'final_layer_index': -1
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_dt']
+            },
+        },
+        epochs=300,
+        batch_size=-1,
+        optimizer={
+            'name': SGD,
+            'kwargs': {'learning_rate': 1},
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    M_R2_CNN4_LR1_AGE = M_R2_CNN4_LR1_DT._replace(
+        description='Logistic regression, 2 ECGs + age vs MACE 30',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['age']
+            },
+        },
+    )
+    M_R2_CNN4_LR1_SEX = M_R2_CNN4_LR1_DT._replace(
+        description='Logistic regression, 2 ECGs + sex vs MACE 30',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['male']
+            },
+        },
+    )
+    M_R2_CNN4_LR1_TNT = M_R2_CNN4_LR1_DT._replace(
+        description='Logistic regression, 2 ECGs + tnt vs MACE 30',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['tnt_1']
+            },
+        },
+    )
+    M_R2_CNN4_LR1_DT_AGE = M_R2_CNN4_LR1_DT._replace(
+        description='Logistic regression, 2 ECGs + dt + age vs MACE 30',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_dt', 'age']
+            },
+        },
+    )
+    M_R2_CNN4_LR1_DT_AGE_SEX = M_R2_CNN4_LR1_DT._replace(
+        description='Logistic regression, 2 ECGs + dt + age + sex vs MACE 30',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_dt', 'age', 'male']
+            },
+        },
+    )
+    M_R2_CNN4_LR1_DT_AGE_SEX_TNT = M_R2_CNN4_LR1_DT._replace(
+        description='Logistic regression, 2 ECGs + all flat features vs '
+                    'MACE 30',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+        },
+    )
+
+    # LOGISTIC REGRESSION USING 2 ECGs PROCESSED WITH RESNET + FLAT FEATURES
+    M_R2_RN5_LR1_DT_AGE_SEX_TNT = M_R1_RN5_LR1_DT_AGE_SEX_TNT._replace(
+        description='Process both input ECGs with the pre-trained ResNet, '
+                    'using only the predictions for each as input, together '
+                    'with the flat-features.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+    )
+
+    # FFNN USING 2 ECGs PROCESSED WITH RESNET + FLAT FEATURES
     M_R2_RN5_NN1 = Experiment(
         description='Loads the pre-trained R1_RN5 model and uses it as a '
                     'feature extractor for the two input ECGs. The model '
