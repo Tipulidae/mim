@@ -22,6 +22,19 @@ from mim.util.logs import get_logger
 log = get_logger('simple_nn')
 
 
+def logistic_regression(train, validation=None):
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    layers = list(inp.values())
+    if len(layers) > 1:
+        x = Concatenate()(layers)
+    else:
+        x = layers[0]
+
+    x = BatchNormalization()(x)
+    output = Dense(1, activation="sigmoid", kernel_regularizer=None)(x)
+    return keras.Model(inp, output)
+
+
 def super_basic_cnn(train, validation=None, dropout=0, filters=32,
                     kernel_size=16, pool_size=8, hidden_size=10):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}

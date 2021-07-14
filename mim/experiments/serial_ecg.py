@@ -1,14 +1,15 @@
 from enum import Enum
 
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam, SGD
 from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
 from sklearn.metrics import roc_auc_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.models.simple_nn import ecg_cnn, ffnn
+from mim.models.simple_nn import ecg_cnn, ffnn, logistic_regression
 from mim.models.load import pre_process_using_xp, load_ribeiro_model
-from sklearn.ensemble import RandomForestClassifier
 from mim.cross_validation import ChronologicalSplit
 
 
@@ -85,6 +86,92 @@ class ESCT(Experiment, Enum):
                 'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
             },
         },
+    )
+
+    # KERAS LOGISTIC REGRESSION, FLAT FEATURES:
+    M_LR1_DT = Experiment(
+        description='Logistic regression, mace vs dt',
+        model=logistic_regression,
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt']
+            },
+        },
+        epochs=300,
+        batch_size=-1,
+        optimizer={
+            'name': SGD,
+            'kwargs': {'learning_rate': 1},
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    M_LR1_AGE = M_LR1_DT._replace(
+        description='Logistic regression, mace vs dt',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt']
+            },
+        },
+    )
+    M_LR1_SEX = M_LR1_DT._replace(
+        description='Logistic regression, mace vs sex',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['male']
+            },
+        },
+    )
+    M_LR1_TNT = M_LR1_DT._replace(
+        description='Logistic regression, mace vs tnt',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['tnt_1']
+            },
+        },
+    )
+    M_LR1_DT_AGE = M_LR1_DT._replace(
+        description='Logistic regression, mace vs dt + age',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age']
+            },
+        },
+    )
+    M_LR1_DT_AGE_SEX = M_LR1_DT._replace(
+        description='Logistic regression, mace vs dt + age + sex',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male']
+            },
+        },
+    )
+    M_LR1_DT_AGE_SEX_TNT = M_LR1_DT._replace(
+        description='Logistic regression, mace vs dt + age + sex + tnt',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+        },
+    )
+
+    # SKLEARN LOGISTIC REGRESSION, FLAT FEATURES:
+    M_LR2_DT_AGE_SEX_TNT = Experiment(
+        description='Scikit-learns logistic regression model, mace vs flat '
+                    'features.',
+        model=LogisticRegression,
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+        },
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
     )
 
     # SINGLE RAW ECG, CNN VARIATIONS:
@@ -334,6 +421,98 @@ class ESCT(Experiment, Enum):
     )
     M_R1_CNN4_DT_AGE_SEX_TNT = M_R1_CNN4._replace(
         description='Adds time since last ECG, age, sex and TnT.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+        },
+    )
+
+    # LOGISTIC REGRESSION USING 1 ECG PROCESSED WITH CNN4 + FLAT FEATURES
+    M_R1_CNN4_LR1_DT = Experiment(
+        description='Pre-processing 1 input ECG with CNN4, into a single '
+                    'scalar, then adding delta-t and feeding it into a '
+                    'logistic-regression model.',
+        model=logistic_regression,
+        pre_processor=pre_process_using_xp,
+        pre_processor_kwargs={
+            'xp_name': 'ESCT/M_R1_CNN4',
+            'commit': 'eb783dc3ab36f554b194cffe463919620d123496',
+            'final_layer_index': -1
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt']
+            },
+        },
+        epochs=300,
+        batch_size=-1,
+        optimizer={
+            'name': SGD,
+            'kwargs': {'learning_rate': 1},
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    M_R1_CNN4_LR1_AGE = M_R1_CNN4_LR1_DT._replace(
+        description='ECG + Age',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['age']
+            },
+        },
+    )
+    M_R1_CNN4_LR1_SEX = M_R1_CNN4_LR1_DT._replace(
+        description='ECG + Sex',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['male']
+            },
+        },
+    )
+    M_R1_CNN4_LR1_TNT = M_R1_CNN4_LR1_DT._replace(
+        description='ECG + tnt',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['tnt_1']
+            },
+        },
+    )
+    M_R1_CNN4_LR1_DT_AGE = M_R1_CNN4_LR1_DT._replace(
+        description='ECG + dt + age',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age']
+            },
+        },
+    )
+    M_R1_CNN4_LR1_DT_AGE_SEX = M_R1_CNN4_LR1_DT._replace(
+        description='ECG + dt + age + sex',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male']
+            },
+        },
+    )
+    M_R1_CNN4_LR1_DT_AGE_SEX_TNT = M_R1_CNN4_LR1_DT._replace(
+        description='ECG + age + sex + tnt',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
