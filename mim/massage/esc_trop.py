@@ -367,6 +367,7 @@ def make_mace_table(index_visits, include_interventions=True,
         mace = sources_of_mace[0]
 
     mace['mace30'] = mace.any(axis=1)
+    mace['ami30'] = mace[['I21', 'I22']].any(axis=1)
     return mace
 
 
@@ -420,46 +421,67 @@ def _make_diagnoses_from_rikshia():
     return diagnoses
 
 
-def _make_mace_diagnoses(index_visits, icds_defining_mace=None,
-                         use_melior=True, use_sos=True, use_hia=True):
+def _make_mace_diagnoses(
+        index_visits, icds_defining_mace=None, use_melior=True, use_sos=True,
+        use_hia=True, use_dors=True):
     if icds_defining_mace is None:
         icds_defining_mace = mace_codes_new
 
     assert any([use_melior, use_sos, use_hia])
+
+    def remove_diagnoses_outside_time_interval(
+            diags, interval_days_start=0, interval_days_end=30):
+        # diags is a DataFrame with index Alias and columns
+        # "icd10" and "diagnosis_date". There is one row for each diagnosis,
+        # so one patient can have multiple rows.
+        diags = diags.join(index_visits)
+
+        # Calculate the time between admission and diagnosis, in days
+        dt = (diags.diagnosis_date.dt.floor('1D') -
+              diags.admission_date.dt.floor('1D'))
+        dt = dt.dt.total_seconds() / (3600 * 24)
+
+        # Keep only the rows within the specified interval.
+        return diags[(dt >= interval_days_start) & (dt <= interval_days_end)]
+
     diagnose_sources = []
 
     if use_melior:
-        diagnose_sources.append(_make_diagnoses(
-            "ESC_TROP_Diagnoser_InkluderadeIndexBesök_2017_2018.csv"
-        ))
-        diagnose_sources.append(_make_diagnoses(
-           "ESC_TROP_Diagnoser_EfterInkluderadeIndexBesök_2017_2018.csv"
-        ))
+        before = _make_diagnoses(
+            "ESC_TROP_Diagnoser_InkluderadeIndexBesök_2017_2018.csv")
+        during = _make_diagnoses(
+           "ESC_TROP_Diagnoser_EfterInkluderadeIndexBesök_2017_2018.csv")
+        diagnose_sources.append(remove_diagnoses_outside_time_interval(before))
+        diagnose_sources.append(remove_diagnoses_outside_time_interval(during))
 
     if use_sos:
         diagnose_sources.append(
-            _make_diagnoses_from_sos()
+            remove_diagnoses_outside_time_interval(_make_diagnoses_from_sos())
         )
 
     if use_hia:
         diagnose_sources.append(
-            _make_diagnoses_from_rikshia()
+            remove_diagnoses_outside_time_interval(
+                _make_diagnoses_from_rikshia()
+            )
         )
-    # diagnoses_deaths = _make_diagnoses_from_dors()
+    if use_dors:
+        # When the day of death is unknown, we have set it to be the first of
+        # the month. For this reason, we want to include deaths from a month
+        # prior to the index as well (the patient is unlikely to go to the ED
+        # after dying, so it should be all right), so that if the patient
+        # arrived at the ED in the middle of the month and then died that
+        # month at some unknown day, it still counts as having occurred within
+        # 30 days of the index.
+        diagnose_sources.append(
+            remove_diagnoses_outside_time_interval(
+                _make_diagnoses_from_dors(),
+                interval_days_start=-30,
+                interval_days_end=30
+            )
+        )
 
-    # diagnoses is a DataFrame with index Alias and columns
-    # "icd10" and "diagnosis_date". There is one row for each diagnosis, so
-    # one patient can have multiple rows.
-    diagnoses = pd.concat(diagnose_sources, axis=0).join(index_visits)
-
-    # Calculate the time between admission and diagnosis, in days
-    dt = (diagnoses.diagnosis_date.dt.floor('1D')) - \
-         (diagnoses.admission_date.dt.floor('1D'))
-    dt = dt.dt.total_seconds() / (3600 * 24)
-
-    # We keep only the diagnoses within 30 days of the index visit
-    # Maybe set lower span to something like -0.5?
-    diagnoses = diagnoses[(dt >= 0) & (dt <= 30)]
+    diagnoses = pd.concat(diagnose_sources, axis=0)
 
     # Create one column of bools per ICD-code included in our definition of
     # MACE. The table now contains one row per diagnosis, and one column per
@@ -642,21 +664,22 @@ def _make_diagnoses(csv_name):
     return diagnoses.set_index('Alias')
 
 
-def _make_mace_deaths(index_visits):
-    def fix_bad_date(s):
-        if s[-4:] == '0000':
-            return s[:-4] + '1201'
-        elif s[-2:] == '00':
-            return s[:-2] + '01'
-        else:
-            return s
+def _fix_dors_date(s):
+    if s[-4:] == '0000':
+        return s[:-4] + '1201'
+    elif s[-2:] == '00':
+        return s[:-2] + '01'
+    else:
+        return s
 
+
+def _make_mace_deaths(index_visits):
     deaths = _read_esc_trop_csv('ESC_TROP_SOS_R_DORS__14204_2019.csv')
     deaths = deaths.set_index('Alias')[['DODSDAT']].rename(
         columns={'DODSDAT': 'diagnosis_date'})
 
     deaths.diagnosis_date = pd.to_datetime(
-        deaths.diagnosis_date.astype(str).apply(fix_bad_date),
+        deaths.diagnosis_date.astype(str).apply(_fix_dors_date),
         format='%Y%m%d'
     )
     deaths = index_visits.join(deaths)
@@ -682,9 +705,8 @@ def _make_diagnoses_from_dors():
     )
     diagnoses = diagnoses.rename(columns={'DODSDAT': 'diagnosis_date'})
     diagnoses['diagnosis_date'] = pd.to_datetime(
-        diagnoses.diagnosis_date,
+        diagnoses.diagnosis_date.astype(str).apply(_fix_dors_date),
         format='%Y%m%d',
-        errors='coerce'
     )
     return diagnoses.dropna()
 

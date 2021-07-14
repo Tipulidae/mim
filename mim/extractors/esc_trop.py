@@ -22,14 +22,13 @@ class EscTrop(Extractor):
     def make_index(self):
         return make_index_visits(**self.index)
 
-    def make_labels(self, index):
-        # if 'inclusions' in self.labels:
-        #     mace = make_mace_table(index, **self.labels['inclusions'])
-        mace = make_mace_table(index, **self.labels)
-
+    def make_labels(self, index, target='mace30', **kwargs):
+        assert target in ['mace30', 'ami30']
+        mace = make_mace_table(index, **kwargs)
         assert index.index.equals(mace.index)
 
-        return mace.mace30.astype(int).values
+        labels = mace[target].astype(int).values
+        return Data(labels, columns=[target])
 
     def make_features(self, index):
         ed_features = make_ed_features(index)
@@ -74,14 +73,14 @@ class EscTrop(Extractor):
         log.debug('Making index')
         index = self.make_index()
         log.debug('Making labels')
-        labels = self.make_labels(index)
+        labels = self.make_labels(index, **self.labels)
         log.debug('Making features')
         feature_dict = self.make_features(index)
 
         data = Container(
             {
                 'x': Container(feature_dict),
-                'y': Data(labels, columns=['mace30']),
+                'y': labels,
                 'index': Data(index.index, columns=['Alias'])
             },
             index=index.reset_index().index,

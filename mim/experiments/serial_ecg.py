@@ -294,6 +294,24 @@ class ESCT(Experiment, Enum):
             },
         },
     )
+    M_R1_CNN4b_TNT = M_R1_CNN4_TNT._replace(
+        description='Adjusts the learning-rate schedule. Also, what if we '
+                    'skip the class-weights?',
+        epochs=100,
+        class_weight=None,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [153 * 5],
+                        'values': [1e-3, 1e-4],
+                    }
+                },
+            }
+        },
+    )
     M_R1_CNN4_DT_AGE = M_R1_CNN4._replace(
         description='Adds time since last ECG and age.',
         extractor_kwargs={
@@ -457,6 +475,49 @@ class ESCT(Experiment, Enum):
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
+    )
+    M_R1_RN5_NN2_DT_AGE_SEX_TNT = M_R1_RN5_NN1_DT_AGE_SEX_TNT._replace(
+        description='Reducing the size of the NN to just a Dense-10. Also, '
+                    'no dropout for now.',
+        model_kwargs={
+            'dense_layers': [10],
+            'dropout': 0.0
+        },
+        epochs=100,
+        batch_size=32,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [305 * 50],
+                        'values': [1e-3, 1e-4],
+                    }
+                },
+            }
+        },
+    )
+    M_R1_RN5_NN3_DT_AGE_SEX_TNT = M_R1_RN5_NN1_DT_AGE_SEX_TNT._replace(
+        description='Neural network with 100 -> 1 dense layers.',
+        model_kwargs={
+            'dense_layers': [100, 1],
+            'dropout': 0.0
+        },
+        epochs=100,
+        batch_size=32,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [305 * 50],
+                        'values': [1e-3, 1e-4],
+                    }
+                },
+            }
+        },
     )
 
     # FFNN USING 2 ECGs PROCESSED WITH CNN4 + FLAT FEATURES
@@ -679,4 +740,47 @@ class ESCT(Experiment, Enum):
             'final_layer_index': -3
         },
         building_model_requires_development_data=False,
+    )
+
+    # LOOKING AT AMI30 INSTEAD OF MACE
+    AMI_R1_CNN2 = Experiment(
+        description='Predicting AMI-30 using single raw ECG in a simple '
+                    '2-layer CNN.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropout': 0.3,
+                'filter_first': 32,
+                'filter_last': 32,
+                'kernel_first': 16,
+                'kernel_last': 16,
+                'pool_size': 16,
+                'batch_norm': True,
+                'dense': False,
+                'downsample': True
+            },
+            'dense_size': 100,
+            'dropout': 0.3
+        },
+        epochs=200,
+        batch_size=64,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-4}
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0']
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
     )
