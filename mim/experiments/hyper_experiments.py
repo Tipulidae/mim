@@ -84,13 +84,9 @@ def validate_pool_size(xp_kwargs, minimum_output_size=4):
         shape //= pool
 
     if shape < minimum_output_size:
-        # log.debug(f'Pool-sizes {pool_sizes} are not valid.')
         return False
 
     if cnn_kwargs['kernel_last'] >= (shape * pool_sizes[-1]) / 2:
-        # log.debug(f"Kernel is too big for the shape: "
-        #           f"{cnn_kwargs['kernel_last']=}, {shape=}, "
-        #           f"{pool_sizes[-1]=}")
         return False
 
     return True
@@ -108,7 +104,7 @@ class HyperSearch(HyperExperiment, Enum):
                         'downsample': True,
                         'num_layers': num_layers,
                         'dropouts': hp.Choices(
-                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
                             k=num_layers),
                         'filter_first': hp.Int(8, 64, step=4),
                         'filter_last': hp.Int(8, 64, step=4),
@@ -116,7 +112,7 @@ class HyperSearch(HyperExperiment, Enum):
                         'kernel_last': hp.Int(5, 65, step=4),
                         'batch_norms': hp.Choices([True, False], k=num_layers),
                         'weight_decays': hp.Choices(
-                            [1e-2, 1e-3, 1e-4, 1e-5, 0.0],
+                            [1e-1, 1e-2, 1e-3, 0.0],
                             k=num_layers),
                         'pool_sizes': hp.Choices(
                             range(2, 33, 2),
@@ -159,8 +155,10 @@ class HyperSearch(HyperExperiment, Enum):
                         'scheduler_kwargs': {
                             'boundaries': [153 * 50],
                             'values': hp.Choice([
-                                [1e-3, 1e-4], [3e-4, 3e-5], [1e-4, 1e-5],
-                                [3e-5, 3e-6], [1e-5, 1e-6]
+                                [3e-2, 3e-3], [1e-2, 1e-3],
+                                [3e-3, 3e-4], [1e-3, 1e-4],
+                                [3e-4, 3e-5], [1e-4, 1e-5],
+                                # [3e-5, 3e-6], [1e-5, 1e-6]
                             ]),
                         }
                     },

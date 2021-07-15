@@ -430,6 +430,67 @@ class ESCT(Experiment, Enum):
         },
     )
 
+    # ABs CNN MODEL, 1 ECG + FLAT FEATURES
+    M_R1_AB1 = Experiment(
+        description='Predicting MACE-30 using only single raw ECG, '
+                    'using the CNN architecture from Anders '
+                    'Björkelund et al. ',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'downsample': False,
+                'num_layers': 3,
+                'dropouts': [0.0, 0.3, 0.0],
+                'kernels': [64, 16, 16],
+                'filters': [64, 16, 8],
+                'weight_decays': [1e-4, 1e-3, 1e-4],
+                'pool_sizes': [32, 4, 8],
+                'batch_norm': False,
+                'ffnn_kwargs': {
+                    'sizes': [10],
+                    'dropouts': [0.0],
+                    'batch_norms': [False]
+                },
+            },
+            'ecg_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 3e-3}
+        },
+        epochs=200,
+        batch_size=64,
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    M_R1_AB1_DT_AGE_SEX_TNT = M_R1_AB1._replace(
+        description='Predicting MACE-30 using single raw ECG and flat-'
+                    'features, using the CNN architecture from Anders '
+                    'Björkelund et al. ',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+        },
+    )
+
     # LOGISTIC REGRESSION USING 1 ECG PROCESSED WITH CNN4 + FLAT FEATURES
     M_R1_CNN4_LR1_DT = Experiment(
         description='Pre-processing 1 input ECG with CNN4, into a single '
@@ -1069,7 +1130,42 @@ class ESCT(Experiment, Enum):
         building_model_requires_development_data=False,
     )
 
-    # LOOKING AT AMI30 INSTEAD OF MACE
+    # AMI-30
+    AMI_LR1_TNT = Experiment(
+        description='Logistic regression, ami vs tnt',
+        model=logistic_regression,
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['tnt_1']
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        },
+        epochs=300,
+        batch_size=-1,
+        optimizer={
+            'name': SGD,
+            'kwargs': {'learning_rate': 1},
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    AMI_LR1_DT_AGE_SEX_TNT = AMI_LR1_TNT._replace(
+        description='Logistic regression, ami vs tnt + dt + age + sex',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        }
+    )
+
     AMI_R1_CNN2 = Experiment(
         description='Predicting AMI-30 using single raw ECG in a simple '
                     '2-layer CNN.',
@@ -1111,3 +1207,202 @@ class ESCT(Experiment, Enum):
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
     )
+    AMI_R1_CNN4 = Experiment(
+        description='Predicting AMI-30 with CNN4 and only 1 ECG input.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'downsample': True,
+                'num_layers': 2,
+                'dropout': 0.5,
+                'filter_first': 32,
+                'filter_last': 32,
+                'kernel_first': 16,
+                'kernel_last': 16,
+                'pool_size': 16,
+                'batch_norm': True,
+                'ffnn_kwargs': None,
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_fnn_kwargs': None
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0']
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [153*20, 153*40, 153*150],
+                        'values': [1e-3, 1e-4, 1e-5, 1e-6],
+                    }
+                },
+            }
+        },
+        class_weight={0: 1, 1: 10.7},
+        epochs=200,
+        batch_size=64,
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+
+    AMI_R1_CNN4_TNT = AMI_R1_CNN4._replace(
+        description='Predicting AMI-30 with CNN4 and 1 ECG input + TnT',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['tnt_1']
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        },
+    )
+    AMI_R1_CNN4_DT_AGE_SEX_TNT = AMI_R1_CNN4._replace(
+        description='Predicting AMI-30 with CNN4 and 1 ECG input + flat-'
+                    'features',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        },
+    )
+
+    # TODO: Once AMI_R1_CNN4 is done
+    # AMI_R1_CNN4_LR1_TNT
+    # AMI_R1_CNN4_LR1_DT_AGE_SEX_TNT
+    #
+    # AMI_R2_CNN4_LR1_TNT
+    # AMI_R2_CNN4_LR1_DT_AGE_SEX_TNT
+
+    AMI_R1_AB1 = Experiment(
+        description='Predicting AMI-30 using Björkelund et al, except only '
+                    '1 ECG input and nothing else.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'downsample': False,
+                'num_layers': 3,
+                'dropouts': [0.0, 0.3, 0.0],
+                'kernels': [64, 16, 16],
+                'filters': [64, 16, 8],
+                'weight_decays': [1e-4, 1e-3, 1e-4],
+                'pool_sizes': [32, 4, 8],
+                'batch_norm': False,
+                'ffnn_kwargs': {
+                    'sizes': [10],
+                    'dropouts': [0.0],
+                    'batch_norms': [False]
+                },
+            },
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0']
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 3e-3}
+        },
+        epochs=200,
+        batch_size=64,
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    AMI_R1_AB1_DT_AGE_SEX_TNT = AMI_R1_AB1._replace(
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        },
+    )
+
+    AMI_R1_RN5 = Experiment(
+        description="Pretrained ResNet architecture from Ribeiro et al, "
+                    "predicting AMI-30.",
+        model=load_ribeiro_model,
+        model_kwargs={
+            'dense_layers': [],
+            'dropout': 0.0,
+            'freeze_resnet': False
+        },
+        epochs=200,
+        batch_size=32,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [305 * 20, 305 * 100],
+                        'values': [1e-3, 1e-4, 1e-5],
+                    }
+                },
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+
+    # TODO once AMI_R1_RN5 is done
+    # AMI_R1_RN5_NN1_TNT
+    # AMI_R1_RN5_NN1_DT_AGE_SEX_TNT
+    #
+    # AMI_R2_RN5_NN1_TNT
+    # AMI_R2_RN5_NN1_DT_AGE_SEX_TNT
