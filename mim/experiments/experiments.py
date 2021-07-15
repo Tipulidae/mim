@@ -42,7 +42,7 @@ class Experiment(NamedTuple):
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
-    class_weight: dict = None
+    class_weight: Union[dict, hp.Param] = None
     epochs: Union[int, hp.Param] = None
     initial_epoch: int = 0
     batch_size: Union[int, hp.Param] = 64

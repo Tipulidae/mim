@@ -15,11 +15,27 @@ log = get_logger("Search Strategies")
 
 class Searcher:
     def __init__(self, parent_name, parent_base, template,
+                 validator=None,
                  large_score_is_good=True):
         self.parent_name = parent_name
         self.parent_base = parent_base
         self.template = template
         self.large_score_is_good = large_score_is_good
+        self.validator = validator or (lambda _: True)
+        self.max_iterations = 1000
+
+    def generate_valid_xp_args(self, random_generator):
+        args = None
+        for i in range(self.max_iterations):
+            args = hp.pick(self.template._asdict(), random_generator)
+            if self.validator(args):
+                log.debug(f'Found valid arguments after {i+1} attempts.')
+                break
+
+        if args is None:
+            raise Exception('No valid experiment settings were found in '
+                            '100 iterations!')
+        return args
 
     def search(self):
         raise NotImplementedError()
@@ -176,7 +192,7 @@ class SuccessiveHalving(Searcher):
     def init_experiments(self):
         experiments = {}
         for i in range(self.num_configurations):
-            args = hp.pick(self.template._asdict(), self.random)
+            args = self.generate_valid_xp_args(self.random)
             args['alias'] = self.make_alias(0, i)
             args['parent_base'] = self.parent_base
             args['parent_name'] = self.parent_name
@@ -232,9 +248,8 @@ class RandomSearch(Searcher):
         r = random.Random(self.random_seed)
 
         for i in range(self.iterations):
-            args = hp.pick(self.template._asdict(), r)
+            args = self.generate_valid_xp_args(r)
             args['parent_base'] = self.parent_base
             args['parent_name'] = self.parent_name
             args['alias'] = f"xp_{i}"
-
             yield Experiment(**args)
