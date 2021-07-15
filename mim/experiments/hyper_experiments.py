@@ -93,9 +93,9 @@ def validate_pool_size(xp_kwargs, minimum_output_size=4):
 
 
 class HyperSearch(HyperExperiment, Enum):
-    M_R1_CNN_RS = HyperExperiment(
+    AMI_R1_CNN_RS = HyperExperiment(
         template=Experiment(
-            description="Try to find good settings for predicting MACE using "
+            description="Try to find good settings for predicting AMI using "
                         "a single raw ECG.",
             model=ecg_cnn,
             model_kwargs={
@@ -145,6 +145,7 @@ class HyperSearch(HyperExperiment, Enum):
                     'ecg_mode': 'raw',
                     'ecgs': ['ecg_0']
                 },
+                'labels': {'target': 'ami30'}
             },
             class_weight=hp.Choice([None, {0: 1, 1: 10.7}]),
             optimizer={
