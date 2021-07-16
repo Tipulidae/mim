@@ -112,10 +112,7 @@ class HyperSearch(HyperExperiment, Enum):
                         'kernel_last': hp.Int(5, 65, step=4),
                         'batch_norms': hp.Choices([True, False], k=num_layers),
                         'weight_decays': hp.Choices(
-                            [1.0, 1e-1, 1e-2, 1e-3, 0.0],
-                            k=num_layers),
-                        'pool_sizes': hp.Choices(
-                            range(2, 33, 2),
+                            [1e-1, 1e-2, 1e-3, 0.0],
                             k=num_layers),
                         'ffnn_kwargs': hp.Choice([
                             None,
@@ -156,16 +153,16 @@ class HyperSearch(HyperExperiment, Enum):
                         'scheduler_kwargs': {
                             'boundaries': [153 * 50],
                             'values': hp.Choice([
-                                [3e-2, 3e-3], [1e-2, 1e-3],
-                                [3e-3, 3e-4], [1e-3, 1e-4],
-                                [3e-4, 3e-5], [1e-4, 1e-5],
-                                # [3e-5, 3e-6], [1e-5, 1e-6]
+                                [1e-2, 1e-3],
+                                [1e-3, 1e-4],
+                                [1e-4, 1e-5],
+                                [1e-5, 1e-6]
                             ]),
                         }
                     },
                 }
             },
-            epochs=200,
+            epochs=100,
             batch_size=64,
             cv=ChronologicalSplit,
             cv_kwargs={
@@ -181,7 +178,6 @@ class HyperSearch(HyperExperiment, Enum):
         strategy_kwargs={
             'iterations': 500
         },
-        validate_experiment_params=validate_pool_size
     )
 
     R1_CNN_HB = HyperExperiment(
