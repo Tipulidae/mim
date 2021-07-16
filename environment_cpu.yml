@@ -11,6 +11,7 @@ dependencies:
   - freezegun
   - jupyterlab
   - ipython
+  - ipyparallel
   - pip
   - autopep8
   - flake8

@@ -22,7 +22,10 @@ def load_json(filename):
 
 
 def parse_iso8601_datetime(s) -> datetime:
-    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+    if isinstance(s, datetime):
+        return s
+    else:
+        return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
 
 
 # def sklearn_auc( y_true, y_pred ) :
