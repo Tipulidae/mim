@@ -9,11 +9,17 @@ from sklearn.metrics import (
     recall_score,
     accuracy_score,
     f1_score,
-    roc_auc_score
+    roc_auc_score,
+    roc_curve
 )
+import matplotlib.pyplot as plt
 
 from mim.util.logs import get_logger
 from mim.util.util import ranksort, insensitive_iglob
+from mim.util.metrics import (
+    positive_predictive_value,
+    negative_predictive_value,
+)
 from mim.experiments.hyper_parameter import flatten
 from mim.config import PATH_TO_TEST_RESULTS
 
@@ -86,6 +92,30 @@ class Presenter:
                 name=name))
         return pd.DataFrame(results)
 
+    def predictions(self, like='.*'):
+        # Return dataframe with the true targets and predictions for each
+        # experiment
+        all_predictions = []
+        all_targets = []
+        for name, xp in self._results_that_match_pattern(like):
+            targets, predictions = self._target_predictions(xp)
+            all_targets.append(targets.values)
+            all_predictions.append(
+                predictions.iloc[:, 0].rename(name)
+            )
+        assert all_columns_equal(np.concatenate(all_targets, axis=1))
+
+        target = pd.DataFrame(all_targets[0], columns=['y'])
+        return target.join(pd.DataFrame(all_predictions).T)
+
+    def prediction_ranks(self, like='.*'):
+        predictions = self.predictions(like=like)
+        for col in predictions.columns[1:]:
+            predictions.loc[:, col] = ranksort(predictions.loc[:, col])
+
+        predictions.iloc[:, 1:] /= len(predictions)
+        return predictions
+
     def threshold_scores(self, like='.*', threshold=0.5):
         results = []
         for name, xp in self._results_that_match_pattern(like):
@@ -96,16 +126,86 @@ class Presenter:
                     precision_score(targets, predictions),
                     recall_score(targets, predictions),
                     accuracy_score(targets, predictions),
-                    f1_score(targets, predictions)
+                    f1_score(targets, predictions),
+                    positive_predictive_value(targets, predictions),
+                    negative_predictive_value(targets, predictions)
                 ],
                 index=[
                     'precision',
                     'recall',
                     'accuracy',
-                    'f1'
+                    'f1',
+                    'ppv',
+                    'npv'
                 ],
                 name=name))
         return pd.DataFrame(results)
+
+    def roc(self, xps, figsize=(20, 20)):
+        """
+        Plot roc-curves for each of the experiments in xps.
+
+        :param xps: list of names of experiments
+        :param figsize: Figure size
+        """
+        plt.figure(figsize=figsize)
+        labels = []
+        lines = []
+        for xp in xps:
+            r = self.results[xp]
+            targets = np.concatenate(r['targets'])
+            predictions = pd.concat(r['predictions']['prediction'])
+            fpr, tpr, thresholds = roc_curve(targets, predictions)
+            auc = roc_auc_score(targets, predictions)
+            l, = plt.plot(fpr, tpr, lw=1, alpha=1)
+            lines.append(l)
+            labels.append(f'{xp} - AUC = {auc:.4f}')
+
+        plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', alpha=.8)
+        plt.xlim([-0.05, 1.05])
+        plt.ylim([-0.05, 1.05])
+        plt.xticks(np.arange(0, 1.1, 0.1))
+        plt.yticks(np.arange(0, 1.1, 0.1))
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.legend(lines, labels)
+        plt.grid(which='both')
+
+        df = pd.DataFrame(
+            [self.results[xp]['test_score'] for xp in xps],
+            index=xps,
+        ).T
+        plt.show()
+        return df
+
+    def sensitivity_specificity(self, experiments):
+        """
+        Return DataFrame containing the sensitivity and specificity of each
+        experiment, for each threshold. The dataframe is cropped to
+        100 rows.
+
+        :param experiments: list of names of experiments
+        """
+        def sample_evenly(x, n):
+            return x[::len(x) // n][:n]
+
+        output = []
+        for experiment in experiments:
+            r = self.results[experiment]
+            targets = np.concatenate(r['targets'])
+            predictions = pd.concat(r['predictions']['prediction'])
+            fpr, tpr, _ = roc_curve(targets, predictions)
+
+            sensitivity = sample_evenly(tpr, 100)
+            specificity = 1 - sample_evenly(fpr, 100)
+
+            data = np.array([sensitivity, specificity]).T
+            output.append(pd.DataFrame(data))
+
+        output = pd.concat(output, axis=1)
+        output.columns = pd.MultiIndex.from_product(
+            [experiments, ['Sensitivity', 'Specificity']])
+        return output
 
     def confusion_matrix(self, name, threshold=0.5, normalize=None):
         targets, predictions = self._threshold_target_predictions(
@@ -199,10 +299,20 @@ class Presenter:
 
     def _threshold_target_predictions(self, xp, threshold):
         targets, predictions = self._target_predictions(xp)
-        predictions = (predictions > threshold).astype(int)
+        predictions = (predictions >= threshold).astype(int)
         return targets, predictions
 
     def _target_predictions(self, xp):
         predictions = pd.concat(xp['predictions']['prediction'], axis=0)
         targets = pd.DataFrame(np.concatenate(xp['targets']))
         return targets, predictions
+
+
+def all_columns_equal(array):
+    """
+    :param array: 2D numpy-array
+    :return: True if all columns in input array are equal, False otherwise
+    """
+    first_column = array[:, 0].reshape((array.shape[0], 1))
+    expected = first_column * np.ones((1, array.shape[1]))  # outer product
+    return np.array_equal(array, expected)

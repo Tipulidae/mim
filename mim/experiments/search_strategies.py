@@ -7,7 +7,7 @@ import pandas as pd
 
 from mim.experiments import hyper_parameter as hp
 from mim.experiments.experiments import Experiment
-from mim.models.simple_nn import load_keras_model
+from mim.models.load import load_keras_model
 from mim.util.logs import get_logger
 
 log = get_logger("Search Strategies")
@@ -15,11 +15,27 @@ log = get_logger("Search Strategies")
 
 class Searcher:
     def __init__(self, parent_name, parent_base, template,
+                 validator=None,
                  large_score_is_good=True):
         self.parent_name = parent_name
         self.parent_base = parent_base
         self.template = template
         self.large_score_is_good = large_score_is_good
+        self.validator = validator or (lambda _: True)
+        self.max_iterations = 1000
+
+    def generate_valid_xp_args(self, random_generator):
+        args = None
+        for i in range(self.max_iterations):
+            args = hp.pick(self.template._asdict(), random_generator)
+            if self.validator(args):
+                log.debug(f'Found valid arguments after {i+1} attempts.')
+                break
+
+        if args is None:
+            raise Exception('No valid experiment settings were found in '
+                            '100 iterations!')
+        return args
 
     def search(self):
         raise NotImplementedError()
@@ -27,13 +43,14 @@ class Searcher:
 
 class Hyperband(Searcher):
     def __init__(self, maximum_resource=200, resource_unit=1, eta=3,
-                 random_seed=123, **kwargs):
+                 random_seed=123, iterations=1, **kwargs):
         super().__init__(**kwargs)
         self.R = maximum_resource
         self.eta = eta
         self.s_max = math.floor(math.log(self.R, self.eta))
         self.B = (self.s_max + 1) * self.R
         self.resource_unit = resource_unit
+        self.iterations = iterations
         self.random = random.Random(random_seed)
 
     def search(self):
@@ -49,37 +66,41 @@ class Hyperband(Searcher):
         )
 
         xp_count = 0
-        for s in range(self.s_max, -1, -1):
-            n = math.ceil((self.B / self.R) * (self.eta ** s) / (s + 1))
-            r = self.R * self.eta ** (-s)
-            SuccessiveHalving(
-                parent_name=self.parent_name,
-                parent_base=self.parent_base,
-                template=self.template,
-                num_configurations=n,
-                minimum_resource=r,
-                resource_unit=self.resource_unit,
-                num_brackets=s+1,
-                eta=self.eta,
-                resource_budget=self.B,
-                random_generator=self.random,
-                large_score_is_good=self.large_score_is_good,
-                xp_id_offset=xp_count
-            ).search()
-            xp_count += n
+        for it in range(self.iterations):
+            log.debug(f'Iteration {it+1} / {self.iterations} of hyperband.')
+            for s in range(self.s_max, -1, -1):
+                n = math.ceil((self.B / self.R) * (self.eta ** s) / (s + 1))
+                r = self.R * self.eta ** (-s)
+                SuccessiveHalving(
+                    parent_name=self.parent_name,
+                    parent_base=self.parent_base,
+                    template=self.template,
+                    num_configurations=n,
+                    minimum_resource=r,
+                    resource_unit=self.resource_unit,
+                    num_brackets=s+1,
+                    eta=self.eta,
+                    resource_budget=self.B,
+                    random_generator=self.random,
+                    large_score_is_good=self.large_score_is_good,
+                    xp_id_offset=xp_count,
+                    iteration=it
+                ).search()
+                xp_count += n
 
 
 class SuccessiveHalving(Searcher):
     def __init__(self, num_configurations, minimum_resource,
                  num_brackets=None, eta=3, resource_unit=1,
                  resource_budget=100, random_generator=None,
-                 xp_id_offset=0,
+                 xp_id_offset=0, iteration=0,
                  **kwargs):
         super().__init__(**kwargs)
         self.num_configurations = num_configurations
         self.minimum_resource = minimum_resource
         self.resource_budget = resource_budget
         self.resource_unit = resource_unit
+        self.iteration = iteration
         self.eta = eta
         self.xp_id_offset = xp_id_offset
         if num_brackets is None:
@@ -158,7 +179,7 @@ class SuccessiveHalving(Searcher):
                 alias=self.make_alias(i+1, xp_id),
                 epochs=resource_allocation_for_round(
                     i+1, self.minimum_resource, self.resource_unit, self.eta
-                ),
+                ) + xp.epochs,
                 initial_epoch=xp.epochs,
                 model=load_keras_model,
                 model_kwargs=new_kwargs,
@@ -171,7 +192,7 @@ class SuccessiveHalving(Searcher):
     def init_experiments(self):
         experiments = {}
         for i in range(self.num_configurations):
-            args = hp.pick(self.template._asdict(), self.random)
+            args = self.generate_valid_xp_args(self.random)
             args['alias'] = self.make_alias(0, i)
             args['parent_base'] = self.parent_base
             args['parent_name'] = self.parent_name
@@ -183,7 +204,8 @@ class SuccessiveHalving(Searcher):
         return experiments
 
     def make_alias(self, round, xp_id):
-        return f"b{self.bracket}_r{round+1}_x{xp_id + 1 + self.xp_id_offset}"
+        return f"i{self.iteration + 1}_b{self.bracket}_r" \
+               f"{round+1}_x{xp_id + 1 + self.xp_id_offset}"
 
 
 def resource_allocation_for_round(i, minimum_resource, resource_unit=1, eta=3):
@@ -226,9 +248,8 @@ class RandomSearch(Searcher):
         r = random.Random(self.random_seed)
 
         for i in range(self.iterations):
-            args = hp.pick(self.template._asdict(), r)
+            args = self.generate_valid_xp_args(r)
             args['parent_base'] = self.parent_base
             args['parent_name'] = self.parent_name
             args['alias'] = f"xp_{i}"
-
             yield Experiment(**args)

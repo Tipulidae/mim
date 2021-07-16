@@ -128,6 +128,52 @@ class TestData:
         assert x.predefined_splits == [0, 0, 1, 1, 1]
         assert x.lazy_slice([3, 2, 1, 0]).predefined_splits == [1, 1, 0, 0]
 
+    def test_flat_numpy_1d(self):
+        x = Data([1, 2, 3, 4, 5])
+        assert np.array_equal(
+            x.as_flat_numpy,
+            np.array([[1], [2], [3], [4], [5]])
+            # np.array([1, 2, 3, 4, 5])
+        )
+
+    def test_flat_numpy_2d(self):
+        x = Data([[1, 2, 3],
+                  [2, 3, 4]])
+        assert np.array_equal(
+            x.as_flat_numpy,
+            np.array([[1, 2, 3], [2, 3, 4]])
+        )
+
+    def test_flat_numpy_3d(self):
+        x = Data([[[1, 2, 3],
+                   [2, 3, 4]],
+
+                  [[3, 4, 5],
+                   [4, 5, 6]]])
+        assert np.array_equal(
+            x.as_flat_numpy,
+            np.array([[1, 2, 3, 2, 3, 4], [3, 4, 5, 4, 5, 6]])
+        )
+
+    def test_flat_numpy_4d(self):
+        x = Data([[[[1, 2, 3, 4],
+                    [2, 3, 4, 5]],
+
+                   [[3, 4, 5, 6],
+                    [4, 5, 6, 7]]],
+
+                  [[[4, 5, 6, 7],
+                    [5, 6, 7, 8]],
+
+                   [[6, 7, 8, 9],
+                    [7, 8, 9, 10]]]]
+                 )
+        assert np.array_equal(
+            x.as_flat_numpy,
+            np.array([[1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7],
+                      [4, 5, 6, 7, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 10]])
+        )
+
 
 class TestInferShape:
     def test_shape_ignores_first_dimension(self):
@@ -185,6 +231,41 @@ class TestContainer:
         container = Container(data_dict, predefined_splits=[-1, -1, 0, 0])
         assert container.predefined_splits == [-1, -1, 0, 0]
         assert container.lazy_slice([1, 2, 0]).predefined_splits == [-1, 0, -1]
+
+    def test_flatten_single_item(self):
+        data_dict = {
+            'x': Data([1, 2, 3, 4]),
+        }
+        container = Container(data_dict)
+        assert np.array_equal(
+            container.as_flat_numpy,
+            np.array([[1], [2], [3], [4]])
+        )
+
+    def test_flatten_1d(self):
+        data_dict = {
+            'a': Data([1, 2, 3, 4]),
+            'b': Data([2, 3, 4, 5])
+        }
+        container = Container(data_dict)
+        assert np.array_equal(
+            container.as_flat_numpy,
+            np.array([[1, 2], [2, 3], [3, 4], [4, 5]])
+        )
+
+    def test_flatten_2d(self):
+        data_dict = {
+            'a': Data([[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]),
+            'b': Data([[2, 3], [3, 4], [4, 5]]),
+            'c': Data([1, 2, 3])
+        }
+        container = Container(data_dict)
+        assert np.array_equal(
+            container.as_flat_numpy,
+            np.array([[1, 2, 3, 4, 2, 3, 1],
+                      [2, 3, 4, 5, 3, 4, 2],
+                      [3, 4, 5, 6, 4, 5, 3]])
+        )
 
 
 class TestECGMatLabData:

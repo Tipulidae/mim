@@ -8,9 +8,20 @@ from typing import Dict
 
 
 class Data:
-    def __init__(self, data, index=None, dtype=tf.int64, fits_in_memory=True,
-                 groups=None, predefined_splits=None):
+    def __init__(
+            self,
+            data,
+            index=None,
+            columns=None,
+            dtype=tf.int64,
+            fits_in_memory=True,
+            groups=None,
+            predefined_splits=None):
         self.data = data
+        if columns is None:
+            self._columns = [0]
+        else:
+            self._columns = columns
         self.dtype = dtype
         self.groups = groups
         self.predefined_splits = predefined_splits
@@ -28,6 +39,7 @@ class Data:
     def lazy_slice(self, index):
         new_data = copy(self)
         new_data._index = np.array([self._index[i] for i in index])
+
         if new_data.groups is not None:
             new_data.groups = [self.groups[i] for i in index]
         if new_data.predefined_splits is not None:
@@ -39,6 +51,10 @@ class Data:
     @property
     def index(self):
         return np.array(range(len(self)))
+
+    @property
+    def columns(self):
+        return self._columns
 
     @property
     def as_dataset(self):
@@ -58,13 +74,25 @@ class Data:
         return np.array(list(self))
 
     @property
+    def as_flat_numpy(self):
+        """Returns a flattened view of the data. Each item in the underlying
+        data structure is flattened.
+        """
+        x = self.as_numpy
+        if len(x.shape) == 1:
+            return x.reshape(-1, 1)
+        else:
+            return x.reshape(x.shape[0], np.prod(x.shape[1:]))
+        # else:
+        #     return x
+
+    @property
     def type(self):
         return self.dtype
 
     @property
     def shape(self):
         return tf.TensorShape(self._shape)
-        # return tf.TensorShape(infer_shape(self.data))
 
     @property
     def fits_in_memory(self):
@@ -132,12 +160,23 @@ class Container(Data):
         return {key: value.type for key, value in self.data.items()}
 
     @property
+    def columns(self):
+        return {key: value.columns for key, value in self.data.items()}
+
+    @property
     def shape(self):
         return {key: value.shape for key, value in self.data.items()}
 
     @property
     def as_numpy(self):
         return {key: value.as_numpy for key, value in self.data.items()}
+
+    @property
+    def as_flat_numpy(self):
+        return np.concatenate(
+            [x.as_flat_numpy for x in self.data.values()],
+            axis=1
+        )
 
     @property
     def fits_in_memory(self):
@@ -179,7 +218,13 @@ class ECGData(Data):
             with h5py.File(data, 'r') as f:
                 index = np.array(range(len(f[mode])))
 
-        super().__init__(data, index=index, dtype=dtype, **kwargs)
+        super().__init__(
+            data,
+            index=index,
+            dtype=dtype,
+            columns=['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'I', 'II'],
+            **kwargs
+        )
 
         if mode == 'beat':
             self._shape = [1200, 8]
@@ -194,10 +239,10 @@ class ECGData(Data):
 class Extractor:
     def __init__(self, index=None, features=None, labels=None,
                  processing=None, fits_in_memory=True, cv_kwargs=None):
-        self.index = index
-        self.features = features
-        self.labels = labels
-        self.processing = processing
+        self.index = {} if index is None else index
+        self.features = {} if features is None else features
+        self.labels = {} if labels is None else labels
+        self.processing = {} if processing is None else processing
         self.fits_in_memory = fits_in_memory
         self.cv_kwargs = cv_kwargs
 

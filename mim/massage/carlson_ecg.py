@@ -28,8 +28,128 @@ class ECGStatus(Enum):
     MISSING_DATE = 20
     MISSING_DEVICE = 21
     MISSING_LEAD_SYSTEM = 22
-    BAD_DATE = 23
-    MISSING_PATIENT = 24
+    MISSING_LEAD_NAMES = 23
+    BAD_LEAD_NAMES = 24
+    BAD_DATE = 25
+    MISSING_PATIENT = 26
+
+    MISSING_GLASGOW = 27
+    BAD_GLASGOW = 28
+
+
+expected_lead_names = [
+    'V1',
+    'V2',
+    'V3',
+    'V4',
+    'V5',
+    'V6',
+    'I',
+    'II',
+    'III',
+    'aVR',
+    'aVL',
+    'aVF'
+]
+
+glasgow_vector_names = [
+    'Ponset',
+    'Pduration',
+    'QRSonset',
+    'QRSduration',
+    'ST80amplitude',
+    'Qduration',
+    'Rduration',
+    'Sduration',
+    'Rprim_dur',
+    'Sprim_dur',
+    'Rbis_dur',
+    'Sbis_dur',
+    'STduration',
+    'Tonset',
+    'Tduration',
+    'Ppos_dur',
+    'Tpos_dur',
+    'QRS_IntD',
+    'Ppos_amp',
+    'Pneg_amp',
+    'pk2pkQRS_amp',
+    'R1_amp',
+    'Qamplitude',
+    'Ramplitude',
+    'Samplitude',
+    'Rprim_amp',
+    'Sprim_amp',
+    'Rbis_amp',
+    'Sbis_amp',
+    'ST_amp',
+    'STT28_amp',
+    'STT38_amp',
+    'Tpos_amp',
+    'Tneg_amp',
+    'QRSarea',
+    'Parea',
+    'Tarea',
+    'Pmorphology',
+    'Tmorphology',
+    'Rnotch',
+    'DeltaConf',
+    'STslope',
+    'QTinterval',
+    'STM_amp',
+    'ST60_amp',
+    'STTmid_amp',
+    'EndQRSnotch_amp',
+    'PR_amp',
+    'ST_ampAdj',
+    'EndQRSnotchSlurOnset',
+    'EndQRSnotchSlurPeak'
+]
+
+glasgow_scalar_names = [
+    'QRSFrontalAxis',
+    'PFrontalAxis',
+    'STFrontalAxis',
+    'TFrontalAxis',
+    'QRSpvec48sv',
+    'QRSpvec58sv',
+    'QRSpvec68sv',
+    'QRSpvec78sv',
+    'QRSpvecMaxAmpl',
+    'OverallPonset',
+    'OverallPend',
+    'OverallQRSonset',
+    'OverallQRSend',
+    'OverallTonset',
+    'OverallTend',
+    'HeartRateVariability',
+    'StdDevNormRR',
+    'LVHscore',
+    'LVstrain',
+    'OverallPdur',
+    'OverallQRSdur',
+    'OverallSTdur',
+    'OverallTdur',
+    'RmaxaVR',
+    'RmaxaVL',
+    'SampV1',
+    'RampV5',
+    'SampV1plusRampV5',
+    'OverallPRint',
+    'OverallQTint',
+    'HeartRate',
+    'PtermV1',
+    'QTdisp',
+    'QTc',
+    'QTcHodge',
+    'QTcBazett',
+    'QTcFridericia',
+    'QTcFramingham',
+    'SinusRate',
+    'SinusAveRR',
+    'VentRate',
+    'VentAveRR'
+]
 
 
 def ecg_status(ecg):
@@ -49,7 +169,8 @@ def data_status(ecg):
     return (
         label_status(data) |
         raw_status(data) |
-        beat_status(data)
+        beat_status(data) |
+        lead_name_status(data)
     )
 
 
@@ -61,7 +182,8 @@ def measurement_status(ecg):
     return (
         diagnose_status(measurements) |
         rhythm_status(measurements) |
-        summary_status(measurements)
+        summary_status(measurements) |
+        glasgow_status(measurements)
     )
 
 
@@ -163,6 +285,44 @@ def summary_status(measurements):
     return set()
 
 
+def glasgow_status(measurements):
+    try:
+        glasgow_data = measurements[0][0]
+    except IndexError:
+        return {ECGStatus.MISSING_GLASGOW}
+
+    return (
+        glasgow_scalar_status(glasgow_data) |
+        glasgow_vector_status(glasgow_data)
+    )
+
+
+def glasgow_scalar_status(glasgow_data):
+    all_names = glasgow_data.dtype.names
+    for name in glasgow_scalar_names:
+        if name not in all_names:
+            return {ECGStatus.MISSING_GLASGOW}
+
+    for name in glasgow_scalar_names:
+        if len(glasgow_data[name][0]) != 1:
+            return {ECGStatus.BAD_GLASGOW}
+
+    return set()
+
+
+def glasgow_vector_status(glasgow_data):
+    all_names = glasgow_data.dtype.names
+    for name in glasgow_vector_names:
+        if name not in all_names:
+            return {ECGStatus.MISSING_GLASGOW}
+
+    for name in glasgow_vector_names:
+        if len(glasgow_data[name][0]) != 12:
+            return {ECGStatus.BAD_GLASGOW}
+
+    return set()
+
+
 def date_status(recording):
     try:
         date = extract_field(recording, 'Date')[0][0][0]
@@ -191,6 +351,19 @@ def lead_system_status(recording):
         extract_field(recording, 'Lead_system')[0][0][0]
     except IndexError:
         return {ECGStatus.MISSING_LEAD_SYSTEM}
+
+    return set()
+
+
+def lead_name_status(data):
+    try:
+        labels = extract_field(data, 'Labels')[0][0][0]
+        actual_lead_names = [x[0] for x in labels]
+    except IndexError:
+        return {ECGStatus.MISSING_LEAD_NAMES}
+
+    if actual_lead_names != expected_lead_names:
+        return {ECGStatus.BAD_LEAD_NAMES}
 
     return set()
 

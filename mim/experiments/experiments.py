@@ -1,4 +1,5 @@
 import os
+import shutil
 from copy import copy
 from time import time
 from pathlib import Path
@@ -13,11 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import PredefinedSplit, KFold
 
 from mim.extractors.extractor import Extractor, Container
-from mim.cross_validation import (
-    CrossValidationWrapper,
-    PredefinedSplitsRepeated
-)
-# from mim.extractors.extractor import DataProvider
+from mim.cross_validation import CrossValidationWrapper
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
@@ -45,6 +42,7 @@ class Experiment(NamedTuple):
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
+    class_weight: Union[dict, hp.Param] = None
     epochs: Union[int, hp.Param] = None
     initial_epoch: int = 0
     batch_size: Union[int, hp.Param] = 64
@@ -58,10 +56,22 @@ class Experiment(NamedTuple):
     parent_base: str = None
     parent_name: str = None
     data_fits_in_memory: bool = True
+    pre_processor: Any = None
+    pre_processor_kwargs: dict = {}
+    reduce_lr_on_plateau: Any = None
 
     def run(self):
         try:
+            # Wipe all old results here!
+            if os.path.exists(self.base_path):
+                log.debug(f'Removing old experiment results from '
+                          f'{self.base_path}')
+                shutil.rmtree(self.base_path, ignore_errors=True)
+            else:
+                log.debug('No old experiment results found.')
+
             results = self._run()
+            os.makedirs(self.base_path, exist_ok=True)
             pd.to_pickle(results, self.result_path)
             log.debug(f'Saved results in {self.result_path}')
         except Exception as e:
@@ -74,11 +84,7 @@ class Experiment(NamedTuple):
 
         data = self.get_data()
 
-        # TODO:
-        #  Add feature names to dataset somewhere so it can be
-        #  logged here
-        feature_names = None
-
+        feature_names = data.columns
         results = {
             'fit_time': [],
             'score_time': [],
@@ -95,6 +101,9 @@ class Experiment(NamedTuple):
         cv = self.get_cross_validation(data.predefined_splits)
 
         for i, (train, validation) in enumerate(cv.split(data)):
+            pre_process = self.get_pre_processor(i)
+            train = pre_process(train)
+            validation = pre_process(validation)
             result = _validate(
                 train,
                 validation,
@@ -110,6 +119,13 @@ class Experiment(NamedTuple):
         log.info(f'Finished computing scores for {self.name} in '
                  f'{time() - t}s. ')
         return results
+
+    def get_pre_processor(self, split=0):
+        if self.pre_processor is None:
+            return lambda x: x
+
+        return self.pre_processor(
+            split_number=split, **self.pre_processor_kwargs)
 
     def get_data(self) -> Container:
         """
@@ -130,10 +146,7 @@ class Experiment(NamedTuple):
                     "Data must contain predefined_splits when using "
                     "PredefinedSplit cross-validation."
                 )
-            if self.cv == PredefinedSplitsRepeated:
-                cv = self.cv(predefined_splits, **self.cv_kwargs)
-            else:
-                cv = PredefinedSplit(predefined_splits)
+            cv = PredefinedSplit(predefined_splits)
         else:
             cv = self.cv(**self.cv_kwargs)
 
@@ -160,8 +173,16 @@ class Experiment(NamedTuple):
         model = self.model(**model_kwargs)
 
         if isinstance(model, tf.keras.Model):
+            # TODO: refactor this! :(
             if isinstance(self.optimizer, dict):
-                optimizer = self.optimizer['name'](**self.optimizer['kwargs'])
+                optimizer_kwargs = copy(self.optimizer['kwargs'])
+                optimizer = self.optimizer['name']
+                if 'learning_rate' in optimizer_kwargs:
+                    lr = optimizer_kwargs.pop('learning_rate')
+                    if isinstance(lr, dict):
+                        lr = lr['scheduler'](**lr['scheduler_kwargs'])
+                    optimizer_kwargs['learning_rate'] = lr
+                optimizer = optimizer(**optimizer_kwargs)
             else:
                 optimizer = self.optimizer
 
@@ -174,6 +195,7 @@ class Experiment(NamedTuple):
 
             return KerasWrapper(
                 model,
+                # TODO: Add data augmentation here maybe, and use in fit
                 checkpoint_path=self.base_path,
                 tensorboard_path=self.base_path,
                 batch_size=self.batch_size,
@@ -181,9 +203,11 @@ class Experiment(NamedTuple):
                 initial_epoch=self.initial_epoch,
                 optimizer=optimizer,
                 loss=self.loss,
+                class_weight=self.class_weight,
                 metrics=metric_list,
                 skip_compile=self.skip_compile,
-                ignore_callbacks=self.ignore_callbacks
+                ignore_callbacks=self.ignore_callbacks,
+                reduce_lr_on_plateau=self.reduce_lr_on_plateau,
             )
         else:
             model.random_state = self.random_state
@@ -235,9 +259,10 @@ class Experiment(NamedTuple):
             return None
 
 
-def _validate(train, val, model, scoring, split_number=None):
+def _validate(train, val, model, scoring, split_number=None, pre_process=None):
     t0 = time()
     log.info(f'\n\nFitting classifier, split {split_number}')
+
     history = model.fit(train, validation_data=val, split_number=split_number)
     fit_time = time() - t0
 
@@ -250,6 +275,11 @@ def _validate(train, val, model, scoring, split_number=None):
     )
 
     y_val = val['y'].as_numpy
+    targets = pd.DataFrame(
+        y_val,
+        index=pd.Index(val['index'].as_numpy, name=val['index'].columns[0]),
+        columns=val['y'].columns
+    )
     test_score = scoring(y_val, prediction['prediction'])
     log.debug(f'test score: {test_score}, train score: {train_score}')
 
@@ -265,7 +295,7 @@ def _validate(train, val, model, scoring, split_number=None):
         'feature_importance': feature_importance,
         'fit_time': fit_time,
         'score_time': score_time,
-        'targets': y_val,
+        'targets': targets,
         'history': history,
         'model_summary': model.summary
     }

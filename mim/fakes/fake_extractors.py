@@ -17,7 +17,7 @@ class FakeExtractor(Extractor):
         index = range(len(x))
         x = Data(x, index=index, dtype=float64)
         y = Data(y, index=index, dtype=float64)
-        return Container({'x': x, 'y': y})
+        return Container({'x': x, 'y': y, 'index': Data(list(index))})
 
 
 class FakeECG(Extractor):

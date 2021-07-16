@@ -4,15 +4,17 @@ class Param:
 
 
 class Int(Param):
-    def __init__(self, min_value, max_value):
+    def __init__(self, min_value, max_value, step=1):
         super().__init__()
         self.min_value = min_value
         self.max_value = max_value
+        self.step = step
 
     def pick(self, generator):
-        return generator.randint(
+        return generator.randrange(
             pick(self.min_value, generator),
-            pick(self.max_value, generator)
+            pick(self.max_value, generator) + 1,
+            step=pick(self.step, generator)
         )
 
     def __str__(self):
