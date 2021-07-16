@@ -112,7 +112,7 @@ class HyperSearch(HyperExperiment, Enum):
                         'kernel_last': hp.Int(5, 65, step=4),
                         'batch_norms': hp.Choices([True, False], k=num_layers),
                         'weight_decays': hp.Choices(
-                            [1e-1, 1e-2, 1e-3, 0.0],
+                            [1.0, 1e-1, 1e-2, 1e-3, 0.0],
                             k=num_layers),
                         'pool_sizes': hp.Choices(
                             range(2, 33, 2),
@@ -120,9 +120,9 @@ class HyperSearch(HyperExperiment, Enum):
                         'ffnn_kwargs': hp.Choice([
                             None,
                             {
-                                'sizes': hp.Choice([10, 50, 100]),
-                                'dropouts': hp.Choice(
-                                    [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
+                                'sizes': hp.Choices([10, 50, 100], k=1),
+                                'dropouts': hp.Choices(
+                                    [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], k=1),
                                 'batch_norms': [False]
                             }
                         ]),

@@ -1229,7 +1229,7 @@ class ESCT(Experiment, Enum):
                 'batch_norms': [False]
             },
             'flat_ffnn_kwargs': None,
-            'final_fnn_kwargs': None
+            'final_ffnn_kwargs': None
         },
         extractor=EscTrop,
         extractor_kwargs={
