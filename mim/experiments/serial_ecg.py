@@ -1345,10 +1345,26 @@ class ESCT(Experiment, Enum):
         scoring=roc_auc_score,
     )
     AMI_R1_AB1_DT_AGE_SEX_TNT = AMI_R1_AB1._replace(
+        description='Predicting AMI with AB1, using 1 ECG plus the flat-'
+                    'features',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
                 'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+            'labels': {
+                'target': 'ami30'
+            }
+        },
+    )
+    AMI_R2_AB1_DT_AGE_SEX_TNT = AMI_R1_AB1._replace(
+        description='Predicting AMI with AB1, using 2 ECGs plus the flat-'
+                    'features',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
                 'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
             },
             'labels': {
