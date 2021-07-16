@@ -279,13 +279,16 @@ def make_troponin_table():
     second_tnt = tnt[~tnt.index.isin(first_tnt.index)].drop_duplicates(
         subset=['ed_id'], keep='first')
 
-    return (
-        first_tnt.set_index('ed_id').join(
+    r = first_tnt.set_index('ed_id').join(
             second_tnt.set_index('ed_id'),
             lsuffix='_1',
             rsuffix='_2'
         )
-    )
+
+    r["log_tnt_1"] = np.log2(r["tnt_1"])
+    r["log_tnt_2"] = np.log2(r["tnt_2"])
+
+    return r
 
 
 def make_double_ecg_features(index):
