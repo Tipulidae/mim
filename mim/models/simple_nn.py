@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import math
 from copy import deepcopy
 
@@ -15,12 +17,30 @@ from tensorflow.keras.layers import (
     ReLU,
     AveragePooling1D
 )
+from tensorflow.keras.layers.experimental.preprocessing import Normalization
 from tensorflow.keras.regularizers import l2
 
 from mim.models.load import load_model_from_experiment_result
 from mim.util.logs import get_logger
 
 log = get_logger('simple_nn')
+
+
+def logistic_regression_ab(train, validation=None):
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    # ['log_dt', 'age', 'male', 'tnt_1']
+    normalization = Normalization(axis=1)
+    normalization.adapt(train['x']['flat_features'].as_numpy)
+    cols = train['x']["flat_features"].columns
+    if 'male' in cols:
+        i = cols.index('male')
+        w = normalization.get_weights()
+        w[0][i] = 0
+        w[1][i] = 1
+        normalization.set_weights(w)
+    layer = normalization(inp['flat_features'])
+    output = Dense(1, activation="sigmoid", kernel_regularizer=None)(layer)
+    return keras.Model(inp, output)
 
 
 def logistic_regression(train, validation=None):

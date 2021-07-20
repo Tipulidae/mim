@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from enum import Enum
 
 from tensorflow.keras.optimizers import Adam, SGD
@@ -8,7 +10,8 @@ from sklearn.linear_model import LogisticRegression
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.models.simple_nn import ecg_cnn, ffnn, logistic_regression
+from mim.models.simple_nn import ecg_cnn, ffnn, logistic_regression, \
+    logistic_regression_ab
 from mim.models.load import pre_process_using_xp, load_ribeiro_model
 from mim.cross_validation import ChronologicalSplit
 
@@ -86,6 +89,28 @@ class ESCT(Experiment, Enum):
                 'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
             },
         },
+    )
+
+    # AB Log Reg, Flat Features:
+    AB_M_LR1_DT_AGE_SEX_LOGTNT = Experiment(
+        description="foo",
+        model=logistic_regression_ab,
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_tnt_1', "age", "male", "log_dt"]
+            },
+        },
+        epochs=300,
+        batch_size=-1,
+        optimizer={
+            'name': SGD,
+            'kwargs': {'learning_rate': 1},
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
     )
 
     # KERAS LOGISTIC REGRESSION, FLAT FEATURES:
