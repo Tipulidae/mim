@@ -11,7 +11,8 @@ from tensorflow.keras.layers import (
     MaxPool1D,
     Dropout,
     BatchNormalization,
-    Concatenate
+    Concatenate,
+    Lambda
 )
 from tensorflow.keras.layers.experimental.preprocessing import Normalization
 from tensorflow.keras.regularizers import l2
@@ -75,8 +76,14 @@ def dyn_cnn(train=None, validation=None,
 
     # ECG Processing
     layer = inp["ecg"]
-    if ecg_normalization_layer:
-        layer = ecg_normalization_layer(layer)
+    if ecg_normalization_layer == "BatchNormalization":
+        layer = BatchNormalization()(layer)
+    elif ecg_normalization_layer == "PredefinedLambda":
+        m = 4.057771e-05
+        s = 0.0001882498
+        normalization_layer = Lambda(lambda v: (v - m) / s)
+        layer = normalization_layer(layer)
+
     assert len(conv_dropout) == len(conv_filters)
     assert len(conv_dropout) == len(conv_kernel_size)
     assert len(conv_dropout) == len(conv_pool_size)

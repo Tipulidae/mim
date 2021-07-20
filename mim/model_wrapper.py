@@ -279,9 +279,11 @@ def prepare_dataset(data, batch_size=1, prefetch=None, **kwargs):
     x = data['x'].as_dataset
     y = data['y'].as_dataset
 
+    # TODO: Fix shuffling.
+
     fixed_data = (
         tf.data.Dataset.zip((x, y))
-        .shuffle(len(data))
+        .shuffle(batch_size)
         .batch(batch_size)
     )
 

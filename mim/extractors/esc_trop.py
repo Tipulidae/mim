@@ -10,7 +10,8 @@ from mim.massage.esc_trop import (
     make_ed_features,
     make_lab_features,
     make_double_ecg_features,
-    make_ecg_table
+    make_ecg_table,
+    _read_esc_trop_csv
 )
 from mim.extractors.extractor import Data, Container, ECGData, Extractor
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
@@ -121,22 +122,38 @@ class EscTropECG(Extractor):
             log.debug(f"{len(ecgs)} ECGs after excluding index and 'previous'"
                       f" ECGs")
 
-        return np.array(ecgs.index)
+        ed = _read_esc_trop_csv(
+            "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv"
+        ).set_index('Alias')
+
+        ecgs = ecgs.join(ed["Kön"], on="Alias").dropna()
+        ecgs['male'] = ecgs["Kön"].map({"M": 1, "F": 0})
+
+        return np.array(ecgs.index), ecgs['male']
 
     def get_data(self) -> Container:
         log.debug('Making index')
-        index = self.make_index()
+        index, male = self.make_index()
 
         if 'ecg_mode' in self.features:
             mode = self.features['ecg_mode']
         else:
             mode = 'raw'
 
-        data = ECGData(
+        x = ECGData(
             '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5',
             mode=mode,
             index=index,
             fits_in_memory=self.fits_in_memory
+        )
+        x = Container({"ecg": x})
+
+        y = Data(male.values, columns=["male"])
+
+        data = Container(
+            {'x': x,
+             'y': y},
+            index=range(len(y))
         )
 
         # No need for a hold-out set if we exclude the test-patients.
