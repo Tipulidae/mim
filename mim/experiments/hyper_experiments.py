@@ -112,10 +112,7 @@ class HyperSearch(HyperExperiment, Enum):
                         'kernel_last': hp.Int(5, 65, step=4),
                         'batch_norms': hp.Choices([True, False], k=num_layers),
                         'weight_decays': hp.Choices(
-                            [1.0, 1e-1, 1e-2, 1e-3, 0.0],
-                            k=num_layers),
-                        'pool_sizes': hp.Choices(
-                            range(2, 33, 2),
+                            [1e-1, 1e-2, 1e-3, 0.0],
                             k=num_layers),
                         'ffnn_kwargs': hp.Choice([
                             None,
@@ -156,16 +153,16 @@ class HyperSearch(HyperExperiment, Enum):
                         'scheduler_kwargs': {
                             'boundaries': [153 * 50],
                             'values': hp.Choice([
-                                [3e-2, 3e-3], [1e-2, 1e-3],
-                                [3e-3, 3e-4], [1e-3, 1e-4],
-                                [3e-4, 3e-5], [1e-4, 1e-5],
-                                # [3e-5, 3e-6], [1e-5, 1e-6]
+                                [1e-2, 1e-3],
+                                [1e-3, 1e-4],
+                                [1e-4, 1e-5],
+                                [1e-5, 1e-6]
                             ]),
                         }
                     },
                 }
             },
-            epochs=200,
+            epochs=100,
             batch_size=64,
             cv=ChronologicalSplit,
             cv_kwargs={
@@ -181,7 +178,86 @@ class HyperSearch(HyperExperiment, Enum):
         strategy_kwargs={
             'iterations': 500
         },
-        validate_experiment_params=validate_pool_size
+    )
+
+    AMI_R1_CNN_HB = HyperExperiment(
+        template=Experiment(
+            description="Try to find good settings for predicting AMI using "
+                        "a single raw ECG. Hyperband searcher.",
+            model=ecg_cnn,
+            model_kwargs={
+                'cnn_kwargs': hp.Choice([
+                    {
+                        'downsample': True,
+                        'num_layers': num_layers,
+                        'dropouts': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers),
+                        'filter_first': hp.Int(8, 64, step=4),
+                        'filter_last': hp.Int(8, 64, step=4),
+                        'kernel_first': hp.Int(5, 65, step=4),
+                        'kernel_last': hp.Int(5, 65, step=4),
+                        'batch_norms': hp.Choices([True, False], k=num_layers),
+                        'weight_decays': hp.Choices(
+                            [1e-1, 1e-2, 1e-3, 0.0],
+                            k=num_layers),
+                        'ffnn_kwargs': hp.Choice([
+                            None,
+                            {
+                                'sizes': hp.Choices([10, 50, 100], k=1),
+                                'dropouts': hp.Choices(
+                                    [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], k=1),
+                                'batch_norms': [False]
+                            }
+                        ]),
+                    } for num_layers in [2, 3, 4]
+                ]),
+                'ecg_ffnn_kwargs': None,
+                'flat_ffnn_kwargs': None,
+                'final_ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.Choices([10, 20, 50, 100], k=1),
+                        'dropouts': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], k=1),
+                        'batch_norms': [False]
+                    }
+                ]),
+            },
+            extractor=EscTrop,
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'raw',
+                    'ecgs': ['ecg_0']
+                },
+                'labels': {'target': 'ami30'}
+            },
+            class_weight={0: 1, 1: 10.7},
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5
+                    ])
+                }
+            },
+            epochs=100,
+            batch_size=64,
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 1/3
+            },
+            building_model_requires_development_data=True,
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            random_state=hp.Int(0, 1000000000),
+        ),
+        random_seed=42,
+        strategy=Hyperband,
+        strategy_kwargs={
+            'iterations': 20,
+            'maximum_resource': 40,
+            'resource_unit': 5
+        }
     )
 
     R1_CNN_HB = HyperExperiment(

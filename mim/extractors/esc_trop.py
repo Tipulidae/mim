@@ -9,7 +9,8 @@ from mim.massage.esc_trop import (
     make_index_visits,
     make_ed_features,
     make_lab_features,
-    make_double_ecg_features
+    make_double_ecg_features,
+    make_ecg_table
 )
 from mim.extractors.extractor import Data, Container, ECGData, Extractor
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
@@ -93,6 +94,54 @@ class EscTrop(Extractor):
         dev, _ = next(hold_out_splitter.split(data))
         log.debug('Finished extracting esc-trop data')
         return dev
+
+
+class EscTropECG(Extractor):
+    def make_index(self, exclude_new_ecgs=True, exclude_test_patients=True,
+                   exclude_index_ecgs=True, **index_kwargs):
+        index = make_index_visits(**index_kwargs)
+        index_ecgs = make_double_ecg_features(index)
+        ecgs = make_ecg_table()
+
+        log.debug(f"{len(ecgs)} usable ECGs")
+        if exclude_new_ecgs:
+            ecgs = ecgs[ecgs.ecg_date < '2017-02-01']
+            log.debug(f"{len(ecgs)} ECGs after excluding 'new' ECGs")
+        if exclude_test_patients:
+            first_test_patient_index = -(len(index) // 4)
+            ecgs = ecgs[~(ecgs.Alias.isin(
+                index.iloc[first_test_patient_index:].index))]
+            log.debug(f"{len(ecgs)} ECGs after excluding ECGs from test "
+                      f"patients")
+        if exclude_index_ecgs:
+            ecgs = ecgs[
+                ~(ecgs.index.isin(index_ecgs.ecg_0)) &
+                ~(ecgs.index.isin(index_ecgs.ecg_1))
+            ]
+            log.debug(f"{len(ecgs)} ECGs after excluding index and 'previous'"
+                      f" ECGs")
+
+        return np.array(ecgs.index)
+
+    def get_data(self) -> Container:
+        log.debug('Making index')
+        index = self.make_index()
+
+        if 'ecg_mode' in self.features:
+            mode = self.features['ecg_mode']
+        else:
+            mode = 'raw'
+
+        data = ECGData(
+            '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5',
+            mode=mode,
+            index=index,
+            fits_in_memory=self.fits_in_memory
+        )
+
+        # No need for a hold-out set if we exclude the test-patients.
+        log.debug('Finished extracting esc-trop ECGs')
+        return data
 
 
 def preprocess_ecg(ecg_data, processing, scale=5000):
