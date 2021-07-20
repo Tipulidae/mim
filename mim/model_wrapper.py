@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 from enum import Enum
 
@@ -5,6 +7,8 @@ import pandas as pd
 import sklearn.ensemble as ensemble
 import sklearn.linear_model as linear_model
 import tensorflow as tf
+import tensorflow.keras as keras
+
 from tensorflow.keras.callbacks import (
     ModelCheckpoint,
     TensorBoard,
@@ -202,6 +206,7 @@ class KerasWrapper(Model):
             checkpoint_path=None,
             skip_compile=False,
             tensorboard_path=None,
+            exp_base_path=None,
             class_weight=None,
             reduce_lr_on_plateau=None
     ):
@@ -214,6 +219,7 @@ class KerasWrapper(Model):
             )
         self.checkpoint_path = checkpoint_path
         self.tensorboard_path = tensorboard_path
+        self.exp_base_path = exp_base_path
         self.batch_size = batch_size
         self.epochs = epochs
         self.initial_epoch = initial_epoch
@@ -223,6 +229,10 @@ class KerasWrapper(Model):
         log.info("\n\n" + keras_model_summary_as_string(model))
 
     def fit(self, data, validation_data=None, split_number=None, **kwargs):
+        keras.utils.plot_model(self.model,
+                               os.path.join(self.exp_base_path,
+                                            "network-graph.png"),
+                               True, True)
         if self.ignore_callbacks:
             callbacks = None
         else:

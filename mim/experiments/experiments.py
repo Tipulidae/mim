@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import shutil
 from copy import copy
@@ -70,8 +72,8 @@ class Experiment(NamedTuple):
             else:
                 log.debug('No old experiment results found.')
 
-            results = self._run()
             os.makedirs(self.base_path, exist_ok=True)
+            results = self._run()
             pd.to_pickle(results, self.result_path)
             log.debug(f'Saved results in {self.result_path}')
         except Exception as e:
@@ -198,6 +200,7 @@ class Experiment(NamedTuple):
                 # TODO: Add data augmentation here maybe, and use in fit
                 checkpoint_path=self.base_path,
                 tensorboard_path=self.base_path,
+                exp_base_path=self.base_path,
                 batch_size=self.batch_size,
                 epochs=self.epochs,
                 initial_epoch=self.initial_epoch,
