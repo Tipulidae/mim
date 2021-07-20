@@ -41,7 +41,7 @@ class SmallTestExperiment(Experiment, Enum):
 
 class TestRunOneExperiment:
     def test_fake_experiment(self):
-        res = SmallTestExperiment.test_fake_data._run()
+        res = SmallTestExperiment.test_fake_data.run()
 
         assert 'predictions' in res
         assert 'train_score' in res
@@ -53,5 +53,5 @@ class TestRunOneExperiment:
         assert 'history' in res
 
     def test_keras(self):
-        res = SmallTestExperiment.test_keras._run()
+        res = SmallTestExperiment.test_keras.run()
         assert res['test_score'].mean() > 0

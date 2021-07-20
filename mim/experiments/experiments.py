@@ -76,6 +76,7 @@ class Experiment(NamedTuple):
             results = self._run()
             pd.to_pickle(results, self.result_path)
             log.debug(f'Saved results in {self.result_path}')
+            return results
         except Exception as e:
             log.error('Something went wrong!')
             raise e
