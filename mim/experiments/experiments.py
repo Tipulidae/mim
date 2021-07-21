@@ -274,14 +274,14 @@ def _validate(train, val, model, scoring, split_number=None, pre_process=None):
     score_time = time() - fit_time - t0
 
     train_score = scoring(
-        train['y'].as_numpy,
+        train['y'].as_numpy(),
         model.predict(train['x'])['prediction']
     )
 
-    y_val = val['y'].as_numpy
+    y_val = val['y'].as_numpy()
     targets = pd.DataFrame(
         y_val,
-        index=pd.Index(val['index'].as_numpy, name=val['index'].columns[0]),
+        index=pd.Index(val['index'].as_numpy(), name=val['index'].columns[0]),
         columns=val['y'].columns
     )
     test_score = scoring(y_val, prediction['prediction'])

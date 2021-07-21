@@ -12,7 +12,7 @@ class CrossValidationWrapper:
 
     def split(self, data: Container):
         x = data.index
-        y = data['y'].as_numpy
+        y = data['y'].as_numpy()
 
         groups = data.groups
         for train, val in self.cv.split(x, y=y, groups=groups):

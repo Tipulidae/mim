@@ -5,8 +5,8 @@ from mim.fakes.fake_extractors import FakeExtractor
 def test_data_is_correct_format():
     data = FakeExtractor().get_data()
     assert isinstance(data, Data)
-    assert data['x'].as_numpy.shape == (100, 20)
-    assert data['y'].as_numpy.shape == (100,)
+    assert data['x'].as_numpy().shape == (100, 20)
+    assert data['y'].as_numpy().shape == (100,)
 
 
 def test_can_specify_inputs():
@@ -18,7 +18,7 @@ def test_can_specify_inputs():
         )
     )
     data = ext.get_data()
-    assert data['x'].as_numpy.shape == (10, 5)
+    assert data['x'].as_numpy().shape == (10, 5)
 
 
 def test_can_specify_inputs_like_experiment():
@@ -33,4 +33,4 @@ def test_can_specify_inputs_like_experiment():
         processing=processing
     )
     data = FakeExtractor(**extractors_kwargs).get_data()
-    assert data['x'].as_numpy.shape == (10, 5)
+    assert data['x'].as_numpy().shape == (10, 5)

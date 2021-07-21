@@ -18,6 +18,7 @@ class TestData:
 
         assert list(data) == [1, 2, 3, 4]
         assert list(data.lazy_slice([3, 2, 1])) == [4, 3, 2]
+        assert list(data) == [1, 2, 3, 4]
 
     def test_slice_of_slice(self):
         data = Data([0, 1, 2, 3])
@@ -43,7 +44,7 @@ class TestData:
 
     def test_as_numpy(self):
         data = Data([1, 2, 3, 4])
-        assert np.array_equal(data.as_numpy, np.array([1, 2, 3, 4]))
+        assert np.array_equal(data.as_numpy(), np.array([1, 2, 3, 4]))
 
     def test_can_make_data_container_from_dict(self):
         x = [[1, 2], [2, 3], [3, 4]]
@@ -54,7 +55,7 @@ class TestData:
         assert isinstance(data, Data)
         assert isinstance(data['x'], Data)
         assert isinstance(data['y'], Data)
-        assert np.array_equal(data['x'].as_numpy, np.array(x))
+        assert np.array_equal(data['x'].as_numpy(), np.array(x))
 
     def test_can_make_data_container_from_dict_of_data(self):
         x = [[1, 2], [2, 3], [3, 4]]
@@ -72,7 +73,7 @@ class TestData:
         assert isinstance(data['x'], Data)
         assert isinstance(data['y'], Data)
         assert not isinstance(data['x'].data, Data)
-        assert np.array_equal(data['x'].as_numpy, np.array(x))
+        assert np.array_equal(data['x'].as_numpy(), np.array(x))
 
     def test_data_shape(self):
         data = Data([1, 2, 3, 4])
@@ -131,16 +132,15 @@ class TestData:
     def test_flat_numpy_1d(self):
         x = Data([1, 2, 3, 4, 5])
         assert np.array_equal(
-            x.as_flat_numpy,
+            x.as_flat_numpy(),
             np.array([[1], [2], [3], [4], [5]])
-            # np.array([1, 2, 3, 4, 5])
         )
 
     def test_flat_numpy_2d(self):
         x = Data([[1, 2, 3],
                   [2, 3, 4]])
         assert np.array_equal(
-            x.as_flat_numpy,
+            x.as_flat_numpy(),
             np.array([[1, 2, 3], [2, 3, 4]])
         )
 
@@ -151,7 +151,7 @@ class TestData:
                   [[3, 4, 5],
                    [4, 5, 6]]])
         assert np.array_equal(
-            x.as_flat_numpy,
+            x.as_flat_numpy(),
             np.array([[1, 2, 3, 2, 3, 4], [3, 4, 5, 4, 5, 6]])
         )
 
@@ -169,10 +169,42 @@ class TestData:
                     [7, 8, 9, 10]]]]
                  )
         assert np.array_equal(
-            x.as_flat_numpy,
+            x.as_flat_numpy(),
             np.array([[1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7],
                       [4, 5, 6, 7, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 10]])
         )
+
+    def test_shuffled_dataset(self):
+        unshuffled = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        shuffled_once = [1, 5, 2, 7, 4, 3, 10, 6, 8, 9]
+        shuffled_twice = [6, 1, 3, 2, 8, 5, 10, 4, 9, 7]
+
+        x = Data(unshuffled, fits_in_memory=False)
+        unshuffled_dataset = x.as_dataset()
+        shuffled_dataset = x.as_dataset(shuffle=True)
+
+        assert list(x) == unshuffled
+        assert list(unshuffled_dataset.as_numpy_iterator()) == unshuffled
+
+        assert list(shuffled_dataset.as_numpy_iterator()) == shuffled_once
+        assert list(shuffled_dataset.as_numpy_iterator()) == shuffled_twice
+
+        assert list(x) == unshuffled
+        assert list(unshuffled_dataset.as_numpy_iterator()) == unshuffled
+
+        assert list(x.as_dataset(shuffle=True).as_numpy_iterator()) == \
+               shuffled_once
+        assert list(x.as_dataset(shuffle=True).as_numpy_iterator()) == \
+               shuffled_once
+
+    def test_dataset_shuffle_does_nothing_if_data_fits_in_memory(self):
+        unshuffled = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+        x = Data(unshuffled, fits_in_memory=True)
+        not_actually_shuffled = x.as_dataset(shuffle=True)
+
+        assert list(x) == unshuffled
+        assert list(not_actually_shuffled.as_numpy_iterator()) == unshuffled
 
 
 class TestInferShape:
@@ -238,7 +270,7 @@ class TestContainer:
         }
         container = Container(data_dict)
         assert np.array_equal(
-            container.as_flat_numpy,
+            container.as_flat_numpy(),
             np.array([[1], [2], [3], [4]])
         )
 
@@ -249,7 +281,7 @@ class TestContainer:
         }
         container = Container(data_dict)
         assert np.array_equal(
-            container.as_flat_numpy,
+            container.as_flat_numpy(),
             np.array([[1, 2], [2, 3], [3, 4], [4, 5]])
         )
 
@@ -261,7 +293,7 @@ class TestContainer:
         }
         container = Container(data_dict)
         assert np.array_equal(
-            container.as_flat_numpy,
+            container.as_flat_numpy(),
             np.array([[1, 2, 3, 4, 2, 3, 1],
                       [2, 3, 4, 5, 3, 4, 2],
                       [3, 4, 5, 6, 4, 5, 3]])
@@ -291,7 +323,7 @@ class TestECGMatLabData:
         s2 = data.lazy_slice([2, 4, 6, 8])
         assert np.array_equal(s1[1], s2[0])
 
-        array = s1.as_numpy
+        array = s1.as_numpy()
         assert array.shape == (3, 10000, 12)
         assert data.cache_size == 0
 
@@ -317,7 +349,7 @@ class TestECGMatLabData:
         assert np.array_equal(s1[2], s2[1])
         assert data.cache_size == 3
 
-        array = s1.as_numpy
+        array = s1.as_numpy()
         assert array.shape == (4, 1200, 8)
         assert data.cache_size == 6
 
