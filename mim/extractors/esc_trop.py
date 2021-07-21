@@ -162,7 +162,7 @@ class EscTropECG(Extractor):
 
 
 def preprocess_ecg(ecg_data, processing, scale=5000):
-    data = ecg_data.as_numpy
+    data = ecg_data.as_numpy()
 
     if processing is not None:
         if 'scale' in processing:

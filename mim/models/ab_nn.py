@@ -24,7 +24,7 @@ def ab_simple_lr(train=None, validation=None, **kwargs):
     # to_cat = [value for key, value in sorted(inp.items())]
     to_cat = [inp['categorical']]
     normalization = Normalization(axis=1)
-    normalization.adapt(train['x']['numeric'].as_numpy)
+    normalization.adapt(train['x']['numeric'].as_numpy())
     to_cat.append(normalization(inp['numeric']))
     layer = Concatenate()(to_cat)
     output = Dense(1, activation="sigmoid")(layer)
@@ -35,7 +35,7 @@ def ab_simple_one_hidden_layer(train=None, **kwargs):
     inp = {key: Input(shape=value, name=key)
            for key, value in train['x'].shape.items()}
     normalization = Normalization(axis=1)
-    normalization.adapt(train['x']['numeric'].as_numpy)
+    normalization.adapt(train['x']['numeric'].as_numpy())
     normalized = normalization(inp['numeric'])
     concatenated = Concatenate()([normalized, inp['categorical']])
     layer = Dense(kwargs["hidden_layer_n"], activation="relu",
@@ -68,7 +68,7 @@ def dyn_cnn(train=None, validation=None,
     if not skip_basic:
         to_cat = [inp['categorical']]
         normalization = Normalization(axis=1, name="NormalizeNumeric")
-        normalization.adapt(train['x']['numeric'].as_numpy)
+        normalization.adapt(train['x']['numeric'].as_numpy())
         to_cat.append(normalization(inp['numeric']))
         basic_layer = Concatenate(name="CatBasic")(to_cat)
     else:

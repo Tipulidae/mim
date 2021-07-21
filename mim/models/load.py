@@ -129,7 +129,7 @@ def process_ecg(model, data):
     for feature in data['x'].shape.keys():
         if feature.startswith('ecg'):
             new_dict[feature] = Data(
-                model.predict(data['x'][feature].as_numpy)
+                model.predict(data['x'][feature].as_numpy())
             )
         else:
             new_dict[feature] = data['x'][feature]

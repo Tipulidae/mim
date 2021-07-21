@@ -30,7 +30,7 @@ def logistic_regression_ab(train, validation=None):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     # ['log_dt', 'age', 'male', 'tnt_1']
     normalization = Normalization(axis=1)
-    normalization.adapt(train['x']['flat_features'].as_numpy)
+    normalization.adapt(train['x']['flat_features'].as_numpy())
     cols = train['x']["flat_features"].columns
     if 'male' in cols:
         i = cols.index('male')
