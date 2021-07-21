@@ -1,3 +1,4 @@
+import random
 from copy import copy
 
 import numpy as np
@@ -56,35 +57,42 @@ class Data:
     def columns(self):
         return self._columns
 
-    @property
-    def as_dataset(self):
+    def as_dataset(self, shuffle=False, seed=123):
+        if shuffle and not self._fits_in_memory:
+            r = random.Random(seed)
+
+            def randomize():
+                new_index = r.sample(range(len(self)), k=len(self))
+                for i in new_index:
+                    yield self[i]
+
+            generator = randomize
+        else:
+            generator = self
+
         if self._fits_in_memory:
             return tf.data.Dataset.from_tensor_slices(
-                self.as_numpy
+                generator.as_numpy()
             )
         else:
             return tf.data.Dataset.from_generator(
-                self,
+                generator=generator,
                 output_types=self.type,
                 output_shapes=self.shape
             )
 
-    @property
     def as_numpy(self):
         return np.array(list(self))
 
-    @property
     def as_flat_numpy(self):
         """Returns a flattened view of the data. Each item in the underlying
         data structure is flattened.
         """
-        x = self.as_numpy
+        x = self.as_numpy()
         if len(x.shape) == 1:
             return x.reshape(-1, 1)
         else:
             return x.reshape(x.shape[0], np.prod(x.shape[1:]))
-        # else:
-        #     return x
 
     @property
     def type(self):
@@ -167,14 +175,12 @@ class Container(Data):
     def shape(self):
         return {key: value.shape for key, value in self.data.items()}
 
-    @property
     def as_numpy(self):
-        return {key: value.as_numpy for key, value in self.data.items()}
+        return {key: value.as_numpy() for key, value in self.data.items()}
 
-    @property
     def as_flat_numpy(self):
         return np.concatenate(
-            [x.as_flat_numpy for x in self.data.values()],
+            [x.as_flat_numpy() for x in self.data.values()],
             axis=1
         )
 

@@ -44,9 +44,9 @@ class Model:
     def predict(self, x):
         result = {}
         if self.can_use_tf_dataset:
-            x = x.as_dataset
+            x = x.as_dataset()
         else:
-            x = x.as_flat_numpy
+            x = x.as_flat_numpy()
         prediction = self._prediction(x)
 
         if self.only_last_prediction_column_is_used:
@@ -61,8 +61,8 @@ class Model:
             val = prepare_dataset(validation_data, prefetch=3, **kwargs)
             return self.model.fit(train, validation_data=val, **kwargs).history
         else:
-            x = data['x'].as_flat_numpy
-            y = data['y'].as_numpy.ravel()
+            x = data['x'].as_flat_numpy()
+            y = data['y'].as_numpy().ravel()
             return self.model.fit(x, y)
 
     @property
@@ -276,14 +276,20 @@ class KerasWrapper(Model):
 
 
 def prepare_dataset(data, batch_size=1, prefetch=None, **kwargs):
-    x = data['x'].as_dataset
-    y = data['y'].as_dataset
+    # If the data doesn't fit in memory, we can't use tf shuffling. Instead,
+    # we shuffle (lazily) the generator that becomes the dataset. This does
+    # nothing if the data does fit in memory.
+    x = data['x'].as_dataset(shuffle=True)
+    y = data['y'].as_dataset(shuffle=True)
+    fixed_data = tf.data.Dataset.zip((x, y))
 
-    fixed_data = (
-        tf.data.Dataset.zip((x, y))
-        .shuffle(len(data))
-        .batch(batch_size)
-    )
+    # If the data _does_ fit in memory, we can use the tf shuffling instead.
+    # This would be bad if data doesn't fit in memory though, because tf will
+    # load the entire dataset in memory before shuffling.
+    if data.fits_in_memory:
+        fixed_data = fixed_data.shuffle(len(data))
+
+    fixed_data = fixed_data.batch(batch_size)
 
     if prefetch:
         fixed_data = fixed_data.prefetch(prefetch)
