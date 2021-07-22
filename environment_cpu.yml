@@ -1,6 +1,7 @@
 name: mim-cpu
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - python=3.8
   - numpy
@@ -16,7 +17,7 @@ dependencies:
   - autopep8
   - flake8
   - seaborn
-  - tensorflow >= 2
+  - tensorflow=2.4.1
   - graphviz
   - pydot
   - wfdb
