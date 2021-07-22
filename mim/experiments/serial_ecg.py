@@ -7,6 +7,7 @@ from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
 from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedShuffleSplit
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
@@ -158,6 +159,14 @@ class ESCT(Experiment, Enum):
             },
         },
     )
+    M_LR1_LOGTNT = M_LR1_DT._replace(
+        description='Logistic regression, mace vs log-tnt',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_tnt_1']
+            },
+        },
+    )
     M_LR1_DT_AGE = M_LR1_DT._replace(
         description='Logistic regression, mace vs dt + age',
         extractor_kwargs={
@@ -179,6 +188,14 @@ class ESCT(Experiment, Enum):
         extractor_kwargs={
             "features": {
                 'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+        },
+    )
+    M_LR1_FF = M_LR1_DT._replace(
+        description='Logistic regression, mace vs all the flat-features',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
             },
         },
     )
@@ -512,6 +529,30 @@ class ESCT(Experiment, Enum):
                 'ecg_mode': 'raw',
                 'ecgs': ['ecg_0'],
                 'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+            },
+        },
+    )
+    M_R1_AB1_LOGTNT = M_R1_AB1._replace(
+        description='Predicting MACE-30 using single raw ECG and log-tnt, '
+                    'using the CNN architecture from Anders '
+                    'Björkelund et al. ',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1']
+            },
+        },
+    )
+    M_R1_AB1_FF = M_R1_AB1._replace(
+        description='Predicting MACE-30 using single raw ECG and flat-'
+                    'features, using the CNN architecture from Anders '
+                    'Björkelund et al. ',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_dt', 'age', 'male', 'log_tnt_1']
             },
         },
     )
@@ -1287,6 +1328,17 @@ class ESCT(Experiment, Enum):
         scoring=roc_auc_score,
     )
 
+    AMIr_R1_CNN4 = AMI_R1_CNN4._replace(
+        description='Try shuffling the development data instead of splitting '
+                    'chronologically.',
+        cv=StratifiedShuffleSplit,
+        cv_kwargs={
+            'n_splits': 1,
+            'random_state': 123,
+            'test_size': 1 / 3
+        },
+    )
+
     AMI_R1_CNN4_TNT = AMI_R1_CNN4._replace(
         description='Predicting AMI-30 with CNN4 and 1 ECG input + TnT',
         extractor_kwargs={
@@ -1314,13 +1366,6 @@ class ESCT(Experiment, Enum):
             }
         },
     )
-
-    # TODO: Once AMI_R1_CNN4 is done
-    # AMI_R1_CNN4_LR1_TNT
-    # AMI_R1_CNN4_LR1_DT_AGE_SEX_TNT
-    #
-    # AMI_R2_CNN4_LR1_TNT
-    # AMI_R2_CNN4_LR1_DT_AGE_SEX_TNT
 
     AMI_R1_AB1 = Experiment(
         description='Predicting AMI-30 using Björkelund et al, except only '
@@ -1440,10 +1485,3 @@ class ESCT(Experiment, Enum):
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
     )
-
-    # TODO once AMI_R1_RN5 is done
-    # AMI_R1_RN5_NN1_TNT
-    # AMI_R1_RN5_NN1_DT_AGE_SEX_TNT
-    #
-    # AMI_R2_RN5_NN1_TNT
-    # AMI_R2_RN5_NN1_DT_AGE_SEX_TNT
