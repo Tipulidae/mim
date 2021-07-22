@@ -557,6 +557,38 @@ class ESCT(Experiment, Enum):
         },
     )
 
+    # AB model but with 2 input CNNs
+    M_R2_AB1 = M_R1_AB1._replace(
+        description='Same AB model, but using 2 ECGs instead of one. Each '
+                    'ECG trains its own separate network.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+            },
+        },
+    )
+    M_R2_AB1_LOGTNT = M_R1_AB1._replace(
+        description='Same AB model, 2 ECGs + log-tnt.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1']
+            },
+        },
+    )
+    M_R2_AB1_FF = M_R1_AB1._replace(
+        description='Same AB model, 2 ECGs + flat-features.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
+            },
+        },
+    )
+
     # LOGISTIC REGRESSION USING 1 ECG PROCESSED WITH CNN4 + FLAT FEATURES
     M_R1_CNN4_LR1_DT = Experiment(
         description='Pre-processing 1 input ECG with CNN4, into a single '
