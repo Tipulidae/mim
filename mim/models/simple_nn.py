@@ -146,6 +146,7 @@ def ecg_cnn(
         train,
         validation=None,
         cnn_kwargs=None,
+        cnn_combiner='concatenate',
         ecg_ffnn_kwargs=None,
         flat_ffnn_kwargs=None,
         final_ffnn_kwargs=None):
@@ -157,7 +158,10 @@ def ecg_cnn(
         ecg_layers.append(ecg_network(inp['ecg_1'], **cnn_kwargs))
 
     if len(ecg_layers) > 1:
-        x = Concatenate()(ecg_layers)
+        if cnn_combiner == 'difference':
+            x = difference_combiner(ecg_layers)
+        else:
+            x = Concatenate()(ecg_layers)
     else:
         x = ecg_layers[0]
 

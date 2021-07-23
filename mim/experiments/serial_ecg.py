@@ -632,16 +632,100 @@ class ESCT(Experiment, Enum):
                 'ecgs': ['ecg_0', 'ecg_1']
             },
         },
-        epochs=200,
+        epochs=100,
         batch_size=64,
         optimizer={
             'name': Adam,
-            'kwargs': {'learning_rate': 3e-3}
+            'kwargs': {'learning_rate': 1e-4}
         },
         building_model_requires_development_data=True,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
+    )
+    M_R2_AB1_NN2_FF = M_R2_AB1_NN2._replace(
+        description='Loads the AB1-model trained on only a single ECG, and '
+                    'use it as a pre-processor for two input ECGs. Also use '
+                    'flat-features.',
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            },
+            'combiner': 'difference',
+            'comb_ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            }
+        },
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [153*10],
+                        'values': [1e-3, 1e-4],
+                    }
+                },
+            }
+        },
+    )
+    M_R2_AB1b_NN2 = M_R2_AB1_NN2._replace(
+        description='Loads the AB1-model trained on one ECG and flat-'
+                    'features, and use the CNN-part to pre-process the '
+                    'input ECGs.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+            },
+        },
+        pre_processor_kwargs={
+            'xp_name': 'ESCT/M_R2_AB1_FF',
+            'commit': '5557d9e6740724eeab7260b0f40068e47618a2d2',
+            'final_layer_index': -8  # This is the flatten-layer
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-4}
+        },
+    )
+    M_R2_AB1b_NN2_FF = M_R2_AB1_NN2._replace(
+        description='Loads the AB1-model trained on one ECG and flat-'
+                    'features, and use the CNN-part to pre-process the '
+                    'input ECGs. Add flat-features too.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
+            },
+        },
+        pre_processor_kwargs={
+            'xp_name': 'ESCT/M_R2_AB1_FF',
+            'commit': '5557d9e6740724eeab7260b0f40068e47618a2d2',
+            'final_layer_index': -8  # This is the flatten-layer
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-4}
+        },
     )
 
     # LOGISTIC REGRESSION USING 1 ECG PROCESSED WITH CNN4 + FLAT FEATURES
@@ -960,8 +1044,8 @@ class ESCT(Experiment, Enum):
                     'a single hidden layer of size 100.',
         model=ffnn,
         model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.3
+            'dense_ecg': [100],
+            'dropout_ecg': 0.3
         },
         pre_processor=pre_process_using_xp,
         pre_processor_kwargs={
