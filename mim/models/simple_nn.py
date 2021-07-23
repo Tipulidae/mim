@@ -361,6 +361,49 @@ def ffnn(train, validation=None, dense_ecg=None, dropout_ecg=0, dense=None,
     return keras.Model(inp, output)
 
 
+def ffnn2(
+        train,
+        validation=None,
+        ecg_ffnn_kwargs=None,
+        combiner='concatenate',
+        comb_ecg_ffnn_kwargs=None,
+        flat_ffnn_kwargs=None,
+        final_ffnn_kwargs=None,
+):
+    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    ecg_layers = []
+    if 'ecg_0' in inp:
+        ecg_layers.append(inp['ecg_0'])
+    if 'ecg_1' in inp:
+        ecg_layers.append(inp['ecg_1'])
+
+    if ecg_ffnn_kwargs is not None:
+        ecg_layers = [_ffnn(x, **ecg_ffnn_kwargs) for x in ecg_layers]
+
+    if len(ecg_layers) > 1:
+        if combiner == 'difference':
+            x = difference_combiner(ecg_layers)
+        else:
+            x = Concatenate()(ecg_layers)
+    else:
+        x = ecg_layers[0]
+
+    if comb_ecg_ffnn_kwargs is not None:
+        x = _ffnn(x, **comb_ecg_ffnn_kwargs)
+
+    if 'flat_features' in inp:
+        flat_features = BatchNormalization()(inp['flat_features'])
+        if flat_ffnn_kwargs is not None:
+            flat_features = _ffnn(flat_features, **flat_ffnn_kwargs)
+        x = Concatenate()([x, flat_features])
+
+    if final_ffnn_kwargs is not None:
+        x = _ffnn(x, **final_ffnn_kwargs)
+
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
+
+
 def stack_model(model, combiner, stack_size=2):
     features = []
     inputs = {}

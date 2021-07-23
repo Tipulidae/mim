@@ -11,8 +11,13 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.models.simple_nn import ecg_cnn, ffnn, logistic_regression, \
+from mim.models.simple_nn import (
+    ecg_cnn,
+    ffnn,
+    ffnn2,
+    logistic_regression,
     logistic_regression_ab
+)
 from mim.models.load import pre_process_using_xp, load_ribeiro_model
 from mim.cross_validation import ChronologicalSplit
 
@@ -587,6 +592,56 @@ class ESCT(Experiment, Enum):
                 'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
             },
         },
+    )
+
+    # FFNN USING 2 ECGs PROCESSED WITH AB1
+    M_R2_AB1_NN2 = Experiment(
+        description='Loads the AB1-model trained on only a single ECG, and '
+                    'use it as a pre-processor for two input ECGs. Here I '
+                    'try a new ffnn-formula. ',
+        model=ffnn2,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            },
+            'combiner': 'concatenate',
+            'comb_ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            }
+        },
+        pre_processor=pre_process_using_xp,
+        pre_processor_kwargs={
+            'xp_name': 'ESCT/M_R1_AB1',
+            'commit': '1516289a38af2b63aaf3bd8352dff66a6b672a9d',
+            'final_layer_index': -5  # This is the flatten-layer
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1']
+            },
+        },
+        epochs=200,
+        batch_size=64,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 3e-3}
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
     )
 
     # LOGISTIC REGRESSION USING 1 ECG PROCESSED WITH CNN4 + FLAT FEATURES
