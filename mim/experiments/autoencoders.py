@@ -43,3 +43,23 @@ class GenderPredict(Experiment, Enum):
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
     )
+
+    FOO_BN = FOO._replace(
+        description="Predict gender from ECGs, take two. BN instead of fixed",
+
+        # All we need to change is the ecg_normaliation_layer. But we need to
+        # change that in model_kwargs so we need to copy&paste a lot.
+        model_kwargs={
+            "conv_dropout": [0.0, 0.3, 0.0],
+            "conv_filters": [64, 16, 8],
+            "conv_kernel_size": [64, 16, 16],
+            "conv_pool_size": [32, 4, 8],
+            "conv_weight_decay": [0.0001, 0.001, 0.0001],
+            "conv_final_dense_neurons": 10,
+            "final_dense_neurons": 10,
+            "final_dense_dropout": 0.5,
+            "activation": "relu",
+            "skip_basic": True,
+            "ecg_normalization_layer": "BatchNormalization",
+        },
+    )
