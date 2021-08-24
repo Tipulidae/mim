@@ -12,7 +12,7 @@ from mim.cross_validation import ChronologicalSplit
 
 
 class GenderPredict(Experiment, Enum):
-    FOO = Experiment(
+    BL_GENDER_PREDICT = Experiment(
         description="Predict gender from ECGs, take one",
         model=dyn_cnn,
         model_kwargs={
@@ -44,8 +44,9 @@ class GenderPredict(Experiment, Enum):
         scoring=roc_auc_score,
     )
 
-    FOO_BN = FOO._replace(
-        description="Predict gender from ECGs, take two. BN instead of fixed",
+    BL_GENDER_PREDICT_BN = BL_GENDER_PREDICT._replace(
+        description="Predict gender from ECGs, take two. BN instead of fixed"
+                    "transformation on ECG signal",
 
         # All we need to change is the ecg_normaliation_layer. But we need to
         # change that in model_kwargs so we need to copy&paste a lot.
