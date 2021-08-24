@@ -152,7 +152,8 @@ class EscTropECG(Extractor):
 
         data = Container(
             {'x': x,
-             'y': y},
+             'y': y,
+             'index': Data(index, columns=['HDF5_ECG_ID'])},
             index=range(len(y))
         )
 
