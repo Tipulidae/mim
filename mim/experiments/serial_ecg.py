@@ -554,6 +554,86 @@ class ESCT(Experiment, Enum):
         },
     )
 
+    # CNN8 variations, best random-search model for 2ECG+FF
+    M_R1_CNN8 = Experiment(
+        description='Uses xp_294 from M_R2_FF_CNN_RS, which was the top '
+                    'performing model found after 400 iterations of random '
+                    'search. The model is optimized on 2 ECGs and flat-'
+                    'features, but here I only use 1 ECG and no flat-'
+                    'features.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropouts': [0.3, 0.4],
+                'pool_size': 22,
+                'filter_first': 48,
+                'filter_last': 48,
+                'kernel_first': 9,
+                'kernel_last': 21,
+                'batch_norms': [False, True],
+                'weight_decays': [0.1, 0.0],
+                'ffnn_kwargs': {
+                    'sizes': [50],
+                    'dropouts': [0.2],
+                    'batch_norms': [False]
+                }
+            },
+            'cnn_combiner': 'concatenate',
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.1],
+                'batch_norms': [False]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.001}
+        },
+        epochs=200,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+    M_R1_CNN8_FF = M_R1_CNN8._replace(
+        description='Uses the CNN8 model with 1 ECG and flat-features. ',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        }
+    )
+    M_R2_CNN8_FF = M_R1_CNN8._replace(
+        description='Uses the CNN8 model with 2 ECGs and flat-features, '
+                    'as it was optimized for. Should replicate xp_294 from '
+                    'M_R2_FF_CNN_RS, with an AUC of ~0.8735.',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        }
+    )
+
     # ABs CNN MODEL, 1 ECG + FLAT FEATURES
     M_R1_AB1 = Experiment(
         description='Predicting MACE-30 using only single raw ECG, '
