@@ -477,6 +477,83 @@ class ESCT(Experiment, Enum):
         },
     )
 
+    # CNN7 variations, best random-search model for 1ECG+FF
+    M_R1_CNN7 = Experiment(
+        description='Uses xp_379 from M_R1_FF_CNN_RS, which was the top '
+                    'performing model found after 400 iterations of random '
+                    'search. In the random search, flat-features were '
+                    'included, but in this experiment we only use the ECG.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 3,
+                'dropouts': [0.3, 0.5, 0.2],
+                'pool_size': 8,
+                'filter_first': 12,
+                'filter_last': 16,
+                'kernel_first': 13,
+                'kernel_last': 41,
+                'batch_norms:': [True, True, False],
+                'weight_decays': [0.01, 0.001, 0.01],
+                'ffnn_kwargs': {
+                    'sizes': [50],
+                    'dropouts': [0.2],
+                    'batch_norms': [False]
+                }
+            },
+            'ecg_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.001}
+        },
+        epochs=200,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+    M_R1_CNN7_FF = M_R1_CNN7._replace(
+        description='Uses the CNN7 (or xp_379) model with flat-features, as '
+                    'intended. This should replicate the results from '
+                    'experiment xp_379.',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        },
+    )
+    M_R2_CNN7_FF = M_R1_CNN7._replace(
+        description='Uses the CNN7 (or xp_379) model, except with 2 ECGs '
+                    'instead of just one. The CNN combiner defaults to '
+                    'concatenation, but there is no additional ecg_ffnn '
+                    'added, which might be a useful variation.',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        },
+    )
+
     # ABs CNN MODEL, 1 ECG + FLAT FEATURES
     M_R1_AB1 = Experiment(
         description='Predicting MACE-30 using only single raw ECG, '
