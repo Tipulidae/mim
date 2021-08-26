@@ -493,7 +493,7 @@ class ESCT(Experiment, Enum):
                 'filter_last': 16,
                 'kernel_first': 13,
                 'kernel_last': 41,
-                'batch_norms:': [True, True, False],
+                'batch_norms': [True, True, False],
                 'weight_decays': [0.01, 0.001, 0.01],
                 'ffnn_kwargs': {
                     'sizes': [50],
