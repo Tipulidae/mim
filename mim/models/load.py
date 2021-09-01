@@ -22,7 +22,7 @@ def load_keras_model(base_path, split_number, **kwargs):
 
 def load_model_from_experiment_result(
         xp_name, commit=None, which='best', split_number=0, trainable=False,
-        final_layer_index=-1, **kwargs):
+        final_layer_index=-1, input_key=None, **kwargs):
     assert which in ['last', 'best']
     xp_base_path = os.path.join(
         PATH_TO_TEST_RESULTS,
@@ -51,25 +51,12 @@ def load_model_from_experiment_result(
     model = keras.models.load_model(filepath=xp_model_path)
     model.trainable = trainable
 
-    model = keras.Model(model.input, model.layers[final_layer_index].output)
+    if input_key is None:
+        inp = model.input
+    else:
+        inp = model.input[input_key]
+    model = keras.Model(inp, model.layers[final_layer_index].output)
     return model
-
-
-# def load_ribeiro_model(dense_layers=None, dropout=0.0, freeze_resnet=False,
-#                        **kwargs):
-#     resnet = keras.models.load_model(
-#         filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
-#     )
-#     inp = {'ecg_0': resnet.input}
-#     resnet.trainable = not freeze_resnet
-#     x = resnet.layers[-2].output
-#
-#     for size in dense_layers:
-#         x = keras.layers.Dense(size, activation='relu')(x)
-#         x = keras.layers.Dropout(dropout)(x)
-#
-#     output = keras.layers.Dense(1, activation='sigmoid')(x)
-#     return keras.Model(inp, output)
 
 
 def load_ribeiro_model(freeze_resnet=False, suffix=None):

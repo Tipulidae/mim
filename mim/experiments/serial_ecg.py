@@ -20,7 +20,8 @@ from mim.models.simple_nn import (
 )
 from mim.models.load import (
     pre_process_using_xp,
-    load_ribeiro_model
+    load_ribeiro_model,
+    load_model_from_experiment_result
 )
 from mim.cross_validation import ChronologicalSplit
 
@@ -1095,6 +1096,7 @@ class ESCT(Experiment, Enum):
         },
     )
 
+    # SINGLE RAW ECG + FF, RESNET 2-STEP MODEL
     M_R1_RN6a_FF = Experiment(
         description='Loads the pretrained Ribeiro ResNet model and use it as '
                     'a feature extractor for the input ECG. Feed this into a '
@@ -1139,6 +1141,41 @@ class ESCT(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': 1e-3
+            },
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    M_R1_RN6b_FF = Experiment(
+        description='Loads the model from M_R1_RN6b_FF and unfreezes the '
+                    'ResNet portion, fine-tuning the entire model.',
+        model=load_model_from_experiment_result,
+        model_kwargs={
+            'xp_name': 'ESCT/M_R1_RN6a_FF',
+            'commit': '9da74d5436820bbc29758ba07d5d1a83f60fc84f',
+            'which': 'last',
+            'trainable': True
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        epochs=100,
+        batch_size=32,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 1e-4
             },
         },
         building_model_requires_development_data=True,
