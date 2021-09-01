@@ -55,31 +55,38 @@ def load_model_from_experiment_result(
     return model
 
 
-def load_ribeiro_model(dense_layers=None, dropout=0.0, freeze_resnet=False,
-                       **kwargs):
+# def load_ribeiro_model(dense_layers=None, dropout=0.0, freeze_resnet=False,
+#                        **kwargs):
+#     resnet = keras.models.load_model(
+#         filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
+#     )
+#     inp = {'ecg_0': resnet.input}
+#     resnet.trainable = not freeze_resnet
+#     x = resnet.layers[-2].output
+#
+#     for size in dense_layers:
+#         x = keras.layers.Dense(size, activation='relu')(x)
+#         x = keras.layers.Dropout(dropout)(x)
+#
+#     output = keras.layers.Dense(1, activation='sigmoid')(x)
+#     return keras.Model(inp, output)
+
+
+def load_ribeiro_model(freeze_resnet=False, suffix=None):
     resnet = keras.models.load_model(
         filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
     )
-    inp = {'ecg_0': resnet.input}
     resnet.trainable = not freeze_resnet
-    x = resnet.layers[-2].output
+    if suffix is not None:
+        for layer in resnet.layers:
+            layer._name += suffix
 
-    for size in dense_layers:
-        x = keras.layers.Dense(size, activation='relu')(x)
-        x = keras.layers.Dropout(dropout)(x)
-
-    output = keras.layers.Dense(1, activation='sigmoid')(x)
-    return keras.Model(inp, output)
+    return resnet.input, resnet.layers[-2].output
 
 
 def pre_process_using_ribeiro(**kwargs):
-    model = keras.models.load_model(
-        filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
-    )
-    model = keras.Model(
-        {'ecg_0': model.input},
-        model.layers[-2].output
-    )
+    resnet_input, resnet_output = load_ribeiro_model()
+    model = keras.Model({'ecg_0': resnet_input}, resnet_output)
 
     def pre_process(data):
         return process_ecg(model, data)

@@ -14,11 +14,14 @@ from mim.extractors.esc_trop import EscTrop
 from mim.models.simple_nn import (
     ecg_cnn,
     ffnn,
-    ffnn2,
     logistic_regression,
-    logistic_regression_ab
+    logistic_regression_ab,
+    pretrained_resnet
 )
-from mim.models.load import pre_process_using_xp, load_ribeiro_model
+from mim.models.load import (
+    pre_process_using_xp,
+    load_ribeiro_model
+)
 from mim.cross_validation import ChronologicalSplit
 
 
@@ -236,11 +239,13 @@ class ESCT(Experiment, Enum):
                 'kernel_last': 16,
                 'pool_size': 16,
                 'batch_norm': True,
-                'dense': False,
                 'downsample': False
             },
-            'dense_size': 10,
-            'dropout': 0.3
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            },
         },
         epochs=200,
         batch_size=64,
@@ -273,11 +278,13 @@ class ESCT(Experiment, Enum):
                 'kernel_last': 16,
                 'pool_size': 16,
                 'batch_norm': True,
-                'dense': False,
-                'downsample': True
+                'down_sample': True
             },
-            'dense_size': 100,
-            'dropout': 0.3
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            },
         }
     )
     M_R1_CNN3 = M_R1_CNN2._replace(
@@ -317,11 +324,13 @@ class ESCT(Experiment, Enum):
                 'kernel_last': 16,
                 'pool_size': 16,
                 'batch_norm': True,
-                'dense': False,
-                'downsample': True
+                'down_sample': True
             },
-            'dense_size': 100,
-            'dropout': 0.5
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            },
         },
         class_weight={0: 1, 1: 10},
         optimizer={
@@ -347,12 +356,15 @@ class ESCT(Experiment, Enum):
                 'filter_last': 32,
                 'kernel_first': 32,
                 'kernel_last': 16,
+                'pool_size': 16,
                 'batch_norm': True,
-                'dense': False,
-                'downsample': True
+                'down_sample': True
             },
-            'dense_size': 100,
-            'dropout': 0.5
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            },
         },
     )
     M_R1_CNN6 = M_R1_CNN4._replace(
@@ -367,11 +379,13 @@ class ESCT(Experiment, Enum):
                 'kernel_last': 16,
                 'pool_size': 16,
                 'batch_norm': True,
-                'dense': False,
-                'downsample': True
+                'down_sample': True
             },
-            'dense_size': 100,
-            'dropout': 0.5
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            },
         },
         optimizer={
             'name': Adam,
@@ -495,13 +509,13 @@ class ESCT(Experiment, Enum):
                 'kernel_last': 41,
                 'batch_norms': [True, True, False],
                 'weight_decays': [0.01, 0.001, 0.01],
-                'ffnn_kwargs': {
-                    'sizes': [50],
-                    'dropouts': [0.2],
-                    'batch_norms': [False]
-                }
             },
-            'ecg_ffnn_kwargs': None,
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
             'flat_ffnn_kwargs': None,
             'final_ffnn_kwargs': {
                 'sizes': [20],
@@ -573,14 +587,14 @@ class ESCT(Experiment, Enum):
                 'kernel_last': 21,
                 'batch_norms': [False, True],
                 'weight_decays': [0.1, 0.0],
-                'ffnn_kwargs': {
-                    'sizes': [50],
-                    'dropouts': [0.2],
-                    'batch_norms': [False]
-                }
             },
-            'cnn_combiner': 'concatenate',
+            'ecg_combiner': 'concatenate',
             'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': {
                 'sizes': [10],
                 'dropouts': [0.1],
                 'batch_norms': [False]
@@ -642,7 +656,7 @@ class ESCT(Experiment, Enum):
         model=ecg_cnn,
         model_kwargs={
             'cnn_kwargs': {
-                'downsample': False,
+                'down_sample': False,
                 'num_layers': 3,
                 'dropouts': [0.0, 0.3, 0.0],
                 'kernels': [64, 16, 16],
@@ -650,13 +664,13 @@ class ESCT(Experiment, Enum):
                 'weight_decays': [1e-4, 1e-3, 1e-4],
                 'pool_sizes': [32, 4, 8],
                 'batch_norm': False,
-                'ffnn_kwargs': {
-                    'sizes': [10],
-                    'dropouts': [0.0],
-                    'batch_norms': [False]
-                },
             },
-            'ecg_ffnn_kwargs': None,
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
             'flat_ffnn_kwargs': None,
             'final_ffnn_kwargs': {
                 'sizes': [10],
@@ -756,15 +770,15 @@ class ESCT(Experiment, Enum):
         description='Loads the AB1-model trained on only a single ECG, and '
                     'use it as a pre-processor for two input ECGs. Here I '
                     'try a new ffnn-formula. ',
-        model=ffnn2,
+        model=ffnn,
         model_kwargs={
             'ecg_ffnn_kwargs': {
                 'sizes': [10],
                 'dropouts': [0.0],
                 'batch_norms': [False]
             },
-            'combiner': 'concatenate',
-            'comb_ecg_ffnn_kwargs': {
+            'ecg_combiner': 'concatenate',
+            'ecg_comb_ffnn_kwargs': {
                 'sizes': [10],
                 'dropouts': [0.3],
                 'batch_norms': [False]
@@ -810,8 +824,8 @@ class ESCT(Experiment, Enum):
                 'dropouts': [0.0],
                 'batch_norms': [False]
             },
-            'combiner': 'difference',
-            'comb_ecg_ffnn_kwargs': {
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
                 'sizes': [10],
                 'dropouts': [0.3],
                 'batch_norms': [False]
@@ -980,11 +994,13 @@ class ESCT(Experiment, Enum):
     # SINGLE RAW ECG, RESNET VARIATIONS
     M_R1_RN1 = Experiment(
         description="Pretrained ResNet architecture from Ribeiro et al.",
-        model=load_ribeiro_model,
+        model=pretrained_resnet,
         model_kwargs={
-            'dense_layers': [],
-            'dropout': 0.0,
-            'freeze_resnet': False
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': None,
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None
         },
         epochs=200,
         batch_size=32,
@@ -1024,27 +1040,45 @@ class ESCT(Experiment, Enum):
         description='Pretrained ResNet, but adding a final dense 100 at the '
                     'end.',
         model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.0,
-            'freeze_resnet': False
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': None,
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            }
         },
     )
     M_R1_RN4 = M_R1_RN1._replace(
         description='Pretrained ResNet, but adding final dense 100 layer with '
                     'dropout at the end.',
         model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.3,
-            'freeze_resnet': False
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': None,
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
         },
     )
     M_R1_RN5 = M_R1_RN1._replace(
         description='Adjusting the learning-rate scheduler and reducing epoch '
                     'number. ',
         model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.0,
-            'freeze_resnet': False
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': None,
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            }
         },
         epochs=50,
         optimizer={
@@ -1061,6 +1095,58 @@ class ESCT(Experiment, Enum):
         },
     )
 
+    M_R1_RN6a_FF = Experiment(
+        description='Loads the pretrained Ribeiro ResNet model and use it as '
+                    'a feature extractor for the input ECG. Feed this into a '
+                    'dense 100 -> dense 10, then concatenate with ff and a '
+                    'final dense 10 -> output. This is the first step of '
+                    'the model, in which the resnet weights are frozen and '
+                    'only the ffnn part is trained. ',
+        model=pretrained_resnet,
+        model_kwargs={
+            'freeze_resnet': True,
+            'ecg_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.5],
+                'batch_norms': [False],
+            },
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            },
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.5],
+                'batch_norms': [False],
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        epochs=15,
+        batch_size=32,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 1e-3
+            },
+        },
+        building_model_requires_development_data=True,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+
     # FFNN USING 1 ECG PROCESSED WITH RESNET + FLAT FEATURES
     M_R1_RN5_NN1_DT_AGE_SEX_TNT = Experiment(
         description='Loads the pre-trained R1_RN5 model and uses it as a '
@@ -1069,8 +1155,14 @@ class ESCT(Experiment, Enum):
                     'before the final sigmoid layer.',
         model=ffnn,
         model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.3
+            'ecg_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None
         },
         pre_processor=pre_process_using_xp,
         pre_processor_kwargs={
@@ -1114,8 +1206,14 @@ class ESCT(Experiment, Enum):
         description='Reducing the size of the NN to just a Dense-10. Also, '
                     'no dropout for now.',
         model_kwargs={
-            'dense_layers': [10],
-            'dropout': 0.0
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None
         },
         epochs=100,
         batch_size=32,
@@ -1135,8 +1233,14 @@ class ESCT(Experiment, Enum):
     M_R1_RN5_NN3_DT_AGE_SEX_TNT = M_R1_RN5_NN1_DT_AGE_SEX_TNT._replace(
         description='Neural network with 100 -> 1 dense layers.',
         model_kwargs={
-            'dense_layers': [100, 1],
-            'dropout': 0.0
+            'ecg_ffnn_kwargs': {
+                'sizes': [100, 1],
+                'dropouts': [0.0, 0.0],
+                'batch_norms': [False, False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None
         },
         epochs=100,
         batch_size=32,
@@ -1201,8 +1305,12 @@ class ESCT(Experiment, Enum):
                     'a single hidden layer of size 100.',
         model=ffnn,
         model_kwargs={
-            'dense_ecg': [100],
-            'dropout_ecg': 0.3
+            'ecg_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
         },
         pre_processor=pre_process_using_xp,
         pre_processor_kwargs={
@@ -1451,8 +1559,11 @@ class ESCT(Experiment, Enum):
                     'a single hidden layer of size 100.',
         model=ffnn,
         model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.3
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
         },
         pre_processor=pre_process_using_xp,
         pre_processor_kwargs={
@@ -1574,11 +1685,13 @@ class ESCT(Experiment, Enum):
                 'kernel_last': 16,
                 'pool_size': 16,
                 'batch_norm': True,
-                'dense': False,
-                'downsample': True
+                'down_sample': True
             },
-            'dense_size': 100,
-            'dropout': 0.3
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
         },
         epochs=200,
         batch_size=64,
@@ -1606,7 +1719,7 @@ class ESCT(Experiment, Enum):
         model=ecg_cnn,
         model_kwargs={
             'cnn_kwargs': {
-                'downsample': True,
+                'down_sample': True,
                 'num_layers': 2,
                 'dropout': 0.5,
                 'filter_first': 32,
@@ -1615,15 +1728,13 @@ class ESCT(Experiment, Enum):
                 'kernel_last': 16,
                 'pool_size': 16,
                 'batch_norm': True,
-                'ffnn_kwargs': None,
             },
-            'ecg_ffnn_kwargs': {
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
                 'sizes': [100],
                 'dropouts': [0.5],
                 'batch_norms': [False]
             },
-            'flat_ffnn_kwargs': None,
-            'final_ffnn_kwargs': None
         },
         extractor=EscTrop,
         extractor_kwargs={
@@ -1701,7 +1812,7 @@ class ESCT(Experiment, Enum):
         model=ecg_cnn,
         model_kwargs={
             'cnn_kwargs': {
-                'downsample': False,
+                'down_sample': False,
                 'num_layers': 3,
                 'dropouts': [0.0, 0.3, 0.0],
                 'kernels': [64, 16, 16],
@@ -1709,11 +1820,11 @@ class ESCT(Experiment, Enum):
                 'weight_decays': [1e-4, 1e-3, 1e-4],
                 'pool_sizes': [32, 4, 8],
                 'batch_norm': False,
-                'ffnn_kwargs': {
-                    'sizes': [10],
-                    'dropouts': [0.0],
-                    'batch_norms': [False]
-                },
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [False]
             },
             'final_ffnn_kwargs': {
                 'sizes': [10],
@@ -1775,11 +1886,7 @@ class ESCT(Experiment, Enum):
         description="Pretrained ResNet architecture from Ribeiro et al, "
                     "predicting AMI-30.",
         model=load_ribeiro_model,
-        model_kwargs={
-            'dense_layers': [],
-            'dropout': 0.0,
-            'freeze_resnet': False
-        },
+        model_kwargs={},
         epochs=200,
         batch_size=32,
         optimizer={
