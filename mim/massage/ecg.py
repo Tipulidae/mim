@@ -13,7 +13,9 @@ from mim.massage.carlson_ecg import (
     expected_lead_names,
     glasgow_scalar_names,
     glasgow_vector_names,
-    extract_field
+    glasgow_diagnoses_index,
+    extract_field,
+    flatten_nested
 )
 
 
@@ -93,6 +95,19 @@ class ECG:
             )
         else:
             return np.zeros(len(glasgow_scalar_names))
+
+    def init_glasgow_diagnoses(self):
+        diagnoses_vector = np.zeros(
+            (len(glasgow_diagnoses_index),)).astype(bool)
+        if ECGStatus.MISSING_DIAGNOSES not in self.status:
+            diagnoses = flatten_nested(extract_field(
+                self.ecg_dict['Measurements'], 'D'))
+
+            for d in diagnoses:
+                if d in glasgow_diagnoses_index:
+                    diagnoses_vector[glasgow_diagnoses_index[d]] = True
+
+        return diagnoses_vector
 
     @property
     def is_raw_ecg_ok(self):
@@ -190,6 +205,13 @@ def to_hdf5(ecg_paths, target_path):
             chunks=(1, len(glasgow_scalar_names)),
             fletcher32=True
         )
+        glasgow.create_dataset(
+            'diagnoses',
+            (n, len(glasgow_diagnoses_index)),
+            dtype=np.bool,
+            chunks=(1, len(glasgow_diagnoses_index)),
+            fletcher32=True
+        )
 
         meta = data.create_group('meta')
         meta.create_dataset(
@@ -238,6 +260,11 @@ def to_hdf5(ecg_paths, target_path):
             dtype=h5py.string_dtype(encoding='utf-8')
         )
         meta.create_dataset(
+            "glasgow_diagnoses_names",
+            (len(glasgow_diagnoses_index),),
+            dtype=h5py.string_dtype(encoding='utf-8')
+        )
+        meta.create_dataset(
             "lead_names",
             (len(expected_lead_names),),
             dtype=h5py.string_dtype(encoding='utf-8')
@@ -262,6 +289,7 @@ def to_hdf5(ecg_paths, target_path):
             data['beat'][i] = ecg.beat
             data['glasgow']['scalars'][i] = ecg.init_glasgow_scalars()
             data['glasgow']['vectors'][i] = ecg.init_glasgow_vectors()
+            data['glasgow']['diagnoses'][i] = ecg.init_glasgow_diagnoses()
             meta = ecg.metadata
             data['meta']['date'][i] = meta['date']
             data['meta']['alias'][i] = meta['alias']
