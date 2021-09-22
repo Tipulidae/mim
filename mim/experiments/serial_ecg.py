@@ -686,6 +686,28 @@ class ESCT(Experiment, Enum):
         epochs=100,
     )
 
+    # CNN7 variations with different random seeds
+    M_R1_CNN7_FF_r1 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed.',
+        random_state=1000,
+    )
+    M_R1_CNN7_FF_r2 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed.',
+        random_state=1001,
+    )
+    M_R1_CNN7_FF_r3 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed.',
+        random_state=1002,
+    )
+    M_R1_CNN7_FF_r4 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed.',
+        random_state=1003,
+    )
+    M_R1_CNN7_FF_r5 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed.',
+        random_state=1004,
+    )
+
     # CNN8 variations, best random-search model for 2ECG+FF
     M_R1_CNN8 = Experiment(
         description='Uses xp_294 from M_R2_FF_CNN_RS, which was the top '
