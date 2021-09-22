@@ -275,8 +275,6 @@ def _validate(train, val, model, scoring, split_number=None, pre_process=None):
     train_score = scoring(
         train['y'].as_numpy(),
         model.predict(train['x'])['prediction'],
-        multi_class='ovo',
-        average='macro'
     )
 
     y_val = val['y'].as_numpy()
@@ -288,8 +286,6 @@ def _validate(train, val, model, scoring, split_number=None, pre_process=None):
     test_score = scoring(
         y_val,
         prediction['prediction'],
-        multi_class='ovo',
-        average='macro'
     )
     log.debug(f'test score: {test_score}, train score: {train_score}')
 
