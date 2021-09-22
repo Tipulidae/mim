@@ -8,9 +8,12 @@ from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
+from mim.extractors.extractor import sklearn_process
 from mim.models.simple_nn import (
     ecg_cnn,
     ffnn,
@@ -223,6 +226,104 @@ class ESCT(Experiment, Enum):
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
+    )
+
+    M_F1_LR2 = Experiment(
+        description='Scikit-learn logistic regression model, mace vs '
+                    'features from Forberg et al. Features are normalized '
+                    'and then reduced in dimension by PCA. ',
+        model=LogisticRegression,
+        model_kwargs={
+            'class_weight': 'balanced',
+            'max_iter': 300,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'forberg': ['ecg_0']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'processor': 'Pipeline',
+            'steps': [
+                ('scaler', StandardScaler, {}),
+                ('pca', PCA, {
+                    'n_components': 100,
+                    'whiten': False,
+                    'random_state': 42
+                })
+            ]
+        },
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    M_F2_LR2 = M_F1_LR2._replace(
+        description='Scikit-learn logistic regression model, mace vs '
+                    'features from Forberg et al. Features are normalized '
+                    'and then reduced in dimension by PCA. ',
+        extractor_kwargs={
+            "features": {
+                'forberg': ['ecg_0', 'diff']
+            },
+        },
+        pre_processor_kwargs={
+            'processor': 'Pipeline',
+            'steps': [
+                ('scaler', StandardScaler, {}),
+                ('pca', PCA, {
+                    'n_components': 145,
+                    'whiten': False,
+                    'random_state': 42
+                })
+            ]
+        },
+    )
+    M_F1_LR2_FF = M_F1_LR2._replace(
+        description='Scikit-learn logistic regression model, mace vs '
+                    'features from Forberg et al. Features are normalized '
+                    'and then reduced in dimension by PCA.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male', 'log_tnt_1'],
+                'forberg': ['ecg_0']
+            },
+        },
+        pre_processor_kwargs={
+            'processor': 'Pipeline',
+            'steps': [
+                ('scaler', StandardScaler, {}),
+                ('pca', PCA, {
+                    'n_components': 100,
+                    'whiten': False,
+                    'random_state': 42
+                })
+            ]
+        },
+    )
+    M_F2_LR2_FF = M_F1_LR2._replace(
+        description='Scikit-learn logistic regression model, mace vs '
+                    'features from Forberg et al. Features are normalized '
+                    'and then reduced in dimension by PCA. I tried a bunch '
+                    'of settings for dimension, ~145 gave the best AUC.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male', 'log_tnt_1'],
+                'forberg': ['ecg_0', 'diff']
+            },
+        },
+        pre_processor_kwargs={
+            'processor': 'Pipeline',
+            'steps': [
+                ('scaler', StandardScaler, {}),
+                ('pca', PCA, {
+                    'n_components': 150,
+                    'whiten': False,
+                    'random_state': 42
+                })
+            ]
+        },
     )
 
     # SINGLE RAW ECG, CNN VARIATIONS:
@@ -568,6 +669,22 @@ class ESCT(Experiment, Enum):
             },
         },
     )
+    MC_R1_CNN7_FF = M_R1_CNN7_FF._replace(
+        description='Like M_R1_CNN7_FF, except the target is now the '
+                    'components of MACE, divided into chapters. So a multi-'
+                    'label problem.',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+            'labels': {
+                'target': 'mace_chapters'
+            }
+        },
+        epochs=100,
+    )
 
     # CNN8 variations, best random-search model for 2ECG+FF
     M_R1_CNN8 = Experiment(
@@ -640,6 +757,79 @@ class ESCT(Experiment, Enum):
         description='Uses the CNN8 model with 2 ECGs and flat-features, '
                     'as it was optimized for. Should replicate xp_294 from '
                     'M_R2_FF_CNN_RS, with an AUC of ~0.8735.',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        }
+    )
+
+    # CNN9 variations, 2nd best random-search model for 1ECG+FF
+    M_R1_CNN9 = Experiment(
+        description='Uses xp_382 from M_R1_FF_CNN_RS, which was the second '
+                    'best in terms of both AUC and rule-out. ',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'dropouts': [0.3, 0.4],
+                'pool_size': 21,
+                'filter_first': 52,
+                'filter_last': 60,
+                'kernel_first': 61,
+                'kernel_last': 45,
+                'batch_norms': [False, True],
+                'weight_decays': [0.1, 0.0],
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.001}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+    M_R1_CNN9_FF = M_R1_CNN9._replace(
+        description='Uses the CNN9 model with 1 ECGs and flat-features, '
+                    'as it was optimized for. Should replicate xp_382 from '
+                    'M_R1_FF_CNN_RS, with an AUC of ~0.8726 and rule-out '
+                    '~0.3122.',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        }
+    )
+    M_R2_CNN9_FF = M_R1_CNN9._replace(
+        description='Uses the CNN9 model with 2 ECGs and flat-features.',
         extractor_kwargs={
             'features': {
                 'ecg_mode': 'raw',
@@ -1095,6 +1285,8 @@ class ESCT(Experiment, Enum):
             }
         },
     )
+
+    # SINGLE RAW ECG + FF, RESNET VARIATIONS
 
     # SINGLE RAW ECG + FF, RESNET 2-STEP MODEL
     M_R1_RN6a_FF = Experiment(

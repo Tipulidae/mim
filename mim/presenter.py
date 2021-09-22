@@ -13,12 +13,15 @@ from sklearn.metrics import (
     roc_curve
 )
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from tqdm import tqdm
 
 from mim.util.logs import get_logger
 from mim.util.util import ranksort, insensitive_iglob
 from mim.util.metrics import (
     positive_predictive_value,
     negative_predictive_value,
+    rule_in_rule_out
 )
 from mim.experiments.hyper_parameter import flatten
 from mim.config import PATH_TO_TEST_RESULTS
@@ -78,18 +81,25 @@ class Presenter:
             index=['train', 'test']
         )
 
-    def scores(self, like='.*'):
+    def scores(self, like='.*', auc=True, rule_in_out=False):
         results = []
-        for name, xp in self._results_that_match_pattern(like):
+        for name, xp in tqdm(list(self._results_that_match_pattern(like))):
             targets, predictions = self._target_predictions(xp)
-            results.append(pd.Series(
-                data=[
-                    roc_auc_score(targets, predictions)
-                ],
-                index=[
-                    'auc'
-                ],
-                name=name))
+            targets = targets.values.ravel()
+            predictions = predictions.values.ravel()
+
+            data = []
+            index = []
+            if auc:
+                data.append(roc_auc_score(targets, predictions))
+                index.append('auc')
+            if rule_in_out:
+                riro = rule_in_rule_out(targets, predictions).mean(axis=0)
+                data.extend(list(riro))
+                index.extend(['rule-in', 'intermediate', 'rule-out'])
+
+            s = pd.Series(data=data, index=index, name=name)
+            results.append(s)
         return pd.DataFrame(results)
 
     def predictions(self, like='.*'):
@@ -170,6 +180,16 @@ class Presenter:
         plt.ylabel('True Positive Rate')
         plt.legend(lines, labels)
         plt.grid(which='both')
+
+        plt.gca().add_patch(
+            patches.Rectangle(
+                (0, 0), 0.1, 1.0, linewidth=0, alpha=0.1, facecolor='red')
+        )
+        plt.gca().add_patch(
+            patches.Rectangle(
+                (0, 0.99), 1.0, 0.01, linewidth=0, alpha=0.1,
+                facecolor='green')
+        )
 
         df = pd.DataFrame(
             [self.results[xp]['test_score'] for xp in xps],

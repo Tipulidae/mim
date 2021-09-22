@@ -120,12 +120,19 @@ def _ecg_and_flat_feature_combiner(
     return keras.Model(inp, output)
 
 
-def _ffnn(x, sizes, dropouts, batch_norms):
+def _ffnn(x, sizes, dropouts, batch_norms, activation='relu',
+          activity_regularizer=None, kernel_regularizer=None,
+          bias_regularizer=None):
     assert _all_lists_have_same_length(
         [sizes, dropouts, batch_norms]
     )
     for size, dropout, batch_norm in zip(sizes, dropouts, batch_norms):
-        x = Dense(size, activation='relu')(x)
+        x = Dense(
+            size,
+            activation=activation,
+            activity_regularizer=activity_regularizer,
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer)(x)
         if batch_norm:
             x = BatchNormalization()(x)
         if dropout > 0:

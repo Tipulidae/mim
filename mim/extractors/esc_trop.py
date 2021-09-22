@@ -11,6 +11,10 @@ from mim.massage.esc_trop import (
     make_lab_features,
     make_double_ecg_features,
     make_ecg_table,
+    make_mace30_dataframe,
+    make_ami30_dataframe,
+    make_mace_chapters_dataframe,
+    make_forberg_features,
     _read_esc_trop_csv
 )
 from mim.extractors.extractor import Data, Container, ECGData, Extractor
@@ -25,12 +29,19 @@ class EscTrop(Extractor):
         return make_index_visits(**self.index)
 
     def make_labels(self, index, target='mace30', **kwargs):
-        assert target in ['mace30', 'ami30']
-        mace = make_mace_table(index, **kwargs)
-        assert index.index.equals(mace.index)
+        assert target in ['mace30', 'ami30', 'mace_chapters']
+        mace_table = make_mace_table(index, **kwargs)
 
-        labels = mace[target].astype(int).values
-        return Data(labels, columns=[target])
+        if target == 'mace30':
+            df = make_mace30_dataframe(mace_table)
+        elif target == 'ami30':
+            df = make_ami30_dataframe(mace_table)
+        else:
+            df = make_mace_chapters_dataframe(mace_table)
+
+        assert index.index.equals(df.index)
+
+        return Data(df.values, columns=list(df))
 
     def make_features(self, index):
         ed_features = make_ed_features(index)
@@ -53,11 +64,41 @@ class EscTrop(Extractor):
                 if ecg in self.features['ecgs']:
                     x_dict[ecg] = self.make_ecg_data(ecg_features[ecg])
 
+        flat_data = []
         if 'flat_features' in self.features:
-            x_dict['flat_features'] = Data(
-                features[self.features['flat_features']].values,
-                columns=self.features['flat_features']
-            )
+            data = features[self.features['flat_features']].values
+            flat_data.append(data)
+            # x_dict['flat_features'] = Data(
+            #     data,
+            #     columns=self.features['flat_features'],
+            # )
+
+        if 'forberg' in self.features:
+            f0 = make_forberg_features(ecg_features.ecg_0)
+            f1 = make_forberg_features(ecg_features.ecg_1)
+            diff = (f1 - f0)
+            f0.columns += '_ecg_0'
+            f1.columns += '_ecg_1'
+            diff.columns += '_diff'
+
+            forberg_features = []
+            if 'ecg_0' in self.features['forberg']:
+                forberg_features.append(f0)
+            if 'ecg_1' in self.features['forberg']:
+                forberg_features.append(f1)
+            if 'diff' in self.features['forberg']:
+                forberg_features.append(diff)
+
+            forberg = pd.concat(forberg_features, axis=1)
+            flat_data.append(forberg.values)
+            # x_dict['forberg_features'] = Data(
+            #     forberg.values,
+            #     columns=list(forberg.columns)
+            # )
+
+        x_dict['flat_features'] = Data(
+            np.concatenate(flat_data, axis=1),
+        )
 
         return x_dict
 

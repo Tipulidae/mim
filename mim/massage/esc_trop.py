@@ -3,6 +3,7 @@ from os.path import join
 import numpy as np
 import pandas as pd
 import h5py
+from tqdm import tqdm
 
 from mim.massage.carlson_ecg import ECGStatus
 from mim.util.logs import get_logger
@@ -227,6 +228,52 @@ def _make_double_ecg(index):
     return ecg_0.join(ecg_1, how='outer', lsuffix='_0', rsuffix='_1')
 
 
+def make_forberg_features(ecg_ids):
+    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    with h5py.File(ecg_path, 'r') as ecg:
+        glasgow_features = []
+        for x in tqdm(ecg_ids):
+            glasgow_features.append(ecg['glasgow']['vectors'][x])
+
+        vector_names = list(ecg['meta']['glasgow_vector_names'][:])
+        lead_names = ecg['meta']['lead_names'][:]
+
+    cols = [
+        'Qamplitude',
+        'Ramplitude',
+        'Samplitude',
+        'Tpos_amp',
+        'Tneg_amp',
+        'Qduration',
+        'QRSduration',
+        'Rduration',
+        'Sduration',
+        'QRSarea',
+        'STslope',
+        'ST_amp',
+        'STT28_amp',
+        'STT38_amp',
+    ]
+    index = [vector_names.index(name) for name in cols]
+
+    glasgow_features = np.stack(glasgow_features)[:, index, :]
+    final_five_positive = np.maximum(glasgow_features[:, -5:, :], 0)
+    final_five_negative = np.maximum(-glasgow_features[:, -5:, :], 0)
+
+    glasgow_features[:, -5:, :] = final_five_positive
+    glasgow_features = np.append(glasgow_features, final_five_negative, axis=1)
+    glasgow_features = glasgow_features.reshape((len(ecg_ids), -1))
+
+    new_cols = (
+        cols[:-5] +
+        [f"{col}_{sign}" for sign in ['pos', 'neg'] for col in cols[-5:]]
+    )
+
+    columns = [f"{col}_{lead}" for col in new_cols for lead in lead_names]
+    df = pd.DataFrame(glasgow_features, index=ecg_ids.index, columns=columns)
+    return df
+
+
 def make_ed_features(index):
     ed = _read_esc_trop_csv(
         "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv"
@@ -369,9 +416,49 @@ def make_mace_table(index_visits, include_interventions=True,
     else:
         mace = sources_of_mace[0]
 
-    mace['mace30'] = mace.any(axis=1)
-    mace['ami30'] = mace[['I21', 'I22']].any(axis=1)
+    # mace['mace30'] = mace.any(axis=1)
+    # mace['ami30'] = mace[['I21', 'I22']].any(axis=1)
     return mace
+
+
+def make_mace30_dataframe(mace_table):
+    return pd.DataFrame(
+        data=mace_table.any(axis=1).astype(int),
+        index=mace_table.index,
+        columns=['mace30']
+    )
+
+
+def make_ami30_dataframe(mace_table):
+    return pd.DataFrame(
+        data=mace_table[['I21', 'I22']].any(axis=1).astype(int),
+        index=mace_table.index,
+        columns=['ami30']
+    )
+
+
+def make_mace_chapters_dataframe(mace_table):
+    # I decided to exclude a few of the chapters here because they are so
+    # rare that they won't show up in the validation set.
+    # I22 occurs for 4 patients in total, I put it together with I21.
+    # R57 occurs for 3 patients in total, I remove it.
+    # TF only happens for a single patient, I remove it.
+    # DF is only 10 patients, I remove that as well.
+    # I leave I49, even though it is only 12 patients. It's possible, maybe
+    # even likely, that we're missing a few actual I49, if they are perhaps
+    # entered into melior but not sos or swedeheart.
+    chapters = [
+        'I20', 'I21', 'I22', 'I44', 'I46', 'I47', 'I49', 'J81', 'R57',
+        'DF', 'DG', 'FN', 'FP', 'TF', 'death'
+    ]
+    df = pd.concat(
+        [mace_table.filter(like=chapter).any(axis=1).rename(chapter) for
+         chapter in chapters],
+        axis=1
+    )
+    df['I21_22'] = df[['I21', 'I22']].any(axis=1)
+    df = df.drop(columns=['I21', 'I22', 'R57', 'TF', 'DF'])
+    return df.astype(int)
 
 
 def _make_diagnoses_from_sos():

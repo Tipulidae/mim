@@ -14,6 +14,7 @@ from mim.massage.carlson_ecg import (
     glasgow_scalar_names,
     glasgow_vector_names,
     glasgow_diagnoses_index,
+    glasgow_diagnoses,
     extract_field,
     flatten_nested
 )
@@ -279,6 +280,7 @@ def to_hdf5(ecg_paths, target_path):
         data['meta']['path'][()] = ecg_paths
         data['meta']['glasgow_vector_names'][()] = glasgow_vector_names
         data['meta']['glasgow_scalar_names'][()] = glasgow_scalar_names
+        data['meta']['glasgow_diagnoses_names'][()] = glasgow_diagnoses
         data['meta']['lead_names'][()] = expected_lead_names
         data['meta']['report'][()] = Metadata().report(
             conda=False, file_data=False, as_string=True)

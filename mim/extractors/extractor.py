@@ -2,8 +2,10 @@ import random
 from copy import copy
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 import h5py
+from sklearn.pipeline import Pipeline
 
 from typing import Dict
 
@@ -210,6 +212,139 @@ def infer_shape(data):
         return None
 
     return list(shape[1:])
+
+
+def sklearn_process(processor, split_number=0, **processor_kwargs):
+    """
+    Returns a function that takes a train, val Data tuple as input and
+    processes all of the underlying data with the specified processor,
+    returning new Data (or Container) objects.
+
+    The processor can be a sklearn Pipeline, or a Transformer like the
+    StandardScaler.
+
+    TODO:
+    I would like to be able to apply different processors to different
+    "branches" of the input features. For instance, to apply PCA only on the
+    "Forberg"-features, and not the flat-features. There is probably a good
+    approach somewhere, that uses the ColumnTransformer, but the situation
+    is made more complicated by the possibility of nested features in the
+    Data/Container architecture.
+
+    In any case, if I could have different transformers for different
+    sets of features, I might avoid having to automatically infer which
+    features or groups of features are categorical.
+    """
+    def process_and_wrap(train, val):
+        x_train, x_val = process_container(
+            train['x'], val['x'], processor, **processor_kwargs)
+        new_train = Container(
+            {
+                'x': x_train,
+                'y': train['y'],
+                'index': train['index']
+            },
+            columns=train.columns,
+            index=train.index,
+            fits_in_memory=train.fits_in_memory
+        )
+
+        new_val = Container(
+            {
+                'x': x_val,
+                'y': val['y'],
+                'index': val['index']
+            },
+            columns=val.columns,
+            index=val.index,
+            fits_in_memory=val.fits_in_memory
+        )
+        return new_train, new_val
+
+    return process_and_wrap
+
+
+def process_container(train, val, processor, **processor_kwargs):
+    train_dict = {}
+    val_dict = {}
+    for key, value in train.columns.items():
+        if isinstance(value, dict):
+            train_dict[key], val_dict[key] = process_container(
+                train, val, processor, **processor_kwargs)
+        else:
+            train_dict[key], val_dict[key] = process_data(
+                train[key], val[key], processor, **processor_kwargs)
+
+    new_train = Container(
+        train_dict,
+        columns=train.columns,
+        index=train.index,
+        fits_in_memory=train.fits_in_memory
+    )
+    new_val = Container(
+        val_dict,
+        columns=val.columns,
+        index=val.index,
+        fits_in_memory=val.fits_in_memory
+    )
+    return new_train, new_val
+
+
+def process_data(train, val, processor, **kwargs):
+    train_data = train.as_numpy()
+    cat, num = _infer_categorical(train_data)
+
+    if processor == 'Pipeline':
+        p = Pipeline(steps=[
+            (label, transform(**transform_kwargs))
+            for label, transform, transform_kwargs in kwargs['steps']
+        ])
+    else:
+        p = processor(**kwargs)
+
+    p.fit(train_data[:, num])
+
+    new_train_data = np.concatenate(
+        [train_data[:, cat], p.transform(train_data[:, num])],
+        axis=1
+    )
+
+    new_train = Data(
+        new_train_data,
+        index=train.index,
+        dtype=train.dtype,
+        fits_in_memory=train.fits_in_memory,
+        groups=train.groups,
+        predefined_splits=train.predefined_splits
+    )
+
+    val_data = val.as_numpy()
+    new_val_data = np.concatenate(
+        [val_data[:, cat], p.transform(val_data[:, num])],
+        axis=1,
+    )
+
+    new_val = Data(
+        new_val_data,
+        index=val.index,
+        dtype=val.dtype,
+        fits_in_memory=val.fits_in_memory,
+        groups=val.groups,
+        predefined_splits=val.predefined_splits
+    )
+    return new_train, new_val
+
+
+def _infer_categorical(data):
+    df = pd.DataFrame(data)
+    cat, num = [], []
+    for col in df.columns:
+        if len(df.loc[:, col].value_counts()) > 10:
+            num.append(col)
+        else:
+            cat.append(col)
+
+    return cat, num
 
 
 class ECGData(Data):
