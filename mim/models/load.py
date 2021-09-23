@@ -74,23 +74,26 @@ def load_ribeiro_model(freeze_resnet=False, suffix=None):
 def pre_process_using_ribeiro(**kwargs):
     resnet_input, resnet_output = load_ribeiro_model()
     model = keras.Model({'ecg_0': resnet_input}, resnet_output)
-
-    def pre_process(data):
-        return process_ecg(model, data)
-
-    return pre_process
+    return _pre_process_with_model(model)
 
 
 def pre_process_using_xp(**load_model_kwargs):
     model = load_model_from_experiment_result(**load_model_kwargs)
+    return _pre_process_with_model(model)
 
-    def pre_process(data):
-        return process_ecg(model, data)
+
+def _pre_process_with_model(model):
+    def pre_process(train, val):
+        log.debug('Processing ECGs using pre-trained model')
+        processed_train = _process_ecg(model, train)
+        processed_val = _process_ecg(model, val)
+        log.debug('Finished processing ECGs')
+        return processed_train, processed_val
 
     return pre_process
 
 
-def process_ecg(model, data):
+def _process_ecg(model, data):
     """
     The point of this function is to take all the ecg-data from the input
     dataset and pass it through the given model. The output is our processed
@@ -117,8 +120,6 @@ def process_ecg(model, data):
     # Maybe add a "data.keys" or similar and verify that the format is
     # correct here? Or we could make a special type of Data/Container, that
     # enforces the x, y, index structure?
-
-    log.debug('Processing ECGs using pre-trained model')
     new_dict = {}
     for feature in data['x'].shape.keys():
         if feature.startswith('ecg'):
@@ -139,5 +140,4 @@ def process_ecg(model, data):
         index=data.index,
         fits_in_memory=True
     )
-    log.debug('Finished processing ECGs')
     return new_data

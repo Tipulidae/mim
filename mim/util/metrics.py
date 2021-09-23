@@ -52,7 +52,9 @@ def rule_in_rule_out(
         rule_in_spec=0.90,
         rule_in_ppv=0.7,
         rule_out_sens=0.99,
-        rule_out_npv=0.995):
+        rule_out_npv=0.995,
+        rule_in_threshold=None,
+        rule_out_threshold=None):
     """
     The 'naive' implementation of rule-in rule-out. Calculates a 3*n numpy
     array where the columns correspond to rule-in, intermediate and rule-out,
@@ -60,12 +62,17 @@ def rule_in_rule_out(
     constraints, in which case the corresponding group (rule-in or rule-out)
     is empty.
     """
+    if rule_in_threshold is None or rule_out_threshold is None:
+        in_th, out_th = find_rule_in_rule_out_thresholds(
+            targets, predictions, rule_in_spec=rule_in_spec,
+            rule_in_ppv=rule_in_ppv, rule_out_sens=rule_out_sens,
+            rule_out_npv=rule_out_npv
+        )
+        if rule_in_threshold is None:
+            rule_in_threshold = in_th
+        if rule_out_threshold is None:
+            rule_out_threshold = out_th
 
-    rule_in_threshold, rule_out_threshold = find_rule_in_rule_out_thresholds(
-        targets, predictions, rule_in_spec=rule_in_spec,
-        rule_in_ppv=rule_in_ppv, rule_out_sens=rule_out_sens,
-        rule_out_npv=rule_out_npv
-    )
     rule_in = np.where(predictions >= rule_in_threshold, 1, 0)
     rule_out = np.where(predictions < rule_out_threshold, 1, 0)
     results = np.vstack(
