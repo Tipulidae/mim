@@ -96,9 +96,10 @@ class EscTrop(Extractor):
             #     columns=list(forberg.columns)
             # )
 
-        x_dict['flat_features'] = Data(
-            np.concatenate(flat_data, axis=1),
-        )
+        if len(flat_data) > 0:
+            x_dict['flat_features'] = Data(
+                np.concatenate(flat_data, axis=1),
+            )
 
         return x_dict
 
