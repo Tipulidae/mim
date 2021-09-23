@@ -347,6 +347,15 @@ def _infer_categorical(data):
     return cat, num
 
 
+def pre_process_bootstrap_validation(split_number=0, random_state=42):
+    def bootstrap(train, val):
+        r = random.Random(random_state)
+        n = len(val)
+        return train, val.lazy_slice(r.choices(range(n), k=n))
+
+    return bootstrap
+
+
 class ECGData(Data):
     def __init__(self, data, mode='raw', index=None, dtype=tf.float32,
                  **kwargs):

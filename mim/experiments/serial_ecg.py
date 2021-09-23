@@ -13,7 +13,8 @@ from sklearn.decomposition import PCA
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.extractors.extractor import sklearn_process
+from mim.extractors.extractor import sklearn_process, \
+    pre_process_bootstrap_validation
 from mim.models.simple_nn import (
     ecg_cnn,
     ffnn,
@@ -706,6 +707,43 @@ class ESCT(Experiment, Enum):
     M_R1_CNN7_FF_r5 = M_R1_CNN7_FF._replace(
         description='Same as M_R1_CNN7_FF, but with a different random seed.',
         random_state=1004,
+    )
+
+    # CNN7 variations with different validation bootstrap samples
+    M_R1_CNN7_FF_b1 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed '
+                    'and the validation set is a bootstrap sample. ',
+        random_state=2001,
+        pre_processor=pre_process_bootstrap_validation,
+        pre_processor_kwargs={'random_state': 2001}
+    )
+    M_R1_CNN7_FF_b2 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed '
+                    'and the validation set is a bootstrap sample. ',
+        random_state=2002,
+        pre_processor=pre_process_bootstrap_validation,
+        pre_processor_kwargs={'random_state': 2002}
+    )
+    M_R1_CNN7_FF_b3 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed '
+                    'and the validation set is a bootstrap sample. ',
+        random_state=2003,
+        pre_processor=pre_process_bootstrap_validation,
+        pre_processor_kwargs={'random_state': 2003}
+    )
+    M_R1_CNN7_FF_b4 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed '
+                    'and the validation set is a bootstrap sample. ',
+        random_state=2004,
+        pre_processor=pre_process_bootstrap_validation,
+        pre_processor_kwargs={'random_state': 2004}
+    )
+    M_R1_CNN7_FF_b5 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed '
+                    'and the validation set is a bootstrap sample. ',
+        random_state=2005,
+        pre_processor=pre_process_bootstrap_validation,
+        pre_processor_kwargs={'random_state': 2005}
     )
 
     # CNN8 variations, best random-search model for 2ECG+FF
