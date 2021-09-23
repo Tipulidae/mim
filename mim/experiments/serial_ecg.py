@@ -1142,7 +1142,8 @@ class ESCT(Experiment, Enum):
         pre_processor_kwargs={
             'xp_name': 'ESCT/M_R1_AB1_FF',
             'commit': '5557d9e6740724eeab7260b0f40068e47618a2d2',
-            'final_layer_index': -8  # This is the flatten-layer
+            'final_layer_index': -8,  # This is the flatten-layer,
+            'input_key': 'ecg_0'
         },
         optimizer={
             'name': Adam,
