@@ -13,8 +13,7 @@ from sklearn.decomposition import PCA
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.extractors.extractor import sklearn_process, \
-    pre_process_bootstrap_validation
+from mim.extractors.extractor import sklearn_process
 from mim.models.simple_nn import (
     ecg_cnn,
     ffnn,
@@ -708,42 +707,21 @@ class ESCT(Experiment, Enum):
         description='Same as M_R1_CNN7_FF, but with a different random seed.',
         random_state=1004,
     )
-
-    # CNN7 variations with different validation bootstrap samples
-    M_R1_CNN7_FF_b1 = M_R1_CNN7_FF._replace(
-        description='Same as M_R1_CNN7_FF, but with a different random seed '
-                    'and the validation set is a bootstrap sample. ',
-        random_state=2001,
-        pre_processor=pre_process_bootstrap_validation,
-        pre_processor_kwargs={'random_state': 2001}
+    M_R1_CNN7_FF_r6 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed.',
+        random_state=1005,
     )
-    M_R1_CNN7_FF_b2 = M_R1_CNN7_FF._replace(
-        description='Same as M_R1_CNN7_FF, but with a different random seed '
-                    'and the validation set is a bootstrap sample. ',
-        random_state=2002,
-        pre_processor=pre_process_bootstrap_validation,
-        pre_processor_kwargs={'random_state': 2002}
+    M_R1_CNN7_FF_r7 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed.',
+        random_state=1006,
     )
-    M_R1_CNN7_FF_b3 = M_R1_CNN7_FF._replace(
-        description='Same as M_R1_CNN7_FF, but with a different random seed '
-                    'and the validation set is a bootstrap sample. ',
-        random_state=2003,
-        pre_processor=pre_process_bootstrap_validation,
-        pre_processor_kwargs={'random_state': 2003}
+    M_R1_CNN7_FF_r8 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed.',
+        random_state=1007,
     )
-    M_R1_CNN7_FF_b4 = M_R1_CNN7_FF._replace(
-        description='Same as M_R1_CNN7_FF, but with a different random seed '
-                    'and the validation set is a bootstrap sample. ',
-        random_state=2004,
-        pre_processor=pre_process_bootstrap_validation,
-        pre_processor_kwargs={'random_state': 2004}
-    )
-    M_R1_CNN7_FF_b5 = M_R1_CNN7_FF._replace(
-        description='Same as M_R1_CNN7_FF, but with a different random seed '
-                    'and the validation set is a bootstrap sample. ',
-        random_state=2005,
-        pre_processor=pre_process_bootstrap_validation,
-        pre_processor_kwargs={'random_state': 2005}
+    M_R1_CNN7_FF_r9 = M_R1_CNN7_FF._replace(
+        description='Same as M_R1_CNN7_FF, but with a different random seed.',
+        random_state=1008,
     )
 
     # CNN8 variations, best random-search model for 2ECG+FF
@@ -824,6 +802,44 @@ class ESCT(Experiment, Enum):
                 'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
             },
         }
+    )
+
+    # CNN8 variations with different random seeds
+    M_R2_CNN8_FF_r1 = M_R2_CNN8_FF._replace(
+        description='Same as M_R2_CNN8_FF, but with a different random seed.',
+        random_state=1001,
+    )
+    M_R2_CNN8_FF_r2 = M_R2_CNN8_FF._replace(
+        description='Same as M_R2_CNN8_FF, but with a different random seed.',
+        random_state=1002,
+    )
+    M_R2_CNN8_FF_r3 = M_R2_CNN8_FF._replace(
+        description='Same as M_R2_CNN8_FF, but with a different random seed.',
+        random_state=1003,
+    )
+    M_R2_CNN8_FF_r4 = M_R2_CNN8_FF._replace(
+        description='Same as M_R2_CNN8_FF, but with a different random seed.',
+        random_state=1004,
+    )
+    M_R2_CNN8_FF_r5 = M_R2_CNN8_FF._replace(
+        description='Same as M_R2_CNN8_FF, but with a different random seed.',
+        random_state=1005,
+    )
+    M_R2_CNN8_FF_r6 = M_R2_CNN8_FF._replace(
+        description='Same as M_R2_CNN8_FF, but with a different random seed.',
+        random_state=1006,
+    )
+    M_R2_CNN8_FF_r7 = M_R2_CNN8_FF._replace(
+        description='Same as M_R2_CNN8_FF, but with a different random seed.',
+        random_state=1007,
+    )
+    M_R2_CNN8_FF_r8 = M_R2_CNN8_FF._replace(
+        description='Same as M_R2_CNN8_FF, but with a different random seed.',
+        random_state=1008,
+    )
+    M_R2_CNN8_FF_r9 = M_R2_CNN8_FF._replace(
+        description='Same as M_R2_CNN8_FF, but with a different random seed.',
+        random_state=1009,
     )
 
     # CNN9 variations, 2nd best random-search model for 1ECG+FF
