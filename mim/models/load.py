@@ -44,7 +44,7 @@ def load_model_from_experiment_result(
     }
     v = Validator(
         allow_different_commits=False,
-        allow_uncommitted=True
+        allow_uncommitted=False
     )
     v.validate_consistency([metadata, expected_metadata])
 
