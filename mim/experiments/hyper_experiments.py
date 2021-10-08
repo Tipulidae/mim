@@ -431,6 +431,86 @@ class HyperSearch(HyperExperiment, Enum):
         },
     )
 
+    M_R1_CNN_RS = HyperExperiment(
+        template=Experiment(
+            description="Try to find good settings for predicting MACE using "
+                        "1 raw ECG, without flat-features.",
+            model=ecg_cnn,
+            model_kwargs={
+                'cnn_kwargs': hp.Choice([
+                    {
+                        'downsample': True,
+                        'num_layers': num_layers,
+                        'dropouts': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers),
+                        'pool_size': hp.Choice(pool_sizes),
+                        'filter_first': hp.Int(8, 64, step=4),
+                        'filter_last': hp.Int(8, 64, step=4),
+                        'kernel_first': hp.Int(5, 65, step=4),
+                        'kernel_last': hp.Int(5, 65, step=4),
+                        'batch_norms': hp.Choices([True, False], k=num_layers),
+                        'weight_decays': hp.Choices(
+                            [1e-1, 1e-2, 1e-3, 0.0],
+                            k=num_layers),
+                        'ffnn_kwargs': hp.Choice([
+                            None,
+                            {
+                                'sizes': hp.Choices([10, 50, 100], k=1),
+                                'dropouts': hp.Choices(
+                                    [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], k=1),
+                                'batch_norms': [False]
+                            }
+                        ]),
+                    } for num_layers, pool_sizes in zip(
+                        [2, 3, 4],
+                        [range(7, 31), range(4, 11), range(3, 7)]
+                    )
+                ]),
+                'ecg_ffnn_kwargs': None,
+                'flat_ffnn_kwargs': None,
+                'final_ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.Choices([10, 20, 50, 100], k=1),
+                        'dropouts': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], k=1),
+                        'batch_norms': [False]
+                    }
+                ]),
+            },
+            extractor=EscTrop,
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'raw',
+                    'ecgs': ['ecg_0']
+                },
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5
+                    ])
+                }
+            },
+            epochs=100,
+            batch_size=64,
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 1/3
+            },
+            building_model_requires_development_data=True,
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            random_state=hp.Int(0, 1000000000),
+        ),
+        random_seed=44,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 400
+        },
+    )
+
     M_R2_CNN_RS = HyperExperiment(
         template=Experiment(
             description="Try to find good settings for predicting MACE using "

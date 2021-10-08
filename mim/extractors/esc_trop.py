@@ -65,9 +65,11 @@ class EscTrop(Extractor):
                     x_dict[ecg] = self.make_ecg_data(ecg_features[ecg])
 
         flat_data = []
+        cols = []
         if 'flat_features' in self.features:
             data = features[self.features['flat_features']].values
             flat_data.append(data)
+            cols.extend(self.features['flat_features'])
             # x_dict['flat_features'] = Data(
             #     data,
             #     columns=self.features['flat_features'],
@@ -95,10 +97,12 @@ class EscTrop(Extractor):
             #     forberg.values,
             #     columns=list(forberg.columns)
             # )
+            cols.extend(list(forberg.columns))
 
         if len(flat_data) > 0:
             x_dict['flat_features'] = Data(
                 np.concatenate(flat_data, axis=1),
+                columns=cols
             )
 
         return x_dict
@@ -130,9 +134,12 @@ class EscTrop(Extractor):
             index=index.reset_index().index,
             fits_in_memory=self.fits_in_memory
         )
-
+        if self.cv_kwargs is not None and 'test_size' in self.cv_kwargs:
+            test_size = self.cv_kwargs['test_size']
+        else:
+            test_size = 1 / 4
         hold_out_splitter = CrossValidationWrapper(
-            ChronologicalSplit(test_size=1/4)
+            ChronologicalSplit(test_size=test_size)
         )
         dev, _ = next(hold_out_splitter.split(data))
         log.debug('Finished extracting esc-trop data')

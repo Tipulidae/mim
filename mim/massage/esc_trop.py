@@ -537,12 +537,12 @@ def _make_mace_diagnoses(
     diagnose_sources = []
 
     if use_melior:
-        before = _make_diagnoses(
-            "ESC_TROP_Diagnoser_InkluderadeIndexBesök_2017_2018.csv")
         during = _make_diagnoses(
+            "ESC_TROP_Diagnoser_InkluderadeIndexBesök_2017_2018.csv")
+        after = _make_diagnoses(
            "ESC_TROP_Diagnoser_EfterInkluderadeIndexBesök_2017_2018.csv")
-        diagnose_sources.append(remove_diagnoses_outside_time_interval(before))
         diagnose_sources.append(remove_diagnoses_outside_time_interval(during))
+        diagnose_sources.append(remove_diagnoses_outside_time_interval(after))
 
     if use_sos:
         diagnose_sources.append(
