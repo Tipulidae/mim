@@ -245,15 +245,17 @@ class ESCT(Experiment, Enum):
         },
         pre_processor=sklearn_process,
         pre_processor_kwargs={
-            'processor': 'Pipeline',
-            'steps': [
-                ('scaler', StandardScaler, {}),
-                ('pca', PCA, {
-                    'n_components': 100,
-                    'whiten': False,
-                    'random_state': 42
-                })
-            ]
+            'forberg_features': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 100,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            }
         },
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
@@ -269,15 +271,17 @@ class ESCT(Experiment, Enum):
             },
         },
         pre_processor_kwargs={
-            'processor': 'Pipeline',
-            'steps': [
-                ('scaler', StandardScaler, {}),
-                ('pca', PCA, {
-                    'n_components': 145,
-                    'whiten': False,
-                    'random_state': 42
-                })
-            ]
+            'forberg_features': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 145,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            },
         },
     )
     M_F1_LR2_FF = M_F1_LR2._replace(
@@ -291,15 +295,20 @@ class ESCT(Experiment, Enum):
             },
         },
         pre_processor_kwargs={
-            'processor': 'Pipeline',
-            'steps': [
-                ('scaler', StandardScaler, {}),
-                ('pca', PCA, {
-                    'n_components': 100,
-                    'whiten': False,
-                    'random_state': 42
-                })
-            ]
+            'forberg_features': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 2,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            },
+            'flat_features': {
+                'processor': StandardScaler,
+            }
         },
     )
     M_F2_LR2_FF = M_F1_LR2._replace(
@@ -314,15 +323,20 @@ class ESCT(Experiment, Enum):
             },
         },
         pre_processor_kwargs={
-            'processor': 'Pipeline',
-            'steps': [
-                ('scaler', StandardScaler, {}),
-                ('pca', PCA, {
-                    'n_components': 150,
-                    'whiten': False,
-                    'random_state': 42
-                })
-            ]
+            'forberg_features': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 5,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            },
+            'flat_features': {
+                'processor': StandardScaler,
+            }
         },
     )
 
@@ -602,6 +616,7 @@ class ESCT(Experiment, Enum):
         model=ecg_cnn,
         model_kwargs={
             'cnn_kwargs': {
+                'down_sample': True,
                 'num_layers': 3,
                 'dropouts': [0.3, 0.5, 0.2],
                 'pool_size': 8,
@@ -734,6 +749,7 @@ class ESCT(Experiment, Enum):
         model=ecg_cnn,
         model_kwargs={
             'cnn_kwargs': {
+                'down_sample': True,
                 'num_layers': 2,
                 'dropouts': [0.3, 0.4],
                 'pool_size': 22,
@@ -914,6 +930,60 @@ class ESCT(Experiment, Enum):
             },
         }
     )
+
+    # CNN10, best random-search model for 1 ECG
+    M_R1_CNN10 = Experiment(
+        description='Uses xp_210 from M_R1_CNN_RS, which was the second '
+                    'best in terms of AUC, but looked better than the best '
+                    'when considering the overall learning trend. ',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'down_sample': True,
+                'dropouts': [0.5, 0.4],
+                'pool_size': 15,
+                'filter_first': 28,
+                'filter_last': 8,
+                'kernel_first': 61,
+                'kernel_last': 17,
+                'batch_norms': [False, False],
+                'weight_decays': [0.0, 0.01],
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.4],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.0001}
+        },
+        epochs=200,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # CNN11, best random-search model for 2 ECGs
 
     # ABs CNN MODEL, 1 ECG + FLAT FEATURES
     M_R1_AB1 = Experiment(

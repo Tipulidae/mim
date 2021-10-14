@@ -7,7 +7,7 @@ from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
 import mim.experiments.hyper_parameter as hp
 from mim.experiments.experiments import Experiment
 from mim.experiments.search_strategies import Hyperband, RandomSearch
-from mim.models.simple_nn import ecg_cnn
+from mim.models.simple_nn import ecg_cnn, pretrained_resnet
 from mim.extractors.esc_trop import EscTrop
 from mim.cross_validation import ChronologicalSplit
 from mim.util.logs import get_logger
@@ -586,6 +586,93 @@ class HyperSearch(HyperExperiment, Enum):
             cv=ChronologicalSplit,
             cv_kwargs={
                 'test_size': 1/3
+            },
+            building_model_requires_development_data=True,
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            random_state=hp.Int(0, 1000000000),
+        ),
+        random_seed=44,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 400
+        },
+    )
+
+    M_R1_FF_RN_RS = HyperExperiment(
+        template=Experiment(
+            description="Random search for pretrained resnet using 1 ECG + "
+                        "flat-features. Search space is over ffnn parameters "
+                        "following the flatten layer of the resnet. ",
+            model=pretrained_resnet,
+            model_kwargs={
+                'freeze_resnet': False,
+                'ecg_ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [20, 40, 80, 160, 320],
+                            k=num_layers,
+                            ascending=False,
+                        ),
+                        'dropouts': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers
+                        ),
+                        'batch_norms': hp.Choices(
+                            [True, False],
+                            k=num_layers
+                        ),
+                        'activity_regularizers': hp.Choices(
+                            [0.01, 0.001, 0.0001, 0.00001, 0.0],
+                            k=num_layers
+                        ),
+                        'kernel_regularizers': hp.Choices(
+                            [0.1, 0.01, 0.001, 0.0001, 0.0],
+                            k=num_layers
+                        ),
+                        'bias_regularizers': hp.Choices(
+                            [0.1, 0.01, 0.001, 0.0001, 0.0],
+                            k=num_layers
+                        )
+                    } for num_layers in [1, 2]
+                ]),
+                'ecg_combiner': hp.Choice(['concatenate', 'difference']),
+                'ecg_comb_ffnn_kwargs': None,
+                'flat_ffnn_kwargs': None,
+                'final_ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.Choices([10, 20], k=1),
+                        'dropouts': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], k=1),
+                        'batch_norms': [False],
+                    }
+                ]),
+            },
+            extractor=EscTrop,
+            extractor_kwargs={
+                'features': {
+                    'ecg_mode': 'raw',
+                    'ecgs': ['ecg_0'],
+                    'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+                },
+                'processing': {
+                    'scale': 1000,
+                    'ribeiro': True
+                }
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5
+                    ])
+                }
+            },
+            epochs=50,
+            batch_size=32,
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 1 / 3
             },
             building_model_requires_development_data=True,
             loss='binary_crossentropy',

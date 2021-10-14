@@ -64,16 +64,16 @@ class EscTrop(Extractor):
                 if ecg in self.features['ecgs']:
                     x_dict[ecg] = self.make_ecg_data(ecg_features[ecg])
 
-        flat_data = []
-        cols = []
+        # flat_data = []
+        # cols = []
         if 'flat_features' in self.features:
             data = features[self.features['flat_features']].values
-            flat_data.append(data)
-            cols.extend(self.features['flat_features'])
-            # x_dict['flat_features'] = Data(
-            #     data,
-            #     columns=self.features['flat_features'],
-            # )
+            # flat_data.append(data)
+            # cols.extend(self.features['flat_features'])
+            x_dict['flat_features'] = Data(
+                data,
+                columns=self.features['flat_features'],
+            )
 
         if 'forberg' in self.features:
             f0 = make_forberg_features(ecg_features.ecg_0)
@@ -92,18 +92,18 @@ class EscTrop(Extractor):
                 forberg_features.append(diff)
 
             forberg = pd.concat(forberg_features, axis=1)
-            flat_data.append(forberg.values)
-            # x_dict['forberg_features'] = Data(
-            #     forberg.values,
-            #     columns=list(forberg.columns)
-            # )
-            cols.extend(list(forberg.columns))
-
-        if len(flat_data) > 0:
-            x_dict['flat_features'] = Data(
-                np.concatenate(flat_data, axis=1),
-                columns=cols
+            # flat_data.append(forberg.values)
+            x_dict['forberg_features'] = Data(
+                forberg.values,
+                columns=list(forberg.columns)
             )
+            # cols.extend(list(forberg.columns))
+
+        # if len(flat_data) > 0:
+        #     x_dict['flat_features'] = Data(
+        #         np.concatenate(flat_data, axis=1),
+        #         columns=cols
+        #     )
 
         return x_dict
 

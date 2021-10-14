@@ -75,6 +75,30 @@ class Choices(Param):
         return f"Choices({self.data}, k={self.k})"
 
 
+class SortedChoices(Param):
+    def __init__(self, data, k=1, ascending=True):
+        super().__init__()
+        self.data = data
+        self.k = k
+        self.ascending = ascending
+
+    def pick(self, generator):
+        k = pick(self.k, generator)
+        return pick(
+            sorted(
+                generator.choices(self.data, k=k),
+                reverse=not self.ascending
+            ),
+            generator
+        )
+
+    def __str__(self):
+        return f"Choices({self.data}, k={self.k})"
+
+    def __repr__(self):
+        return f"Choices({self.data}, k={self.k})"
+
+
 def pick(search_space, r):
     if isinstance(search_space, Param):
         return search_space.pick(r)

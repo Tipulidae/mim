@@ -232,7 +232,7 @@ def make_forberg_features(ecg_ids):
     ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
     with h5py.File(ecg_path, 'r') as ecg:
         glasgow_features = []
-        for x in tqdm(ecg_ids):
+        for x in tqdm(ecg_ids, desc='Extracting Glasgow vectors'):
             glasgow_features.append(ecg['glasgow']['vectors'][x])
 
         vector_names = list(ecg['meta']['glasgow_vector_names'][:])

@@ -121,22 +121,44 @@ def _ecg_and_flat_feature_combiner(
 
 
 def _ffnn(x, sizes, dropouts, batch_norms, activation='relu',
-          activity_regularizer=None, kernel_regularizer=None,
-          bias_regularizer=None):
+          activity_regularizer=None,
+          activity_regularizers=None,
+          kernel_regularizer=None,
+          kernel_regularizers=None,
+          bias_regularizer=None,
+          bias_regularizers=None):
+    n = len(sizes)
+    if activity_regularizers is None:
+        if activity_regularizer is None:
+            activity_regularizer = 0.0
+        activity_regularizers = n*[activity_regularizer]
+    if kernel_regularizers is None:
+        if kernel_regularizer is None:
+            kernel_regularizer = 0.0
+        kernel_regularizers = n*[kernel_regularizer]
+    if bias_regularizers is None:
+        if bias_regularizer is None:
+            bias_regularizer = 0.0
+        bias_regularizers = n*[bias_regularizer]
+
     assert _all_lists_have_same_length(
-        [sizes, dropouts, batch_norms]
+        [sizes, dropouts, batch_norms, activity_regularizers,
+         kernel_regularizers, bias_regularizers]
     )
-    for size, dropout, batch_norm in zip(sizes, dropouts, batch_norms):
+
+    for i in range(n):
         x = Dense(
-            size,
+            sizes[i],
             activation=activation,
-            activity_regularizer=activity_regularizer,
-            kernel_regularizer=kernel_regularizer,
-            bias_regularizer=bias_regularizer)(x)
-        if batch_norm:
+            activity_regularizer=l2(activity_regularizers[i]),
+            kernel_regularizer=l2(kernel_regularizers[i]),
+            bias_regularizer=l2(bias_regularizers[i])
+        )(x)
+
+        if batch_norms[i]:
             x = BatchNormalization()(x)
-        if dropout > 0:
-            x = Dropout(dropout)(x)
+        if dropouts[i] > 0:
+            x = Dropout(dropouts[i])(x)
 
     return x
 

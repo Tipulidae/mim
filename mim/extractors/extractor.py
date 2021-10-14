@@ -214,7 +214,7 @@ def infer_shape(data):
     return list(shape[1:])
 
 
-def sklearn_process(processor, split_number=0, **processor_kwargs):
+def sklearn_process(split_number=0, **processors):
     """
     Returns a function that takes a train, val Data tuple as input and
     processes all of the underlying data with the specified processor,
@@ -237,7 +237,10 @@ def sklearn_process(processor, split_number=0, **processor_kwargs):
     """
     def process_and_wrap(train, val):
         x_train, x_val = process_container(
-            train['x'], val['x'], processor, **processor_kwargs)
+            train['x'], val['x'], processors)
+
+        # x_train, x_val = process_container(
+        #     train['x'], val['x'], processor, **processor_kwargs)
         new_train = Container(
             {
                 'x': x_train,
@@ -264,16 +267,17 @@ def sklearn_process(processor, split_number=0, **processor_kwargs):
     return process_and_wrap
 
 
-def process_container(train, val, processor, **processor_kwargs):
+def process_container(train, val, processors):
     train_dict = {}
     val_dict = {}
+
     for key, value in train.columns.items():
-        if isinstance(value, dict):
-            train_dict[key], val_dict[key] = process_container(
-                train, val, processor, **processor_kwargs)
-        else:
+        if key in processors:
             train_dict[key], val_dict[key] = process_data(
-                train[key], val[key], processor, **processor_kwargs)
+                train[key], val[key], **processors[key]
+            )
+        else:
+            train_dict[key], val_dict[key] = train[key], val[key]
 
     new_train = Container(
         train_dict,
@@ -288,6 +292,31 @@ def process_container(train, val, processor, **processor_kwargs):
         fits_in_memory=val.fits_in_memory
     )
     return new_train, new_val
+
+# def process_container(train, val, processor, **processor_kwargs):
+#     train_dict = {}
+#     val_dict = {}
+#     for key, value in train.columns.items():
+#         if isinstance(value, dict):
+#             train_dict[key], val_dict[key] = process_container(
+#                 train, val, processor, **processor_kwargs)
+#         else:
+#             train_dict[key], val_dict[key] = process_data(
+#                 train[key], val[key], processor, **processor_kwargs)
+#
+#     new_train = Container(
+#         train_dict,
+#         columns=train.columns,
+#         index=train.index,
+#         fits_in_memory=train.fits_in_memory
+#     )
+#     new_val = Container(
+#         val_dict,
+#         columns=val.columns,
+#         index=val.index,
+#         fits_in_memory=val.fits_in_memory
+#     )
+#     return new_train, new_val
 
 
 def process_data(train, val, processor, **kwargs):
