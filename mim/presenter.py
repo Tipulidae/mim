@@ -30,7 +30,7 @@ log = get_logger("Presenter")
 
 
 class Presenter:
-    def __init__(self, name):
+    def __init__(self, name, verbose=2):
         self.results = dict()
         paths = insensitive_iglob(
             f"{PATH_TO_TEST_RESULTS}/{name}/**/results.pickle",
@@ -39,11 +39,15 @@ class Presenter:
 
         for path in sorted(paths):
             _, xp_name = os.path.split(os.path.dirname(path))
-            log.info(f"Loading {xp_name}")
+            if verbose > 1:
+                log.info(f"Loading {xp_name}")
             if xp_name in self.results:
                 log.warning(f"Two experiments with the name {xp_name}!")
 
             self.results[xp_name] = pd.read_pickle(path)
+
+        if verbose > 0:
+            log.info(f"Finished loading {len(self.results)} experiments.")
 
     def describe(self, like='.*'):
         results = []
@@ -105,18 +109,21 @@ class Presenter:
     def predictions(self, like='.*'):
         # Return dataframe with the true targets and predictions for each
         # experiment
-        all_predictions = []
-        all_targets = []
+        predictions = []
+        the_target = None
         for name, xp in self._results_that_match_pattern(like):
-            targets, predictions = self._target_predictions(xp)
-            all_targets.append(targets.values)
-            all_predictions.append(
-                predictions.iloc[:, 0].rename(name)
-            )
-        assert all_columns_equal(np.concatenate(all_targets, axis=1))
+            target, prediction = self._target_predictions(xp)
+            if the_target is None:
+                the_target = target
 
-        target = pd.DataFrame(all_targets[0], columns=['y'])
-        return target.join(pd.DataFrame(all_predictions).T)
+            assert the_target.equals(target)
+            predictions.append(
+                prediction.iloc[:, 0].rename(name)
+            )
+
+        predictions = pd.DataFrame(predictions).T
+        predictions.index = the_target.index
+        return the_target.join(predictions)
 
     def prediction_ranks(self, like='.*'):
         predictions = self.predictions(like=like)
@@ -323,8 +330,9 @@ class Presenter:
         return targets, predictions
 
     def _target_predictions(self, xp):
+        targets = pd.concat(xp['targets'])
         predictions = pd.concat(xp['predictions']['prediction'], axis=0)
-        targets = pd.DataFrame(np.concatenate(xp['targets']))
+        predictions.index = targets.index
         return targets, predictions
 
 
