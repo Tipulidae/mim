@@ -127,38 +127,38 @@ def _ffnn(x, sizes, dropouts, batch_norms, activation='relu',
           kernel_regularizers=None,
           bias_regularizer=None,
           bias_regularizers=None):
-    n = len(sizes)
+    num_layers = len(sizes)
     if activity_regularizers is None:
         if activity_regularizer is None:
             activity_regularizer = 0.0
-        activity_regularizers = n*[activity_regularizer]
+        activity_regularizers = num_layers*[activity_regularizer]
     if kernel_regularizers is None:
         if kernel_regularizer is None:
             kernel_regularizer = 0.0
-        kernel_regularizers = n*[kernel_regularizer]
+        kernel_regularizers = num_layers*[kernel_regularizer]
     if bias_regularizers is None:
         if bias_regularizer is None:
             bias_regularizer = 0.0
-        bias_regularizers = n*[bias_regularizer]
+        bias_regularizers = num_layers*[bias_regularizer]
 
     assert _all_lists_have_same_length(
         [sizes, dropouts, batch_norms, activity_regularizers,
          kernel_regularizers, bias_regularizers]
     )
 
-    for i in range(n):
+    for layer in range(num_layers):
         x = Dense(
-            sizes[i],
+            sizes[layer],
             activation=activation,
-            activity_regularizer=l2(activity_regularizers[i]),
-            kernel_regularizer=l2(kernel_regularizers[i]),
-            bias_regularizer=l2(bias_regularizers[i])
+            activity_regularizer=l2(activity_regularizers[layer]),
+            kernel_regularizer=l2(kernel_regularizers[layer]),
+            bias_regularizer=l2(bias_regularizers[layer])
         )(x)
 
-        if batch_norms[i]:
+        if batch_norms[layer]:
             x = BatchNormalization()(x)
-        if dropouts[i] > 0:
-            x = Dropout(dropouts[i])(x)
+        if dropouts[layer] > 0:
+            x = Dropout(dropouts[layer])(x)
 
     return x
 

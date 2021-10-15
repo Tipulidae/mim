@@ -246,15 +246,17 @@ class ESCT(Experiment, Enum):
         pre_processor=sklearn_process,
         pre_processor_kwargs={
             'forberg_features': {
-                'processor': 'Pipeline',
-                'steps': [
-                    ('scaler', StandardScaler, {}),
-                    ('pca', PCA, {
-                        'n_components': 100,
-                        'whiten': False,
-                        'random_state': 42
-                    })
-                ]
+                'ecg_0': {
+                    'processor': 'Pipeline',
+                    'steps': [
+                        ('scaler', StandardScaler, {}),
+                        ('pca', PCA, {
+                            'n_components': 100,
+                            'whiten': False,
+                            'random_state': 42
+                        })
+                    ]
+                }
             }
         },
         cv=ChronologicalSplit,
@@ -272,15 +274,28 @@ class ESCT(Experiment, Enum):
         },
         pre_processor_kwargs={
             'forberg_features': {
-                'processor': 'Pipeline',
-                'steps': [
-                    ('scaler', StandardScaler, {}),
-                    ('pca', PCA, {
-                        'n_components': 145,
-                        'whiten': False,
-                        'random_state': 42
-                    })
-                ]
+                'ecg_0': {
+                    'processor': 'Pipeline',
+                    'steps': [
+                        ('scaler', StandardScaler, {}),
+                        ('pca', PCA, {
+                            'n_components': 145,
+                            'whiten': False,
+                            'random_state': 42
+                        })
+                    ]
+                },
+                'diff': {
+                    'processor': 'Pipeline',
+                    'steps': [
+                        ('scaler', StandardScaler, {}),
+                        ('pca', PCA, {
+                            'n_components': 145,
+                            'whiten': False,
+                            'random_state': 42
+                        })
+                    ]
+                },
             },
         },
     )
@@ -296,15 +311,17 @@ class ESCT(Experiment, Enum):
         },
         pre_processor_kwargs={
             'forberg_features': {
-                'processor': 'Pipeline',
-                'steps': [
-                    ('scaler', StandardScaler, {}),
-                    ('pca', PCA, {
-                        'n_components': 2,
-                        'whiten': False,
-                        'random_state': 42
-                    })
-                ]
+                'ecg_0': {
+                    'processor': 'Pipeline',
+                    'steps': [
+                        ('scaler', StandardScaler, {}),
+                        ('pca', PCA, {
+                            'n_components': 2,
+                            'whiten': False,
+                            'random_state': 42
+                        })
+                    ]
+                }
             },
             'flat_features': {
                 'processor': StandardScaler,
@@ -324,15 +341,28 @@ class ESCT(Experiment, Enum):
         },
         pre_processor_kwargs={
             'forberg_features': {
-                'processor': 'Pipeline',
-                'steps': [
-                    ('scaler', StandardScaler, {}),
-                    ('pca', PCA, {
-                        'n_components': 5,
-                        'whiten': False,
-                        'random_state': 42
-                    })
-                ]
+                'ecg_0': {
+                    'processor': 'Pipeline',
+                    'steps': [
+                        ('scaler', StandardScaler, {}),
+                        ('pca', PCA, {
+                            'n_components': 5,
+                            'whiten': False,
+                            'random_state': 42
+                        })
+                    ]
+                },
+                'diff': {
+                    'processor': 'Pipeline',
+                    'steps': [
+                        ('scaler', StandardScaler, {}),
+                        ('pca', PCA, {
+                            'n_components': 5,
+                            'whiten': False,
+                            'random_state': 42
+                        })
+                    ]
+                }
             },
             'flat_features': {
                 'processor': StandardScaler,

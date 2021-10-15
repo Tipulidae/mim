@@ -79,24 +79,44 @@ class EscTrop(Extractor):
             f0 = make_forberg_features(ecg_features.ecg_0)
             f1 = make_forberg_features(ecg_features.ecg_1)
             diff = (f1 - f0)
-            f0.columns += '_ecg_0'
-            f1.columns += '_ecg_1'
-            diff.columns += '_diff'
-
-            forberg_features = []
+            # f0.columns += '_ecg_0'
+            # f1.columns += '_ecg_1'
+            # diff.columns += '_diff'
+            forberg_dict = {}
             if 'ecg_0' in self.features['forberg']:
-                forberg_features.append(f0)
+                forberg_dict['ecg_0'] = Data(
+                    f0.values,
+                    columns=list(f0.columns)
+                )
             if 'ecg_1' in self.features['forberg']:
-                forberg_features.append(f1)
+                forberg_dict['ecg_1'] = Data(
+                    f1.values,
+                    columns=list(f1.columns)
+                )
             if 'diff' in self.features['forberg']:
-                forberg_features.append(diff)
-
-            forberg = pd.concat(forberg_features, axis=1)
-            # flat_data.append(forberg.values)
-            x_dict['forberg_features'] = Data(
-                forberg.values,
-                columns=list(forberg.columns)
+                forberg_dict['diff'] = Data(
+                    diff.values,
+                    columns=list(diff.columns)
+                )
+            x_dict['forberg_features'] = Container(
+                forberg_dict,
+                columns=list(self.features['forberg'])
             )
+
+            # forberg_features = []
+            # if 'ecg_0' in self.features['forberg']:
+            #     forberg_features.append(f0)
+            # if 'ecg_1' in self.features['forberg']:
+            #     forberg_features.append(f1)
+            # if 'diff' in self.features['forberg']:
+            #     forberg_features.append(diff)
+            #
+            # forberg = pd.concat(forberg_features, axis=1)
+            # # flat_data.append(forberg.values)
+            # x_dict['forberg_features'] = Data(
+            #     forberg.values,
+            #     columns=list(forberg.columns)
+            # )
             # cols.extend(list(forberg.columns))
 
         # if len(flat_data) > 0:

@@ -3,12 +3,14 @@ from typing import NamedTuple, Any
 
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
+from sklearn.preprocessing import StandardScaler
 
 import mim.experiments.hyper_parameter as hp
 from mim.experiments.experiments import Experiment
 from mim.experiments.search_strategies import Hyperband, RandomSearch
-from mim.models.simple_nn import ecg_cnn, pretrained_resnet
+from mim.models.simple_nn import ecg_cnn, pretrained_resnet, ffnn
 from mim.extractors.esc_trop import EscTrop
+from mim.extractors.extractor import sklearn_process
 from mim.cross_validation import ChronologicalSplit
 from mim.util.logs import get_logger
 from mim.util.util import callable_to_string
@@ -637,16 +639,22 @@ class HyperSearch(HyperExperiment, Enum):
                     } for num_layers in [1, 2]
                 ]),
                 'ecg_combiner': hp.Choice(['concatenate', 'difference']),
-                'ecg_comb_ffnn_kwargs': None,
-                'flat_ffnn_kwargs': None,
-                'final_ffnn_kwargs': hp.Choice([
+                'ecg_comb_ffnn_kwargs': hp.Choice([
+                    None,
                     {
-                        'sizes': hp.Choices([10, 20], k=1),
+                        'sizes': [10],
                         'dropouts': hp.Choices(
                             [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], k=1),
                         'batch_norms': [False],
                     }
                 ]),
+                'flat_ffnn_kwargs': None,
+                'final_ffnn_kwargs': {
+                    'sizes': [10],
+                    'dropouts': hp.Choices(
+                        [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], k=1),
+                    'batch_norms': [False],
+                },
             },
             extractor=EscTrop,
             extractor_kwargs={
@@ -663,12 +671,19 @@ class HyperSearch(HyperExperiment, Enum):
             optimizer={
                 'name': Adam,
                 'kwargs': {
-                    'learning_rate': hp.Choice([
-                        3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5
-                    ])
+                    'learning_rate': {
+                        'scheduler': PiecewiseConstantDecay,
+                        'scheduler_kwargs': {
+                            'boundaries': [305 * 5],
+                            'values': [
+                                1e-3,
+                                hp.Choice([1e-3, 3e-4, 1e-4, 3e-5, 1e-5])
+                            ],
+                        }
+                    },
                 }
             },
-            epochs=50,
+            epochs=100,
             batch_size=32,
             cv=ChronologicalSplit,
             cv_kwargs={
@@ -685,3 +700,92 @@ class HyperSearch(HyperExperiment, Enum):
             'iterations': 400
         },
     )
+
+    M_F1_FF_CNN_RS = HyperExperiment(
+        template=Experiment(
+            description="Random search for pretrained resnet using 1 ECG + "
+                        "flat-features. Search space is over ffnn parameters "
+                        "following the flatten layer of the resnet. ",
+            model=ffnn,
+            model_kwargs={
+                'ecg_ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [25, 50, 100, 200],
+                            k=num_layers,
+                            ascending=False,
+                        ),
+                        'dropouts': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers
+                        ),
+                        'batch_norms': hp.Choices(
+                            [True, False],
+                            k=num_layers
+                        ),
+                        'activity_regularizers': hp.Choices(
+                            [0.01, 0.001, 0.0001, 0.00001, 0.0],
+                            k=num_layers
+                        ),
+                        'kernel_regularizers': hp.Choices(
+                            [0.1, 0.01, 0.001, 0.0001, 0.0],
+                            k=num_layers
+                        ),
+                        'bias_regularizers': hp.Choices(
+                            [0.1, 0.01, 0.001, 0.0001, 0.0],
+                            k=num_layers
+                        )
+                    } for num_layers in [1, 2]
+                ]),
+                'ecg_combiner': hp.Choice(['concatenate', 'difference']),
+                'ecg_comb_ffnn_kwargs': None,
+                'flat_ffnn_kwargs': None,
+                'final_ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': [10],
+                        'dropouts': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], k=1),
+                        'batch_norms': [False],
+                    }
+                ]),
+            },
+            extractor=EscTrop,
+            extractor_kwargs={
+                'features': {
+                    'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt'],
+                    'forberg': ['ecg_0']
+                },
+            },
+            pre_processor=sklearn_process,
+            pre_processor_kwargs={
+                'flat_features': {'processor': StandardScaler},
+                'forberg_features': {'processor': StandardScaler},
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5
+                    ])
+                }
+            },
+            epochs=200,
+            batch_size=64,
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 1 / 3
+            },
+            building_model_requires_development_data=True,
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            random_state=hp.Int(0, 1000000000),
+        ),
+        random_seed=44,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 400
+        },
+    )
+    # M_F2_FF_CNN_RS = HyperExperiment(
+    # M_F1_CNN_RS
+    # M_F2_CNN_RS

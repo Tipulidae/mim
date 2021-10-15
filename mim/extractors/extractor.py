@@ -273,9 +273,14 @@ def process_container(train, val, processors):
 
     for key, value in train.columns.items():
         if key in processors:
-            train_dict[key], val_dict[key] = process_data(
-                train[key], val[key], **processors[key]
-            )
+            if isinstance(value, dict):
+                train_dict[key], val_dict[key] = process_container(
+                    train[key], val[key], processors[key]
+                )
+            else:
+                train_dict[key], val_dict[key] = process_data(
+                    train[key], val[key], **processors[key]
+                )
         else:
             train_dict[key], val_dict[key] = train[key], val[key]
 
