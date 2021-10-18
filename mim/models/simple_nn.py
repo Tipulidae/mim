@@ -345,12 +345,18 @@ def ffnn(
         flat_ffnn_kwargs=None,
         final_ffnn_kwargs=None,
 ):
-    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    inp = _make_input(train['x'].shape)
     ecg_layers = []
     if 'ecg_0' in inp:
         ecg_layers.append(inp['ecg_0'])
     if 'ecg_1' in inp:
         ecg_layers.append(inp['ecg_1'])
+    if 'forberg_ecg_0' in inp:
+        ecg_layers.append(inp['forberg_ecg_0'])
+    if 'forberg_ecg_1' in inp:
+        ecg_layers.append(inp['forberg_ecg_1'])
+    if 'forberg_diff' in inp:
+        ecg_layers.append(inp['forberg_diff'])
 
     return _ecg_and_flat_feature_combiner(
         inp=inp,
@@ -362,6 +368,13 @@ def ffnn(
         final_ffnn_kwargs=final_ffnn_kwargs,
         output_size=len(train['y'].columns)
     )
+
+
+def _make_input(shape):
+    if isinstance(shape, dict):
+        return {key: _make_input(value) for key, value in shape.items()}
+    else:
+        return Input(shape=shape)
 
 
 def stack_model(model, combiner, stack_size=2):
