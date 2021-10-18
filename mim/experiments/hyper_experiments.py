@@ -1047,7 +1047,7 @@ class HyperSearch(HyperExperiment, Enum):
         },
     )
 
-    M_F1_CNN_RS = HyperExperiment(
+    M_F1_NN_RS = HyperExperiment(
         template=Experiment(
             description="Random search over simple feed-forward neural "
                         "networks, using forberg features from 1 ECG",
@@ -1141,7 +1141,7 @@ class HyperSearch(HyperExperiment, Enum):
             'iterations': 400
         },
     )
-    M_F2_CNN_RS = HyperExperiment(
+    M_F2_NN_RS = HyperExperiment(
         template=Experiment(
             description="Random search over simple feed-forward neural "
                         "networks, using forberg features from 2 ECGs.",
@@ -1236,7 +1236,7 @@ class HyperSearch(HyperExperiment, Enum):
             'iterations': 400
         },
     )
-    M_F1_FF_CNN_RS = HyperExperiment(
+    M_F1_FF_NN_RS = HyperExperiment(
         template=Experiment(
             description="Random search over simple feed-forward neural "
                         "networks, using forberg features from 1 ECG, and "
@@ -1352,7 +1352,7 @@ class HyperSearch(HyperExperiment, Enum):
             'iterations': 400
         },
     )
-    M_F2_FF_CNN_RS = HyperExperiment(
+    M_F2_FF_NN_RS = HyperExperiment(
         template=Experiment(
             description="Random search over simple feed-forward neural "
                         "networks, using forberg features from 2 ECGs, and "
