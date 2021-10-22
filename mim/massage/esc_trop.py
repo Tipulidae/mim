@@ -511,6 +511,22 @@ def _make_diagnoses_from_rikshia():
     return diagnoses
 
 
+def remove_diagnoses_outside_time_interval(
+        diags, index_visits, interval_days_start=0, interval_days_end=30):
+    # diags is a DataFrame with index Alias and columns
+    # "icd10" and "diagnosis_date". There is one row for each diagnosis,
+    # so one patient can have multiple rows.
+    diags = diags.join(index_visits)
+
+    # Calculate the time between admission and diagnosis, in days
+    dt = (diags.diagnosis_date.dt.floor('1D') -
+          diags.admission_date.dt.floor('1D'))
+    dt = dt.dt.total_seconds() / (3600 * 24)
+
+    # Keep only the rows within the specified interval.
+    return diags[(dt >= interval_days_start) & (dt <= interval_days_end)]
+
+
 def _make_mace_diagnoses(
         index_visits, icds_defining_mace=None, use_melior=True, use_sos=True,
         use_hia=True, use_dors=True):
@@ -519,21 +535,6 @@ def _make_mace_diagnoses(
 
     assert any([use_melior, use_sos, use_hia])
 
-    def remove_diagnoses_outside_time_interval(
-            diags, interval_days_start=0, interval_days_end=30):
-        # diags is a DataFrame with index Alias and columns
-        # "icd10" and "diagnosis_date". There is one row for each diagnosis,
-        # so one patient can have multiple rows.
-        diags = diags.join(index_visits)
-
-        # Calculate the time between admission and diagnosis, in days
-        dt = (diags.diagnosis_date.dt.floor('1D') -
-              diags.admission_date.dt.floor('1D'))
-        dt = dt.dt.total_seconds() / (3600 * 24)
-
-        # Keep only the rows within the specified interval.
-        return diags[(dt >= interval_days_start) & (dt <= interval_days_end)]
-
     diagnose_sources = []
 
     if use_melior:
@@ -541,18 +542,22 @@ def _make_mace_diagnoses(
             "ESC_TROP_Diagnoser_InkluderadeIndexBesök_2017_2018.csv")
         after = _make_diagnoses(
            "ESC_TROP_Diagnoser_EfterInkluderadeIndexBesök_2017_2018.csv")
-        diagnose_sources.append(remove_diagnoses_outside_time_interval(during))
-        diagnose_sources.append(remove_diagnoses_outside_time_interval(after))
+        diagnose_sources.append(
+            remove_diagnoses_outside_time_interval(during, index_visits))
+        diagnose_sources.append(
+            remove_diagnoses_outside_time_interval(after, index_visits))
 
     if use_sos:
         diagnose_sources.append(
-            remove_diagnoses_outside_time_interval(_make_diagnoses_from_sos())
+            remove_diagnoses_outside_time_interval(
+                _make_diagnoses_from_sos(), index_visits)
         )
 
     if use_hia:
         diagnose_sources.append(
             remove_diagnoses_outside_time_interval(
-                _make_diagnoses_from_rikshia()
+                _make_diagnoses_from_rikshia(),
+                index_visits
             )
         )
     if use_dors:
@@ -566,6 +571,7 @@ def _make_mace_diagnoses(
         diagnose_sources.append(
             remove_diagnoses_outside_time_interval(
                 _make_diagnoses_from_dors(),
+                index_visits,
                 interval_days_start=-30,
                 interval_days_end=30
             )

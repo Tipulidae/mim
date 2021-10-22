@@ -14,7 +14,6 @@ from sklearn.metrics import (
 )
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from tqdm import tqdm
 
 from mim.util.logs import get_logger
 from mim.util.util import ranksort, insensitive_iglob
@@ -87,7 +86,7 @@ class Presenter:
 
     def scores(self, like='.*', auc=True, rule_in_out=False):
         results = []
-        for name, xp in tqdm(list(self._results_that_match_pattern(like))):
+        for name, xp in list(self._results_that_match_pattern(like)):
             targets, predictions = self._target_predictions(xp)
             targets = targets.values.ravel()
             predictions = predictions.values.ravel()
@@ -283,6 +282,19 @@ class Presenter:
             history = history.loc[:, 'fold 0']
 
         return history
+
+    def max_auc(self):
+        def get_max_auc(xp):
+            return self.history(
+                xp, columns=['val_auc'], folds='first'
+            ).max()[0]
+
+        auc = pd.DataFrame({
+            'final_auc': self.scores()['auc'],
+            'max_auc': {xp: get_max_auc(xp) for xp in self.results},
+        })
+        auc['overfit'] = auc.max_auc - auc.final_auc
+        return auc
 
     def plot_history(self, names, columns=None,
                      folds='first', **plot_kwargs):
