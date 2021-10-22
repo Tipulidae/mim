@@ -99,18 +99,16 @@ class ESCT(Experiment, Enum):
         },
         pre_processor=sklearn_process,
         pre_processor_kwargs={
-            'forberg_features': {
-                'ecg_0': {
-                    'processor': 'Pipeline',
-                    'steps': [
-                        ('scaler', StandardScaler, {}),
-                        ('pca', PCA, {
-                            'n_components': 100,
-                            'whiten': False,
-                            'random_state': 42
-                        })
-                    ]
-                }
+            'forberg_ecg_0': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 100,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
             }
         },
         cv=ChronologicalSplit,
@@ -127,33 +125,31 @@ class ESCT(Experiment, Enum):
             },
         },
         pre_processor_kwargs={
-            'forberg_features': {
-                'ecg_0': {
-                    'processor': 'Pipeline',
-                    'steps': [
-                        ('scaler', StandardScaler, {}),
-                        ('pca', PCA, {
-                            'n_components': 145,
-                            'whiten': False,
-                            'random_state': 42
-                        })
-                    ]
-                },
-                'diff': {
-                    'processor': 'Pipeline',
-                    'steps': [
-                        ('scaler', StandardScaler, {}),
-                        ('pca', PCA, {
-                            'n_components': 145,
-                            'whiten': False,
-                            'random_state': 42
-                        })
-                    ]
-                },
+            'forberg_ecg_0': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 145,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            },
+            'forberg_diff': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 145,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
             },
         },
     )
-    M_F1_LR2_FF = M_F1_LR2._replace(
+    M_F1_FF_LR2 = M_F1_LR2._replace(
         description='Scikit-learn logistic regression model, mace vs '
                     'features from Forberg et al. Features are normalized '
                     'and then reduced in dimension by PCA.',
@@ -164,8 +160,7 @@ class ESCT(Experiment, Enum):
             },
         },
         pre_processor_kwargs={
-            'forberg_features': {
-                'ecg_0': {
+            'forberg_ecg_0': {
                     'processor': 'Pipeline',
                     'steps': [
                         ('scaler', StandardScaler, {}),
@@ -175,14 +170,13 @@ class ESCT(Experiment, Enum):
                             'random_state': 42
                         })
                     ]
-                }
             },
             'flat_features': {
                 'processor': StandardScaler,
             }
         },
     )
-    M_F2_LR2_FF = M_F1_LR2._replace(
+    M_F2_FF_LR2 = M_F1_LR2._replace(
         description='Scikit-learn logistic regression model, mace vs '
                     'features from Forberg et al. Features are normalized '
                     'and then reduced in dimension by PCA. I tried a bunch '
@@ -194,29 +188,27 @@ class ESCT(Experiment, Enum):
             },
         },
         pre_processor_kwargs={
-            'forberg_features': {
-                'ecg_0': {
-                    'processor': 'Pipeline',
-                    'steps': [
-                        ('scaler', StandardScaler, {}),
-                        ('pca', PCA, {
-                            'n_components': 5,
-                            'whiten': False,
-                            'random_state': 42
-                        })
-                    ]
-                },
-                'diff': {
-                    'processor': 'Pipeline',
-                    'steps': [
-                        ('scaler', StandardScaler, {}),
-                        ('pca', PCA, {
-                            'n_components': 5,
-                            'whiten': False,
-                            'random_state': 42
-                        })
-                    ]
-                }
+            'forberg_ecg_0': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 5,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            },
+            'forberg_diff': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 5,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
             },
             'flat_features': {
                 'processor': StandardScaler,
