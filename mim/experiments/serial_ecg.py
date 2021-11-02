@@ -11,6 +11,7 @@ from mim.extractors.esc_trop import EscTrop
 from mim.extractors.extractor import sklearn_process
 from mim.models.simple_nn import (
     ecg_cnn,
+    ffnn,
     logistic_regression,
     logistic_regression_ab,
 )
@@ -216,7 +217,229 @@ class ESCT(Experiment, Enum):
         },
     )
 
-    # CNN1, best random-search model for 1 ECG
+    # FFNN USING FORBERG-FEATURES
+    M_F1_NN1 = Experiment(
+        description='Best iteration (xp_184) from M_F1_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.001],
+                'bias_regularizers': [0.1]
+            },
+            'ecg_combiner': None,
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [False],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.001]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'forberg': ['ecg_0']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'forberg_ecg_0': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0001,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_F2_NN2 = Experiment(
+        description='Best iteration (xp_324) from M_F2_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [200],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.0001],
+                'bias_regularizers': [0.01]
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.0],
+                'batch_norms': [False],
+                'activity_regularizers': [0.001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.0]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'forberg': ['ecg_0', 'ecg_1']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'forberg_ecg_0': {'processor': StandardScaler},
+            'forberg_ecg_1': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0001,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_F1_FF_NN3 = Experiment(
+        description='Best iteration (xp_353) from M_F1_FF_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.2],
+                'batch_norms': [True],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.001]
+            },
+            'ecg_combiner': None,
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.001],
+                'bias_regularizers': [0.0]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.01]
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt'],
+                'forberg': ['ecg_0']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'flat_features': {'processor': StandardScaler},
+            'forberg_ecg_0': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0003,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_F2_FF_NN4 = Experiment(
+        description='Best iteration (xp_224) from M_F2_FF_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [25],
+                'dropouts': [0.3],
+                'batch_norms': [True],
+                'activity_regularizers': [0.001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.1]
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.1]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.0],
+                'kernel_regularizers': [0.0],
+                'bias_regularizers': [0.001]
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt'],
+                'forberg': ['ecg_0', 'ecg_1']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'flat_features': {'processor': StandardScaler},
+            'forberg_ecg_0': {'processor': StandardScaler},
+            'forberg_ecg_1': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0003,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+
+    # CNN1, (2nd) best random-search model for 1 ECG
     M_R1_CNN1 = Experiment(
         description='Uses xp_210 from M_R1_CNN_RS, which was the second '
                     'best in terms of AUC, but looked better than the best '
@@ -267,7 +490,35 @@ class ESCT(Experiment, Enum):
         loss='binary_crossentropy',
         scoring=roc_auc_score,
     )
-
+    M_R1_CNN1b = M_R1_CNN1._replace(
+        description='Replaces the final layer with something smaller.',
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'down_sample': True,
+                'dropouts': [0.5, 0.4],
+                'pool_size': 15,
+                'filter_first': 28,
+                'filter_last': 8,
+                'kernel_first': 61,
+                'kernel_last': 17,
+                'batch_norms': [False, False],
+                'weight_decays': [0.0, 0.01],
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.4],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
+        },
+    )
     # CNN2, best random-search model for 2 ECGs
     M_R2_CNN2 = Experiment(
         description='Uses xp_26 from M_R2_CNN_RS, which was best in terms '
@@ -309,7 +560,7 @@ class ESCT(Experiment, Enum):
         },
         optimizer={
             'name': Adam,
-            'kwargs': {'learning_rate': 0.0001}
+            'kwargs': {'learning_rate': 0.00001}
         },
         epochs=200,
         batch_size=64,
@@ -535,7 +786,7 @@ class ESCT(Experiment, Enum):
     )
 
     # CNN5, second best random-search model for 1 ECG + ff
-    M_FF_R1_CNN5 = Experiment(
+    M_R1_FF_CNN5 = Experiment(
         description='Uses xp_382 from M_R1_FF_CNN_RS, which was the second '
                     'best in terms of both AUC and rule-out. ',
         model=ecg_cnn,
@@ -684,6 +935,58 @@ class ESCT(Experiment, Enum):
         batch_size=64,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # CNN7, best random-search model for 1 ECG
+    M_R1_CNN7 = Experiment(
+        description='Uses xp_261 from M_R1_CNN_RS, which was the '
+                    'best in terms of AUC, but learning curve might have '
+                    'been a fluke. Testing it here anyway to be sure.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 3,
+                'down_sample': True,
+                'dropouts': [0.3, 0.4, 0.3],
+                'pool_size': 10,
+                'filter_first': 36,
+                'filter_last': 32,
+                'kernel_first': 49,
+                'kernel_last': 37,
+                'batch_norms': [True, False, True],
+                'weight_decays': [0.001, 0.001, 0.01],
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.001}
+        },
+        epochs=200,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
         building_model_requires_development_data=True,
         loss='binary_crossentropy',
         scoring=roc_auc_score,

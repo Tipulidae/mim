@@ -181,7 +181,6 @@ class HyperSearch(HyperExperiment, Enum):
             'iterations': 500
         },
     )
-
     AMI_R1_CNN_HB = HyperExperiment(
         template=Experiment(
             description="Try to find good settings for predicting AMI using "
