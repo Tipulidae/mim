@@ -48,7 +48,7 @@ class ESCT(Experiment, Enum):
         extractor=EscTrop,
         extractor_kwargs={
             "features": {
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
             },
         },
         pre_processor=sklearn_process,
@@ -67,7 +67,7 @@ class ESCT(Experiment, Enum):
         extractor=EscTrop,
         extractor_kwargs={
             "features": {
-                'flat_features': ['log_tnt_1', "age", "male", "log_dt"]
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
             },
         },
         epochs=300,
