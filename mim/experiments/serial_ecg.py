@@ -548,6 +548,11 @@ class ESCT(Experiment, Enum):
         loss='binary_crossentropy',
         scoring=roc_auc_score,
     )
+    M_R2_CNN2b = M_R2_CNN2._replace(
+        description='Changes the random state to the exact same as in the '
+                    'RS experiment...',
+        random_state=634181651
+    )
 
     # CNN3, best random-search model for 1 ECG + flat-features
     M_R1_CNN3 = Experiment(
