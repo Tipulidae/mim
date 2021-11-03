@@ -482,7 +482,7 @@ class ESCT(Experiment, Enum):
             'name': Adam,
             'kwargs': {'learning_rate': 0.0001}
         },
-        epochs=200,
+        epochs=100,
         batch_size=64,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
@@ -562,7 +562,7 @@ class ESCT(Experiment, Enum):
             'name': Adam,
             'kwargs': {'learning_rate': 0.00001}
         },
-        epochs=200,
+        epochs=100,
         batch_size=64,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
@@ -615,7 +615,7 @@ class ESCT(Experiment, Enum):
             'name': Adam,
             'kwargs': {'learning_rate': 0.001}
         },
-        epochs=200,
+        epochs=100,
         batch_size=64,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1/3},
@@ -699,7 +699,7 @@ class ESCT(Experiment, Enum):
             'name': Adam,
             'kwargs': {'learning_rate': 0.001}
         },
-        epochs=200,
+        epochs=100,
         batch_size=64,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1/3},
@@ -776,7 +776,7 @@ class ESCT(Experiment, Enum):
             'name': Adam,
             'kwargs': {'learning_rate': 0.001}
         },
-        epochs=200,
+        epochs=100,
         batch_size=64,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1/3},
@@ -845,7 +845,7 @@ class ESCT(Experiment, Enum):
             'cnn_kwargs': {
                 'down_sample': True,
                 'num_layers': 4,
-                'dropouts': [0.3, 0.4, 0.0, 0.5, 0.3],
+                'dropouts': [0.3, 0.0, 0.5, 0.3],
                 'pool_size': 6,
                 'filter_first': 20,
                 'filter_last': 20,
@@ -854,7 +854,7 @@ class ESCT(Experiment, Enum):
                 'batch_norms': [True, False, False, False],
                 'weight_decays': [0.01, 0.001, 0.01, 0.01],
             },
-            'ecg_combiner': 'concatenate',
+            'ecg_combiner': 'difference',
             'ecg_ffnn_kwargs': None,
             'ecg_comb_ffnn_kwargs': {
                 'sizes': [20],
@@ -878,9 +878,9 @@ class ESCT(Experiment, Enum):
         },
         optimizer={
             'name': Adam,
-            'kwargs': {'learning_rate': 0.001}
+            'kwargs': {'learning_rate': 0.0003}
         },
-        epochs=200,
+        epochs=100,
         batch_size=64,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1/3},
@@ -896,7 +896,7 @@ class ESCT(Experiment, Enum):
             'cnn_kwargs': {
                 'down_sample': True,
                 'num_layers': 4,
-                'dropouts': [0.3, 0.4, 0.0, 0.5, 0.3],
+                'dropouts': [0.3, 0.0, 0.5, 0.3],
                 'pool_size': 6,
                 'filter_first': 20,
                 'filter_last': 20,
@@ -929,9 +929,9 @@ class ESCT(Experiment, Enum):
         },
         optimizer={
             'name': Adam,
-            'kwargs': {'learning_rate': 0.001}
+            'kwargs': {'learning_rate': 0.0003}
         },
-        epochs=200,
+        epochs=100,
         batch_size=64,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1/3},
@@ -983,7 +983,7 @@ class ESCT(Experiment, Enum):
             'name': Adam,
             'kwargs': {'learning_rate': 0.001}
         },
-        epochs=200,
+        epochs=100,
         batch_size=64,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
@@ -993,81 +993,314 @@ class ESCT(Experiment, Enum):
     )
 
     # ENSEMBLES
+    # NN1 ensemble
+    M_F1_NN1_r1 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1001,
+    )
+    M_F1_NN1_r2 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1002,
+    )
+    M_F1_NN1_r3 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1003,
+    )
+    M_F1_NN1_r4 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1004,
+    )
+    M_F1_NN1_r5 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1005,
+    )
+    M_F1_NN1_r6 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1006,
+    )
+    M_F1_NN1_r7 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1007,
+    )
+    M_F1_NN1_r8 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1008,
+    )
+    M_F1_NN1_r9 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1009,
+    )
+
+    # NN2 ensemble
+    M_F2_NN2_r1 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1011,
+    )
+    M_F2_NN2_r2 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1012,
+    )
+    M_F2_NN2_r3 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1013,
+    )
+    M_F2_NN2_r4 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1014,
+    )
+    M_F2_NN2_r5 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1015,
+    )
+    M_F2_NN2_r6 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1016,
+    )
+    M_F2_NN2_r7 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1017,
+    )
+    M_F2_NN2_r8 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1018,
+    )
+    M_F2_NN2_r9 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1019,
+    )
+
+    # NN3 ensemble
+    M_F1_FF_NN3_r1 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1021,
+    )
+    M_F1_FF_NN3_r2 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1022,
+    )
+    M_F1_FF_NN3_r3 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1023,
+    )
+    M_F1_FF_NN3_r4 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1024,
+    )
+    M_F1_FF_NN3_r5 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1025,
+    )
+    M_F1_FF_NN3_r6 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1026,
+    )
+    M_F1_FF_NN3_r7 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1027,
+    )
+    M_F1_FF_NN3_r8 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1028,
+    )
+    M_F1_FF_NN3_r9 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1029,
+    )
+
+    # NN4 ensemble
+    M_F2_FF_NN4_r1 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1031,
+    )
+    M_F2_FF_NN4_r2 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1032,
+    )
+    M_F2_FF_NN4_r3 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1033,
+    )
+    M_F2_FF_NN4_r4 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1034,
+    )
+    M_F2_FF_NN4_r5 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1035,
+    )
+    M_F2_FF_NN4_r6 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1036,
+    )
+    M_F2_FF_NN4_r7 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1037,
+    )
+    M_F2_FF_NN4_r8 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1038,
+    )
+    M_F2_FF_NN4_r9 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1039,
+    )
+
+    # CNN1 ensemble
+    M_R1_CNN1_r1 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1041,
+    )
+    M_R1_CNN1_r2 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1042,
+    )
+    M_R1_CNN1_r3 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1043,
+    )
+    M_R1_CNN1_r4 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1044,
+    )
+    M_R1_CNN1_r5 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1045,
+    )
+    M_R1_CNN1_r6 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1046,
+    )
+    M_R1_CNN1_r7 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1047,
+    )
+    M_R1_CNN1_r8 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1048,
+    )
+    M_R1_CNN1_r9 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1049,
+    )
+
+    # CNN2 ensemble
+    M_R2_CNN2_r1 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1051,
+    )
+    M_R2_CNN2_r2 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1052,
+    )
+    M_R2_CNN2_r3 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1053,
+    )
+    M_R2_CNN2_r4 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1054,
+    )
+    M_R2_CNN2_r5 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1055,
+    )
+    M_R2_CNN2_r6 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1056,
+    )
+    M_R2_CNN2_r7 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1057,
+    )
+    M_R2_CNN2_r8 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1058,
+    )
+    M_R2_CNN2_r9 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1059,
+    )
+
     # CNN3 ensemble
     M_R1_FF_CNN3_r1 = M_R1_FF_CNN3._replace(
         description='Same as M_R1_FF_CNN3, but with a different random seed.',
-        random_state=1000,
+        random_state=1061,
     )
     M_R1_FF_CNN3_r2 = M_R1_FF_CNN3._replace(
         description='Same as M_R1_FF_CNN3, but with a different random seed.',
-        random_state=1001,
+        random_state=1062,
     )
     M_R1_FF_CNN3_r3 = M_R1_FF_CNN3._replace(
         description='Same as M_R1_FF_CNN3, but with a different random seed.',
-        random_state=1002,
+        random_state=1063,
     )
     M_R1_FF_CNN3_r4 = M_R1_FF_CNN3._replace(
         description='Same as M_R1_FF_CNN3, but with a different random seed.',
-        random_state=1003,
+        random_state=1064,
     )
     M_R1_FF_CNN3_r5 = M_R1_FF_CNN3._replace(
         description='Same as M_R1_FF_CNN3, but with a different random seed.',
-        random_state=1004,
+        random_state=1065,
     )
     M_R1_FF_CNN3_r6 = M_R1_FF_CNN3._replace(
         description='Same as M_R1_FF_CNN3, but with a different random seed.',
-        random_state=1005,
+        random_state=1066,
     )
     M_R1_FF_CNN3_r7 = M_R1_FF_CNN3._replace(
         description='Same as M_R1_FF_CNN3, but with a different random seed.',
-        random_state=1006,
+        random_state=1067,
     )
     M_R1_FF_CNN3_r8 = M_R1_FF_CNN3._replace(
         description='Same as M_R1_FF_CNN3, but with a different random seed.',
-        random_state=1007,
+        random_state=1068,
     )
     M_R1_FF_CNN3_r9 = M_R1_FF_CNN3._replace(
         description='Same as M_R1_FF_CNN3, but with a different random seed.',
-        random_state=1008,
+        random_state=1069,
     )
 
     # CNN4 ENSEMBLE
     M_R2_FF_CNN4_r1 = M_R2_FF_CNN4._replace(
         description='Same as M_R2_FF_CNN4, but with a different random seed.',
-        random_state=1001,
+        random_state=1071,
     )
     M_R2_FF_CNN4_r2 = M_R2_FF_CNN4._replace(
         description='Same as M_R2_FF_CNN4, but with a different random seed.',
-        random_state=1002,
+        random_state=1072,
     )
     M_R2_FF_CNN4_r3 = M_R2_FF_CNN4._replace(
         description='Same as M_R2_FF_CNN4, but with a different random seed.',
-        random_state=1003,
+        random_state=1073,
     )
     M_R2_FF_CNN4_r4 = M_R2_FF_CNN4._replace(
         description='Same as M_R2_FF_CNN4, but with a different random seed.',
-        random_state=1004,
+        random_state=1074,
     )
     M_R2_FF_CNN4_r5 = M_R2_FF_CNN4._replace(
         description='Same as M_R2_FF_CNN4, but with a different random seed.',
-        random_state=1005,
+        random_state=1075,
     )
     M_R2_FF_CNN4_r6 = M_R2_FF_CNN4._replace(
         description='Same as M_R2_FF_CNN4, but with a different random seed.',
-        random_state=1006,
+        random_state=1076,
     )
     M_R2_FF_CNN4_r7 = M_R2_FF_CNN4._replace(
         description='Same as M_R2_FF_CNN4, but with a different random seed.',
-        random_state=1007,
+        random_state=1077,
     )
     M_R2_FF_CNN4_r8 = M_R2_FF_CNN4._replace(
         description='Same as M_R2_FF_CNN4, but with a different random seed.',
-        random_state=1008,
+        random_state=1078,
     )
     M_R2_FF_CNN4_r9 = M_R2_FF_CNN4._replace(
         description='Same as M_R2_FF_CNN4, but with a different random seed.',
-        random_state=1009,
+        random_state=1079,
     )
+
+    # RN1 Ensemble
+    # RN2 Ensemble
+    # RN3 Ensemble
+    # RN4 Ensemble
 
     # Anders Björkelund CNN model
     M_R1_AB1 = Experiment(
