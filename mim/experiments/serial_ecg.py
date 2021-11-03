@@ -95,12 +95,12 @@ class ESCT(Experiment, Enum):
         extractor=EscTrop,
         extractor_kwargs={
             "features": {
-                'forberg': ['ecg_0']
+                'forberg': ['ecg_0', 'combine']
             },
         },
         pre_processor=sklearn_process,
         pre_processor_kwargs={
-            'forberg_ecg_0': {
+            'forberg_features': {
                 'processor': 'Pipeline',
                 'steps': [
                     ('scaler', StandardScaler, {}),
@@ -122,22 +122,11 @@ class ESCT(Experiment, Enum):
                     'and then reduced in dimension by PCA. ',
         extractor_kwargs={
             "features": {
-                'forberg': ['ecg_0', 'diff']
+                'forberg': ['ecg_0', 'diff', 'combine']
             },
         },
         pre_processor_kwargs={
-            'forberg_ecg_0': {
-                'processor': 'Pipeline',
-                'steps': [
-                    ('scaler', StandardScaler, {}),
-                    ('pca', PCA, {
-                        'n_components': 145,
-                        'whiten': False,
-                        'random_state': 42
-                    })
-                ]
-            },
-            'forberg_diff': {
+            'forberg_features': {
                 'processor': 'Pipeline',
                 'steps': [
                     ('scaler', StandardScaler, {}),
@@ -157,20 +146,20 @@ class ESCT(Experiment, Enum):
         extractor_kwargs={
             "features": {
                 'flat_features': ['log_dt', 'age', 'male', 'log_tnt_1'],
-                'forberg': ['ecg_0']
+                'forberg': ['ecg_0', 'combine']
             },
         },
         pre_processor_kwargs={
-            'forberg_ecg_0': {
-                    'processor': 'Pipeline',
-                    'steps': [
-                        ('scaler', StandardScaler, {}),
-                        ('pca', PCA, {
-                            'n_components': 2,
-                            'whiten': False,
-                            'random_state': 42
-                        })
-                    ]
+            'forberg_features': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 2,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
             },
             'flat_features': {
                 'processor': StandardScaler,
@@ -181,26 +170,15 @@ class ESCT(Experiment, Enum):
         description='Scikit-learn logistic regression model, mace vs '
                     'features from Forberg et al. Features are normalized '
                     'and then reduced in dimension by PCA. I tried a bunch '
-                    'of settings for dimension, ~145 gave the best AUC.',
+                    'of settings for dimension, ~150 gave the best AUC.',
         extractor_kwargs={
             "features": {
                 'flat_features': ['log_dt', 'age', 'male', 'log_tnt_1'],
-                'forberg': ['ecg_0', 'diff']
+                'forberg': ['ecg_0', 'diff', 'combine']
             },
         },
         pre_processor_kwargs={
-            'forberg_ecg_0': {
-                'processor': 'Pipeline',
-                'steps': [
-                    ('scaler', StandardScaler, {}),
-                    ('pca', PCA, {
-                        'n_components': 5,
-                        'whiten': False,
-                        'random_state': 42
-                    })
-                ]
-            },
-            'forberg_diff': {
+            'forberg_features': {
                 'processor': 'Pipeline',
                 'steps': [
                     ('scaler', StandardScaler, {}),

@@ -76,21 +76,48 @@ class EscTrop(Extractor):
             f1 = make_forberg_features(ecg_features.ecg_1)
             diff = (f1 - f0)
 
-            if 'ecg_0' in self.features['forberg']:
-                x_dict['forberg_ecg_0'] = Data(
-                    f0.values,
-                    columns=list(f0.columns)
+            if 'combine' in self.features['forberg']:
+                # This is just a hack to allow the forberg-features to be
+                # combined into a single vector, rather than split into
+                # separate vectors in the Data dict. This is so that they can
+                # be pre-processed together by PCA, rather than separately.
+                # Meanwhile, I need to be able to have the features from each
+                # ECG in a separate vector for the FFNN-model to work
+                # properly, hence the switch here.
+                values = []
+                columns = []
+                if 'ecg_0' in self.features['forberg']:
+                    values.append(f0.values)
+                    columns += [f"{name}_ecg_0" for name in f0.columns]
+
+                if 'ecg_1' in self.features['forberg']:
+                    values.append(f1.values)
+                    columns += [f"{name}_ecg_0" for name in f1.columns]
+
+                if 'diff' in self.features['forberg']:
+                    values.append(f0.values)
+                    columns += [f"{name}_diff" for name in diff.columns]
+
+                x_dict['forberg_features'] = Data(
+                    np.concatenate(values, axis=1),
+                    columns=columns
                 )
-            if 'ecg_1' in self.features['forberg']:
-                x_dict['forberg_ecg_1'] = Data(
-                    f1.values,
-                    columns=list(f1.columns)
-                )
-            if 'diff' in self.features['forberg']:
-                x_dict['forberg_diff'] = Data(
-                    diff.values,
-                    columns=list(diff.columns)
-                )
+            else:
+                if 'ecg_0' in self.features['forberg']:
+                    x_dict['forberg_ecg_0'] = Data(
+                        f0.values,
+                        columns=list(f0.columns)
+                    )
+                if 'ecg_1' in self.features['forberg']:
+                    x_dict['forberg_ecg_1'] = Data(
+                        f1.values,
+                        columns=list(f1.columns)
+                    )
+                if 'diff' in self.features['forberg']:
+                    x_dict['forberg_diff'] = Data(
+                        diff.values,
+                        columns=list(diff.columns)
+                    )
 
         return x_dict
 
