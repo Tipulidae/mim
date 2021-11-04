@@ -92,10 +92,10 @@ class EscTrop(Extractor):
 
                 if 'ecg_1' in self.features['forberg']:
                     values.append(f1.values)
-                    columns += [f"{name}_ecg_0" for name in f1.columns]
+                    columns += [f"{name}_ecg_1" for name in f1.columns]
 
                 if 'diff' in self.features['forberg']:
-                    values.append(f0.values)
+                    values.append(diff.values)
                     columns += [f"{name}_diff" for name in diff.columns]
 
                 x_dict['forberg_features'] = Data(
