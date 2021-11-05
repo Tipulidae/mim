@@ -416,6 +416,66 @@ class ESCT(Experiment, Enum):
         loss='binary_crossentropy',
         metrics=['accuracy', 'auc'],
     )
+    M_F2_FF_NN5 = Experiment(
+        description='Second best iteration (xp_63) from M_F2_FF_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [200],
+                'dropouts': [0.4],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.0]
+            },
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.1],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0],
+                'kernel_regularizers': [0.001],
+                'bias_regularizers': [0.1]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.4],
+                'batch_norms': [True],
+                'activity_regularizers': [0.001],
+                'kernel_regularizers': [0.0001],
+                'bias_regularizers': [0.001]
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt'],
+                'forberg': ['ecg_0', 'ecg_1']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'flat_features': {'processor': StandardScaler},
+            'forberg_ecg_0': {'processor': StandardScaler},
+            'forberg_ecg_1': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0003,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
 
     # CNN1, (2nd) best random-search model for 1 ECG
     M_R1_CNN1 = Experiment(
@@ -1125,6 +1185,44 @@ class ESCT(Experiment, Enum):
     )
     M_F2_FF_NN4_r9 = M_F2_FF_NN4._replace(
         description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1039,
+    )
+
+    # NN5 ensemble (2nd best on 2ECGs + ff)
+    M_F2_FF_NN5_r1 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1031,
+    )
+    M_F2_FF_NN5_r2 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1032,
+    )
+    M_F2_FF_NN5_r3 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1033,
+    )
+    M_F2_FF_NN5_r4 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1034,
+    )
+    M_F2_FF_NN5_r5 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1035,
+    )
+    M_F2_FF_NN5_r6 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1036,
+    )
+    M_F2_FF_NN5_r7 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1037,
+    )
+    M_F2_FF_NN5_r8 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1038,
+    )
+    M_F2_FF_NN5_r9 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
         random_state=1039,
     )
 
