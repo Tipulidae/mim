@@ -477,7 +477,7 @@ class ESCT(Experiment, Enum):
         metrics=['accuracy', 'auc'],
     )
     M_F2_FF_NN6 = Experiment(
-        description='Second best iteration (xp_208) from M_F2_FF_NN_RS',
+        description='Third best iteration (xp_208) from M_F2_FF_NN_RS',
         model=ffnn,
         model_kwargs={
             'ecg_ffnn_kwargs': {
