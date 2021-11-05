@@ -342,10 +342,12 @@ def process_data(train, val, processor, **kwargs):
         [train_data[:, cat], p.transform(train_data[:, num])],
         axis=1
     )
+    new_columns = np.array(train.columns)
+    new_columns = list(new_columns[cat]) + list(new_columns[num])
 
     new_train = Data(
         new_train_data,
-        columns=train.columns,
+        columns=new_columns,
         index=train.index,
         dtype=train.dtype,
         fits_in_memory=train.fits_in_memory,
@@ -361,7 +363,7 @@ def process_data(train, val, processor, **kwargs):
 
     new_val = Data(
         new_val_data,
-        columns=val.columns,
+        columns=new_columns,
         index=val.index,
         dtype=val.dtype,
         fits_in_memory=val.fits_in_memory,
