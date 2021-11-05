@@ -345,6 +345,7 @@ def process_data(train, val, processor, **kwargs):
 
     new_train = Data(
         new_train_data,
+        columns=train.columns,
         index=train.index,
         dtype=train.dtype,
         fits_in_memory=train.fits_in_memory,
@@ -360,6 +361,7 @@ def process_data(train, val, processor, **kwargs):
 
     new_val = Data(
         new_val_data,
+        columns=val.columns,
         index=val.index,
         dtype=val.dtype,
         fits_in_memory=val.fits_in_memory,
