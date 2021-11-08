@@ -673,7 +673,7 @@ class HyperSearch(HyperExperiment, Enum):
                     'learning_rate': {
                         'scheduler': PiecewiseConstantDecay,
                         'scheduler_kwargs': {
-                            'boundaries': [hp.Int(1525, 15250, step=305)],
+                            'boundaries': [hp.Int(1525, 7625, step=305)],
                             'values': hp.SortedChoices(
                                 [3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5],
                                 k=2, ascending=False
@@ -682,7 +682,7 @@ class HyperSearch(HyperExperiment, Enum):
                     },
                 }
             },
-            epochs=100,
+            epochs=50,
             batch_size=32,
             cv=ChronologicalSplit,
             cv_kwargs={
@@ -696,7 +696,7 @@ class HyperSearch(HyperExperiment, Enum):
         random_seed=46,
         strategy=RandomSearch,
         strategy_kwargs={
-            'iterations': 400
+            'iterations': 200
         },
     )
     M_R2_RN_RS = HyperExperiment(
@@ -775,7 +775,7 @@ class HyperSearch(HyperExperiment, Enum):
                     'learning_rate': {
                         'scheduler': PiecewiseConstantDecay,
                         'scheduler_kwargs': {
-                            'boundaries': [hp.Int(1525, 15250, step=305)],
+                            'boundaries': [hp.Int(1525, 7625, step=305)],
                             'values': hp.SortedChoices(
                                 [3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5],
                                 k=2, ascending=False
@@ -784,7 +784,7 @@ class HyperSearch(HyperExperiment, Enum):
                     },
                 }
             },
-            epochs=100,
+            epochs=50,
             batch_size=32,
             cv=ChronologicalSplit,
             cv_kwargs={
@@ -798,7 +798,7 @@ class HyperSearch(HyperExperiment, Enum):
         random_seed=47,
         strategy=RandomSearch,
         strategy_kwargs={
-            'iterations': 400
+            'iterations': 200
         },
     )
     M_R1_FF_RN_RS = HyperExperiment(
@@ -897,7 +897,7 @@ class HyperSearch(HyperExperiment, Enum):
                     'learning_rate': {
                         'scheduler': PiecewiseConstantDecay,
                         'scheduler_kwargs': {
-                            'boundaries': [hp.Int(1525, 15250, step=305)],
+                            'boundaries': [hp.Int(1525, 7625, step=305)],
                             'values': hp.SortedChoices(
                                 [3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5],
                                 k=2, ascending=False
@@ -906,7 +906,7 @@ class HyperSearch(HyperExperiment, Enum):
                     },
                 }
             },
-            epochs=100,
+            epochs=50,
             batch_size=32,
             cv=ChronologicalSplit,
             cv_kwargs={
@@ -920,7 +920,7 @@ class HyperSearch(HyperExperiment, Enum):
         random_seed=48,
         strategy=RandomSearch,
         strategy_kwargs={
-            'iterations': 400
+            'iterations': 200
         },
     )
     M_R2_FF_RN_RS = HyperExperiment(
@@ -1019,7 +1019,7 @@ class HyperSearch(HyperExperiment, Enum):
                     'learning_rate': {
                         'scheduler': PiecewiseConstantDecay,
                         'scheduler_kwargs': {
-                            'boundaries': [hp.Int(1525, 15250, step=305)],
+                            'boundaries': [hp.Int(1525, 7625, step=305)],
                             'values': hp.SortedChoices(
                                 [3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5],
                                 k=2, ascending=False
@@ -1028,7 +1028,7 @@ class HyperSearch(HyperExperiment, Enum):
                     },
                 }
             },
-            epochs=100,
+            epochs=50,
             batch_size=32,
             cv=ChronologicalSplit,
             cv_kwargs={
@@ -1042,7 +1042,7 @@ class HyperSearch(HyperExperiment, Enum):
         random_seed=49,
         strategy=RandomSearch,
         strategy_kwargs={
-            'iterations': 400
+            'iterations': 200
         },
     )
 
