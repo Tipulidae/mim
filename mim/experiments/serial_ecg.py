@@ -1187,10 +1187,12 @@ class ESCT(Experiment, Enum):
         optimizer={
             'name': Adam,
             'kwargs': {
-                'scheduler': PiecewiseConstantDecay,
-                'scheduler_kwargs': {
-                    'boundaries': [6100],
-                    'values': [0.001, 0.0001]
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [6100],
+                        'values': [0.001, 0.0001]
+                    }
                 }
             }
         },
