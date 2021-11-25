@@ -1138,7 +1138,7 @@ class ESCT(Experiment, Enum):
             'name': Adam,
             'kwargs': {'learning_rate': 0.0003}
         },
-        epochs=100,
+        epochs=50,
         batch_size=32,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
@@ -1149,26 +1149,26 @@ class ESCT(Experiment, Enum):
 
     # RN2, 2 ECGs
     M_R2_RN2 = Experiment(
-        description='xp_144 from R1_RN_RS',
+        description='xp_133 from R1_RN_RS, 2nd best model.',
         model=pretrained_resnet,
         model_kwargs={
             'freeze_resnet': False,
             'ecg_ffnn_kwargs': {
                 'sizes': [200, 50],
-                'dropouts': [0.3, 0.0],
-                'batch_norms': [False, True],
-                'activity_regularizers': [0.0, 0.0],
-                'kernel_regularizers': [0.1, 0.01],
-                'bias_regularizers': [0.1, 0.0001]
+                'dropouts': [0.2, 0.0],
+                'batch_norms': [False, False],
+                'activity_regularizers': [0.001, 0.00001],
+                'kernel_regularizers': [0.01, 0.01],
+                'bias_regularizers': [0.01, 0.001]
             },
             'ecg_combiner': 'difference',
             'ecg_comb_ffnn_kwargs': {
-                'sizes': [6],
-                'dropouts': [0.0],
+                'sizes': [20],
+                'dropouts': [0.3],
                 'batch_norms': [False],
-                'activity_regularizers': [0.0],
+                'activity_regularizers': [0.00001],
                 'kernel_regularizers': [0.01],
-                'bias_regularizers': [0.0]
+                'bias_regularizers': [0.01]
             },
             'flat_ffnn_kwargs': None,
             'final_ffnn_kwargs': None,
@@ -1190,13 +1190,13 @@ class ESCT(Experiment, Enum):
                 'learning_rate': {
                     'scheduler': PiecewiseConstantDecay,
                     'scheduler_kwargs': {
-                        'boundaries': [6100],
-                        'values': [0.001, 0.0001]
+                        'boundaries': [5490],
+                        'values': [0.001, 0.00001]
                     }
                 }
             }
         },
-        epochs=100,
+        epochs=50,
         batch_size=32,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
@@ -1204,8 +1204,138 @@ class ESCT(Experiment, Enum):
         loss='binary_crossentropy',
         scoring=roc_auc_score,
     )
+
     # RN3, 1 ECG+ff
+    M_R1_FF_RN3 = Experiment(
+        description='xp_166 from R1_FF_RN_RS, 2nd best model',
+        model=pretrained_resnet,
+        model_kwargs={
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.5],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.0],
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.0],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.1]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.2],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.0],
+                'bias_regularizers': [0.0001],
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [7320],
+                        'values': [0.0003, 0.00003]
+                    }
+                },
+            }
+        },
+        epochs=50,
+        batch_size=32,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
     # RN4, 2 ECGs+ff
+    M_R2_FF_RN4 = Experiment(
+        description='xp_24 from R2_FF_RN_RS',
+        model=pretrained_resnet,
+        model_kwargs={
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': {
+                'sizes': [25],
+                'dropouts': [0.2],
+                'batch_norms': [False],
+                'activity_regularizers': [0.01],
+                'kernel_regularizers': [0.001],
+                'bias_regularizers': [0.001]
+            },
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.0],
+                'batch_norms': [False],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.0001],
+                'bias_regularizers': [0.0001]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.2],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0],
+                'kernel_regularizers': [0.0001],
+                'bias_regularizers': [0.01],
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [10065],
+                        'values': [0.003, 0.00001]
+                    }
+                },
+            }
+        },
+        epochs=50,
+        batch_size=32,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
 
     # ENSEMBLES
     # NN1 ensemble
