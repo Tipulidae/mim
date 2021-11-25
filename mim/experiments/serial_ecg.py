@@ -1,6 +1,7 @@
 from enum import Enum
 
 from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
 from sklearn.metrics import roc_auc_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
@@ -14,6 +15,7 @@ from mim.models.simple_nn import (
     ffnn,
     logistic_regression,
     logistic_regression_ab,
+    pretrained_resnet
 )
 from mim.cross_validation import ChronologicalSplit
 
@@ -1094,6 +1096,114 @@ class ESCT(Experiment, Enum):
         loss='binary_crossentropy',
         scoring=roc_auc_score,
     )
+
+    # RN1, 1 ECG
+    M_R1_RN1 = Experiment(
+        description='xp_141 from R1_RN_RS',
+        model=pretrained_resnet,
+        model_kwargs={
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': {
+                'sizes': [200, 100],
+                'dropouts': [0.0, 0.1],
+                'batch_norms': [False, True],
+                'activity_regularizers': [0.0, 0.0001],
+                'kernel_regularizers': [0.01, 0.0],
+                'bias_regularizers': [0.0001, 0.1]
+            },
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.0],
+                'batch_norms': [False],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.001]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.0003}
+        },
+        epochs=100,
+        batch_size=32,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # RN2, 2 ECGs
+    M_R2_RN2 = Experiment(
+        description='xp_144 from R1_RN_RS',
+        model=pretrained_resnet,
+        model_kwargs={
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': {
+                'sizes': [200, 50],
+                'dropouts': [0.3, 0.0],
+                'batch_norms': [False, True],
+                'activity_regularizers': [0.0, 0.0],
+                'kernel_regularizers': [0.1, 0.01],
+                'bias_regularizers': [0.1, 0.0001]
+            },
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.0],
+                'batch_norms': [False],
+                'activity_regularizers': [0.0],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.0]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'scheduler': PiecewiseConstantDecay,
+                'scheduler_kwargs': {
+                    'boundaries': [6100],
+                    'values': [0.001, 0.0001]
+                }
+            }
+        },
+        epochs=100,
+        batch_size=32,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+    # RN3, 1 ECG+ff
+    # RN4, 2 ECGs+ff
 
     # ENSEMBLES
     # NN1 ensemble
