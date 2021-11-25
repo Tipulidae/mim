@@ -1,4 +1,5 @@
 import argparse
+import re
 
 from .factory import experiment_from_name
 from mim.util.logs import get_logger
@@ -62,6 +63,10 @@ if __name__ == '__main__':
         help='comma separated list of experiments to run (if not specified, '
              'run all experiments)',
     )
+    parser.add_argument(
+        '-p', '--pattern',
+        help='run experiments that matches the given pattern',
+    )
 
     args = parser.parse_args()
 
@@ -73,6 +78,12 @@ if __name__ == '__main__':
         base = experiment_from_name(args.base)
         xps_to_consider = [base[xp_name.strip()] for xp_name in
                            args.xps.split(',')]
+    elif args.pattern:
+        p = re.compile(args.pattern)
+        xps_to_consider = list(filter(
+            lambda xp: p.match(xp.name),
+            list(experiment_from_name(args.base))
+        ))
     else:
         xps_to_consider = list(experiment_from_name(args.base))
 
