@@ -338,14 +338,17 @@ def make_troponin_table():
     return r
 
 
-def make_double_ecg_features(index):
+def make_double_ecg_features(index, include_delta_t=False):
     ecg = _make_double_ecg(index)
     ecg = index.join(ecg)
     ecg['delta_t'] = (ecg.admission_date - ecg.ecg_date_1).dt.total_seconds()
     ecg.delta_t /= 24 * 3600
     ecg['log_dt'] = (np.log10(ecg.delta_t) - 2.5) / 2  # Normalizing
 
-    return ecg[['ecg_0', 'ecg_1', 'log_dt']]
+    features = ['ecg_0', 'ecg_1', 'log_dt']
+    if include_delta_t:
+        features.append('delta_t')
+    return ecg[features]
 
 
 def _read_esc_trop_csv(name, **kwargs):
