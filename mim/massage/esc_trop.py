@@ -195,7 +195,7 @@ def make_ecg_table():
         return table
 
 
-def _make_double_ecg(index):
+def _make_double_ecg(index, seconds_before=-3600, seconds_after=7200):
     ecg = (
         make_ecg_table()
         .rename_axis('ecg')
@@ -208,9 +208,9 @@ def _make_double_ecg(index):
     dt = (ecg.ecg_date - ecg.admission_date).dt.total_seconds()
     ecg = ecg[['Alias', 'ecg', 'ecg_date']]
 
-    before = ecg.loc[(dt > -3600) & (dt < 0), :].drop_duplicates(
+    before = ecg.loc[(dt > -seconds_before) & (dt < 0), :].drop_duplicates(
         subset=['Alias'], keep='last')
-    after = ecg.loc[(dt >= 0) & (dt < 2*3600), :].drop_duplicates(
+    after = ecg.loc[(dt >= 0) & (dt < seconds_after), :].drop_duplicates(
         subset=['Alias'], keep='first')
 
     ecg_0 = (
@@ -832,3 +832,182 @@ def _make_index_stemi():
     hia = hia.set_index('Alias')
 
     return hia.loc[hia.INFARCTTYPE == 'STEMI', 'stemi_date']
+
+
+def make_dataframe_for_anders():
+    """
+    Creates a dataframe with Alias as index, and one column each for glucose,
+    creatinine, troponin and hemoglobin. Each lab-value is the first valid
+    index-measurement for each patient. Drops all patients where any lab
+    value is missing.
+
+    The first valid lab-value will be used, assuming there is one, within
+    a specific time limit.
+    :return:
+    """
+    # Create the index, to associate KontaktId with Alias
+    # And also grab admission date, age and sex while we're at it
+    log.debug("Reading from 'liggaren'")
+    index_colmap = {
+        'KontaktId': 'ed_id',
+        'Alias': 'Alias',
+        'Vardkontakt_InskrivningDatum': 'admission_date',
+        'Kön': 'male',
+        'Ålder vid inklusion': 'age',
+        'BesokOrsakId': 'cause'
+    }
+
+    index = _read_esc_trop_csv(
+        'ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv',
+        usecols=index_colmap.keys()
+    ).rename(columns=index_colmap)
+
+    index.admission_date = pd.to_datetime(
+        index.admission_date, format="%Y-%m-%d %H:%M:%S.%f")
+    index = index.sort_values(by=['admission_date', 'ed_id'])
+    index = index.drop_duplicates(subset=['Alias'], keep='first')
+    index.male = index.male.apply(lambda x: 1 if x == 'M' else 0)
+
+    index = index.dropna(subset=['cause']).drop(columns=['cause'])
+    log.debug(f"{len(index)} unique chest-pain patients")
+
+    # Load all lab-values from the index visit
+    log.debug("Reading from lab-values")
+    lab_colmap = {
+        'KontaktId': 'ed_id',
+        'Analyssvar_ProvtagningDatum': 'lab_date',
+        'Labanalys_Namn': 'lab_name',
+        'Analyssvar_Varde': 'value'
+    }
+    lab = _read_esc_trop_csv(
+        'ESC_TROP_LabAnalysSvar_InkluderadeIndexBesök_2017_2018.csv',
+        usecols=lab_colmap.keys(),
+    )
+    lab = lab.rename(columns=lab_colmap)
+    lab.lab_date = pd.to_datetime(
+        lab.lab_date, format="%Y-%m-%d %H:%M:%S.%f")
+    lab = lab.sort_values(by=['ed_id', 'lab_date'])
+
+    # Map the KontaktId to Alias, and calculate time-difference
+    lab = lab.merge(index, left_on='ed_id', right_on='ed_id', how='inner')
+    lab['dt'] = (lab.lab_date - lab.admission_date).dt.total_seconds()
+    lab = lab.loc[:, ['Alias', 'lab_name', 'value', 'dt']]
+
+    # Extract the troponin, creatinine, hemoglobin and glucose lab-values
+    # and merge them into a single dataframe.
+    log.debug("Extracting troponin, creatinin, hemoglobin and glucose")
+    final_lab_values = pd.concat(
+        [
+            _make_lab_value(lab, 'P-Troponin', new_name='troponin',
+                            impute={'<5': 4.0}),
+            _make_lab_value(lab, 'P-Kreatini', new_name='creatinine'),
+            _make_lab_value(lab, 'B-Hemoglob', new_name='hemoglobin'),
+            _make_lab_value(lab, 'P-Glukos', new_name='glucose')
+        ],
+        axis=1
+    )
+
+    features = (
+        final_lab_values
+        .dropna(how='any')
+        .sort_index()
+        .join(index.set_index('Alias')[['male', 'age', 'admission_date']])
+    )
+    log.debug(f"{len(features)} patients with all lab-values")
+
+    log.debug("Processing ECGs")
+    ecg = _make_double_ecg(features[['admission_date']], seconds_before=3600,
+                           seconds_after=4*3600)[['ecg_0']].dropna()
+
+    # ecg is now a dataframe with Alias as index and the hdf5 index of the
+    # ECG as value in the column ecg_0. We now want to map that index to
+    # the path of the original ECG file.
+    log.debug("Retrieving ECG paths")
+    ecg = _map_ecg_index_to_paths(ecg)
+
+    features = features.join(ecg[['ecg_path']]).dropna()
+    log.debug(f"{len(features)} patients with index ECG")
+
+    log.debug("Calculating AMI/death label")
+    mace_melior = make_mace_table(
+        features[['admission_date']],
+        include_interventions=False,
+        include_deaths=True,
+        use_melior=True,
+        use_sos=False,
+        use_hia=False,
+    )
+
+    features['ami30_melior'] = (
+        mace_melior[["I21", "I22", "death"]]
+        .any(axis=1)
+        .astype(int)
+    )
+
+    mace_sos_hia = make_mace_table(
+        features[['admission_date']],
+        include_interventions=False,
+        include_deaths=True,
+        use_melior=False,
+        use_sos=True,
+        use_hia=True,
+    )
+    features['ami30_sos_hia'] = (
+        mace_sos_hia[["I21", "I22", "death"]]
+        .any(axis=1)
+        .astype(int)
+    )
+
+    return features
+
+
+def _map_ecg_index_to_paths(ecg_index):
+    ecg_index = ecg_index.sort_values(by='ecg_0')
+    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    with h5py.File(ecg_path, 'r') as ecg:
+        ecg_index['ecg_path'] = ecg['meta']['path'][ecg_index.values]
+
+    return ecg_index
+
+
+def _make_lab_value(
+        all_lab_values, lab_name, new_name=None, max_age_seconds=4*3600,
+        impute=None):
+    """
+    Given a dataframe of all lab-values, extract a specific lab-value,
+    optionally fill in some bad or missing values, convert the values to
+    numeric format, and return only the first instance of a lab-value for
+    each patient. If the age of a lab-value is above max_age_seconds, then
+    it will not be used. Returns a series with Alias as index and the
+    numeric lab-values as value. Only one value per patient.
+
+    :param all_lab_values:
+    :param lab_name:
+    :param new_name:
+    :param max_age_seconds:
+    :param impute:
+    :return:
+    """
+    matches_lab_name = all_lab_values.lab_name.str.fullmatch(lab_name)
+    lab_values = all_lab_values.loc[matches_lab_name, :]
+
+    if impute is not None:
+        for nan, imputed_value in impute.items():
+            missing_values = lab_values.value.str.match(nan)
+            lab_values.loc[missing_values, 'value'] = imputed_value
+
+    if new_name is None:
+        new_name = lab_name
+
+    lab_values.value = pd.to_numeric(lab_values.value, errors='coerce')
+    lab_values.loc[lab_values.dt > max_age_seconds, 'value'] = np.nan
+    lab_values = (
+        lab_values
+        .dropna()
+        .sort_values(by=['Alias', 'dt'])
+        .drop_duplicates(subset=['Alias'], keep='first')
+        .set_index('Alias')
+        .value
+        .rename(new_name)
+    )
+    return lab_values
