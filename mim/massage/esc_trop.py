@@ -195,7 +195,7 @@ def make_ecg_table():
         return table
 
 
-def _make_double_ecg(index, seconds_before=-3600, seconds_after=7200):
+def _make_double_ecg(index, min_age_seconds=-3600, max_age_seconds=7200):
     ecg = (
         make_ecg_table()
         .rename_axis('ecg')
@@ -208,9 +208,9 @@ def _make_double_ecg(index, seconds_before=-3600, seconds_after=7200):
     dt = (ecg.ecg_date - ecg.admission_date).dt.total_seconds()
     ecg = ecg[['Alias', 'ecg', 'ecg_date']]
 
-    before = ecg.loc[(dt > -seconds_before) & (dt < 0), :].drop_duplicates(
+    before = ecg.loc[(dt > min_age_seconds) & (dt < 0), :].drop_duplicates(
         subset=['Alias'], keep='last')
-    after = ecg.loc[(dt >= 0) & (dt < seconds_after), :].drop_duplicates(
+    after = ecg.loc[(dt >= 0) & (dt < max_age_seconds), :].drop_duplicates(
         subset=['Alias'], keep='first')
 
     ecg_0 = (
@@ -836,14 +836,23 @@ def _make_index_stemi():
 
 def make_dataframe_for_anders():
     """
-    Creates a dataframe with Alias as index, and one column each for glucose,
-    creatinine, troponin and hemoglobin. Each lab-value is the first valid
-    index-measurement for each patient. Drops all patients where any lab
-    value is missing.
+    Creates a dataframe with all the necessary data for Anders to test the
+    models for the 1-TnT article by Pontus.
 
-    The first valid lab-value will be used, assuming there is one, within
-    a specific time limit.
-    :return:
+    The dataframe has Alias as index, and contains the four lab-values
+    creatinine, glucose, hemoglobin and troponin. It also contains age, sex,
+    path to the ECG matlab file, admission date and the target (AMI or death
+    within 30 days, according to either Melior or SOS/HIA).
+
+    The lab-values uses the first valid index-measurement for each patient,
+    excluding values that are more than four hours after admission. Troponin
+    measurements marked as '<5' are replaced with 4. All other non-numeric
+    lab-values are excluded.
+
+    The ECG used is the closest in time to admission, in the interval [-1, 4]
+    hours.
+
+    Only patients with valid entries for all columns are used.
     """
     # Create the index, to associate KontaktId with Alias
     # And also grab admission date, age and sex while we're at it
@@ -915,17 +924,8 @@ def make_dataframe_for_anders():
     )
     log.debug(f"{len(features)} patients with all lab-values")
 
-    log.debug("Processing ECGs")
-    ecg = _make_double_ecg(features[['admission_date']], seconds_before=3600,
-                           seconds_after=4*3600)[['ecg_0']].dropna()
-
-    # ecg is now a dataframe with Alias as index and the hdf5 index of the
-    # ECG as value in the column ecg_0. We now want to map that index to
-    # the path of the original ECG file.
-    log.debug("Retrieving ECG paths")
-    ecg = _map_ecg_index_to_paths(ecg)
-
-    features = features.join(ecg[['ecg_path']]).dropna()
+    ecg_paths = _make_ecg_paths(features[['admission_date']])[['ecg_path']]
+    features = features.join(ecg_paths).dropna()
     log.debug(f"{len(features)} patients with index ECG")
 
     log.debug("Calculating AMI/death label")
@@ -957,17 +957,31 @@ def make_dataframe_for_anders():
         .any(axis=1)
         .astype(int)
     )
-
     return features
 
 
-def _map_ecg_index_to_paths(ecg_index):
-    ecg_index = ecg_index.sort_values(by='ecg_0')
-    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
-    with h5py.File(ecg_path, 'r') as ecg:
-        ecg_index['ecg_path'] = ecg['meta']['path'][ecg_index.values]
+def _make_ecg_paths(index):
+    """
+    Given a dataframe with Alias as index and admission_date as column,
+    return a dataframe with Alias as index and the path to the index ECG for
+    each corresponding patient.
+    """
+    log.debug("Processing ECGs")
+    ecg = _make_double_ecg(
+        index, min_age_seconds=-3600, max_age_seconds=4*3600
+    )
 
-    return ecg_index
+    # ecg is now a dataframe with Alias as index and the hdf5 index of the
+    # ECG as value in the column ecg_0. We want to map that index to
+    # the path of the original ECG file.
+    log.debug("Retrieving ECG paths")
+    ecg = ecg[['ecg_0']].dropna().sort_values(by='ecg_0')
+    hdf5_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    with h5py.File(hdf5_path, 'r') as ecg_hdf5:
+        # Important that the index (ecg.values) is sorted here, because hdf5
+        ecg['ecg_path'] = ecg_hdf5['meta']['path'][ecg.values]
+
+    return ecg
 
 
 def _make_lab_value(
