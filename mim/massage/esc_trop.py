@@ -3,6 +3,7 @@ from os.path import join
 import numpy as np
 import pandas as pd
 import h5py
+from tqdm import tqdm
 
 from mim.massage.carlson_ecg import ECGStatus
 from mim.util.logs import get_logger
@@ -194,7 +195,7 @@ def make_ecg_table():
         return table
 
 
-def _make_double_ecg(index):
+def _make_double_ecg(index, min_age_seconds=-3600, max_age_seconds=7200):
     ecg = (
         make_ecg_table()
         .rename_axis('ecg')
@@ -207,9 +208,9 @@ def _make_double_ecg(index):
     dt = (ecg.ecg_date - ecg.admission_date).dt.total_seconds()
     ecg = ecg[['Alias', 'ecg', 'ecg_date']]
 
-    before = ecg.loc[(dt > -3600) & (dt < 0), :].drop_duplicates(
+    before = ecg.loc[(dt > min_age_seconds) & (dt < 0), :].drop_duplicates(
         subset=['Alias'], keep='last')
-    after = ecg.loc[(dt >= 0) & (dt < 2*3600), :].drop_duplicates(
+    after = ecg.loc[(dt >= 0) & (dt < max_age_seconds), :].drop_duplicates(
         subset=['Alias'], keep='first')
 
     ecg_0 = (
@@ -225,6 +226,52 @@ def _make_double_ecg(index):
         .set_index('Alias')
     )
     return ecg_0.join(ecg_1, how='outer', lsuffix='_0', rsuffix='_1')
+
+
+def make_forberg_features(ecg_ids):
+    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    with h5py.File(ecg_path, 'r') as ecg:
+        glasgow_features = []
+        for x in tqdm(ecg_ids, desc='Extracting Glasgow vectors'):
+            glasgow_features.append(ecg['glasgow']['vectors'][x])
+
+        vector_names = list(ecg['meta']['glasgow_vector_names'][:])
+        lead_names = ecg['meta']['lead_names'][:]
+
+    cols = [
+        'Qamplitude',
+        'Ramplitude',
+        'Samplitude',
+        'Tpos_amp',
+        'Tneg_amp',
+        'Qduration',
+        'QRSduration',
+        'Rduration',
+        'Sduration',
+        'QRSarea',
+        'STslope',
+        'ST_amp',
+        'STT28_amp',
+        'STT38_amp',
+    ]
+    index = [vector_names.index(name) for name in cols]
+
+    glasgow_features = np.stack(glasgow_features)[:, index, :]
+    final_five_positive = np.maximum(glasgow_features[:, -5:, :], 0)
+    final_five_negative = np.maximum(-glasgow_features[:, -5:, :], 0)
+
+    glasgow_features[:, -5:, :] = final_five_positive
+    glasgow_features = np.append(glasgow_features, final_five_negative, axis=1)
+    glasgow_features = glasgow_features.reshape((len(ecg_ids), -1))
+
+    new_cols = (
+        cols[:-5] +
+        [f"{col}_{sign}" for sign in ['pos', 'neg'] for col in cols[-5:]]
+    )
+
+    columns = [f"{col}_{lead}" for col in new_cols for lead in lead_names]
+    df = pd.DataFrame(glasgow_features, index=ecg_ids.index, columns=columns)
+    return df
 
 
 def make_ed_features(index):
@@ -291,14 +338,17 @@ def make_troponin_table():
     return r
 
 
-def make_double_ecg_features(index):
+def make_double_ecg_features(index, include_delta_t=False):
     ecg = _make_double_ecg(index)
     ecg = index.join(ecg)
     ecg['delta_t'] = (ecg.admission_date - ecg.ecg_date_1).dt.total_seconds()
     ecg.delta_t /= 24 * 3600
     ecg['log_dt'] = (np.log10(ecg.delta_t) - 2.5) / 2  # Normalizing
 
-    return ecg[['ecg_0', 'ecg_1', 'log_dt']]
+    features = ['ecg_0', 'ecg_1', 'log_dt']
+    if include_delta_t:
+        features.append('delta_t')
+    return ecg[features]
 
 
 def _read_esc_trop_csv(name, **kwargs):
@@ -369,9 +419,49 @@ def make_mace_table(index_visits, include_interventions=True,
     else:
         mace = sources_of_mace[0]
 
-    mace['mace30'] = mace.any(axis=1)
-    mace['ami30'] = mace[['I21', 'I22']].any(axis=1)
+    # mace['mace30'] = mace.any(axis=1)
+    # mace['ami30'] = mace[['I21', 'I22']].any(axis=1)
     return mace
+
+
+def make_mace30_dataframe(mace_table):
+    return pd.DataFrame(
+        data=mace_table.any(axis=1).astype(int),
+        index=mace_table.index,
+        columns=['mace30']
+    )
+
+
+def make_ami30_dataframe(mace_table):
+    return pd.DataFrame(
+        data=mace_table[['I21', 'I22']].any(axis=1).astype(int),
+        index=mace_table.index,
+        columns=['ami30']
+    )
+
+
+def make_mace_chapters_dataframe(mace_table):
+    # I decided to exclude a few of the chapters here because they are so
+    # rare that they won't show up in the validation set.
+    # I22 occurs for 4 patients in total, I put it together with I21.
+    # R57 occurs for 3 patients in total, I remove it.
+    # TF only happens for a single patient, I remove it.
+    # DF is only 10 patients, I remove that as well.
+    # I leave I49, even though it is only 12 patients. It's possible, maybe
+    # even likely, that we're missing a few actual I49, if they are perhaps
+    # entered into melior but not sos or swedeheart.
+    chapters = [
+        'I20', 'I21', 'I22', 'I44', 'I46', 'I47', 'I49', 'J81', 'R57',
+        'DF', 'DG', 'FN', 'FP', 'TF', 'death'
+    ]
+    df = pd.concat(
+        [mace_table.filter(like=chapter).any(axis=1).rename(chapter) for
+         chapter in chapters],
+        axis=1
+    )
+    df['I21_22'] = df[['I21', 'I22']].any(axis=1)
+    df = df.drop(columns=['I21', 'I22', 'R57', 'TF', 'DF'])
+    return df.astype(int)
 
 
 def _make_diagnoses_from_sos():
@@ -424,6 +514,22 @@ def _make_diagnoses_from_rikshia():
     return diagnoses
 
 
+def remove_diagnoses_outside_time_interval(
+        diags, index_visits, interval_days_start=0, interval_days_end=30):
+    # diags is a DataFrame with index Alias and columns
+    # "icd10" and "diagnosis_date". There is one row for each diagnosis,
+    # so one patient can have multiple rows.
+    diags = diags.join(index_visits)
+
+    # Calculate the time between admission and diagnosis, in days
+    dt = (diags.diagnosis_date.dt.floor('1D') -
+          diags.admission_date.dt.floor('1D'))
+    dt = dt.dt.total_seconds() / (3600 * 24)
+
+    # Keep only the rows within the specified interval.
+    return diags[(dt >= interval_days_start) & (dt <= interval_days_end)]
+
+
 def _make_mace_diagnoses(
         index_visits, icds_defining_mace=None, use_melior=True, use_sos=True,
         use_hia=True, use_dors=True):
@@ -432,40 +538,29 @@ def _make_mace_diagnoses(
 
     assert any([use_melior, use_sos, use_hia])
 
-    def remove_diagnoses_outside_time_interval(
-            diags, interval_days_start=0, interval_days_end=30):
-        # diags is a DataFrame with index Alias and columns
-        # "icd10" and "diagnosis_date". There is one row for each diagnosis,
-        # so one patient can have multiple rows.
-        diags = diags.join(index_visits)
-
-        # Calculate the time between admission and diagnosis, in days
-        dt = (diags.diagnosis_date.dt.floor('1D') -
-              diags.admission_date.dt.floor('1D'))
-        dt = dt.dt.total_seconds() / (3600 * 24)
-
-        # Keep only the rows within the specified interval.
-        return diags[(dt >= interval_days_start) & (dt <= interval_days_end)]
-
     diagnose_sources = []
 
     if use_melior:
-        before = _make_diagnoses(
-            "ESC_TROP_Diagnoser_InkluderadeIndexBesök_2017_2018.csv")
         during = _make_diagnoses(
+            "ESC_TROP_Diagnoser_InkluderadeIndexBesök_2017_2018.csv")
+        after = _make_diagnoses(
            "ESC_TROP_Diagnoser_EfterInkluderadeIndexBesök_2017_2018.csv")
-        diagnose_sources.append(remove_diagnoses_outside_time_interval(before))
-        diagnose_sources.append(remove_diagnoses_outside_time_interval(during))
+        diagnose_sources.append(
+            remove_diagnoses_outside_time_interval(during, index_visits))
+        diagnose_sources.append(
+            remove_diagnoses_outside_time_interval(after, index_visits))
 
     if use_sos:
         diagnose_sources.append(
-            remove_diagnoses_outside_time_interval(_make_diagnoses_from_sos())
+            remove_diagnoses_outside_time_interval(
+                _make_diagnoses_from_sos(), index_visits)
         )
 
     if use_hia:
         diagnose_sources.append(
             remove_diagnoses_outside_time_interval(
-                _make_diagnoses_from_rikshia()
+                _make_diagnoses_from_rikshia(),
+                index_visits
             )
         )
     if use_dors:
@@ -479,6 +574,7 @@ def _make_mace_diagnoses(
         diagnose_sources.append(
             remove_diagnoses_outside_time_interval(
                 _make_diagnoses_from_dors(),
+                index_visits,
                 interval_days_start=-30,
                 interval_days_end=30
             )
@@ -736,3 +832,201 @@ def _make_index_stemi():
     hia = hia.set_index('Alias')
 
     return hia.loc[hia.INFARCTTYPE == 'STEMI', 'stemi_date']
+
+
+def make_dataframe_for_anders():
+    """
+    Creates a dataframe with all the necessary data for Anders to test the
+    models for the 1-TnT article by Pontus.
+
+    The dataframe has Alias as index, and contains the four lab-values
+    creatinine, glucose, hemoglobin and troponin. It also contains age, sex,
+    path to the ECG matlab file, admission date and the target (AMI or death
+    within 30 days, according to either Melior or SOS/HIA).
+
+    The lab-values uses the first valid index-measurement for each patient,
+    excluding values that are more than four hours after admission. Troponin
+    measurements marked as '<5' are replaced with 4. All other non-numeric
+    lab-values are excluded.
+
+    The ECG used is the closest in time to admission, in the interval [-1, 4]
+    hours.
+
+    Only patients with valid entries for all columns are used.
+    """
+    # Create the index, to associate KontaktId with Alias
+    # And also grab admission date, age and sex while we're at it
+    log.debug("Reading from 'liggaren'")
+    index_colmap = {
+        'KontaktId': 'ed_id',
+        'Alias': 'Alias',
+        'Vardkontakt_InskrivningDatum': 'admission_date',
+        'Kön': 'male',
+        'Ålder vid inklusion': 'age',
+        'BesokOrsakId': 'cause',
+        'Sjukhus_Namn': 'hospital',
+    }
+
+    index = _read_esc_trop_csv(
+        'ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv',
+        usecols=index_colmap.keys()
+    ).rename(columns=index_colmap)
+
+    index.admission_date = pd.to_datetime(
+        index.admission_date, format="%Y-%m-%d %H:%M:%S.%f")
+    index = index.sort_values(by=['admission_date', 'ed_id'])
+    index = index.drop_duplicates(subset=['Alias'], keep='first')
+    index.male = index.male.apply(lambda x: 1 if x == 'M' else 0)
+
+    index = index.dropna(subset=['cause']).drop(columns=['cause'])
+    log.debug(f"{len(index)} unique chest-pain patients")
+
+    # Load all lab-values from the index visit
+    log.debug("Reading from lab-values")
+    lab_colmap = {
+        'KontaktId': 'ed_id',
+        'Analyssvar_ProvtagningDatum': 'lab_date',
+        'Labanalys_Namn': 'lab_name',
+        'Analyssvar_Varde': 'value'
+    }
+    lab = _read_esc_trop_csv(
+        'ESC_TROP_LabAnalysSvar_InkluderadeIndexBesök_2017_2018.csv',
+        usecols=lab_colmap.keys(),
+    )
+    lab = lab.rename(columns=lab_colmap)
+    lab.lab_date = pd.to_datetime(
+        lab.lab_date, format="%Y-%m-%d %H:%M:%S.%f")
+    lab = lab.sort_values(by=['ed_id', 'lab_date'])
+
+    # Map the KontaktId to Alias, and calculate time-difference
+    lab = lab.merge(index, left_on='ed_id', right_on='ed_id', how='inner')
+    lab['dt'] = (lab.lab_date - lab.admission_date).dt.total_seconds()
+    lab = lab.loc[:, ['Alias', 'lab_name', 'value', 'dt']]
+
+    # Extract the troponin, creatinine, hemoglobin and glucose lab-values
+    # and merge them into a single dataframe.
+    log.debug("Extracting troponin, creatinin, hemoglobin and glucose")
+    final_lab_values = pd.concat(
+        [
+            _make_lab_value(lab, 'P-Troponin', new_name='troponin',
+                            impute={'<5': 4.0}),
+            _make_lab_value(lab, 'P-Kreatini', new_name='creatinine'),
+            _make_lab_value(lab, 'B-Hemoglob', new_name='hemoglobin'),
+            _make_lab_value(lab, 'P-Glukos', new_name='glucose')
+        ],
+        axis=1
+    )
+
+    features = (
+        final_lab_values
+        .dropna(how='any')
+        .sort_index()
+        .join(
+            index
+            .set_index('Alias')
+            .loc[:, ['male', 'age', 'admission_date', 'hospital']]
+        )
+    )
+    log.debug(f"{len(features)} patients with all lab-values")
+
+    ecg_paths = _make_ecg_paths(features[['admission_date']])[['ecg_path']]
+    features = features.join(ecg_paths).dropna()
+    log.debug(f"{len(features)} patients with index ECG")
+
+    log.debug("Calculating AMI/death label")
+    mace_melior = make_mace_table(
+        features[['admission_date']],
+        include_interventions=False,
+        include_deaths=True,
+        use_melior=True,
+        use_sos=False,
+        use_hia=False,
+    )
+
+    features['ami30_melior'] = (
+        mace_melior[["I21", "I22", "death"]]
+        .any(axis=1)
+        .astype(int)
+    )
+
+    mace_sos_hia = make_mace_table(
+        features[['admission_date']],
+        include_interventions=False,
+        include_deaths=True,
+        use_melior=False,
+        use_sos=True,
+        use_hia=True,
+    )
+    features['ami30_sos_hia'] = (
+        mace_sos_hia[["I21", "I22", "death"]]
+        .any(axis=1)
+        .astype(int)
+    )
+    return features
+
+
+def _make_ecg_paths(index):
+    """
+    Given a dataframe with Alias as index and admission_date as column,
+    return a dataframe with Alias as index and the path to the index ECG for
+    each corresponding patient.
+    """
+    log.debug("Processing ECGs")
+    ecg = _make_double_ecg(
+        index, min_age_seconds=-3600, max_age_seconds=4*3600
+    )
+
+    # ecg is now a dataframe with Alias as index and the hdf5 index of the
+    # ECG as value in the column ecg_0. We want to map that index to
+    # the path of the original ECG file.
+    log.debug("Retrieving ECG paths")
+    ecg = ecg[['ecg_0']].dropna().sort_values(by='ecg_0')
+    hdf5_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    with h5py.File(hdf5_path, 'r') as ecg_hdf5:
+        # Important that the index (ecg.values) is sorted here, because hdf5
+        ecg['ecg_path'] = ecg_hdf5['meta']['path'][ecg.values]
+
+    return ecg
+
+
+def _make_lab_value(
+        all_lab_values, lab_name, new_name=None, max_age_seconds=4*3600,
+        impute=None):
+    """
+    Given a dataframe of all lab-values, extract a specific lab-value,
+    optionally fill in some bad or missing values, convert the values to
+    numeric format, and return only the first instance of a lab-value for
+    each patient. If the age of a lab-value is above max_age_seconds, then
+    it will not be used. Returns a series with Alias as index and the
+    numeric lab-values as value. Only one value per patient.
+
+    :param all_lab_values:
+    :param lab_name:
+    :param new_name:
+    :param max_age_seconds:
+    :param impute:
+    :return:
+    """
+    matches_lab_name = all_lab_values.lab_name.str.fullmatch(lab_name)
+    lab_values = all_lab_values.loc[matches_lab_name, :]
+
+    if impute is not None:
+        for nan, imputed_value in impute.items():
+            missing_values = lab_values.value.str.match(nan)
+            lab_values.loc[missing_values, 'value'] = imputed_value
+
+    if new_name is None:
+        new_name = lab_name
+
+    lab_values.value = pd.to_numeric(lab_values.value, errors='coerce')
+    lab_values.loc[lab_values.dt > max_age_seconds, 'value'] = np.nan
+    lab_values = (
+        lab_values
+        .dropna()
+        .sort_values(by=['Alias', 'dt'])
+        .drop_duplicates(subset=['Alias'], keep='first')
+        .set_index('Alias')
+        .value
+        .rename(new_name)
+    )
+    return lab_values

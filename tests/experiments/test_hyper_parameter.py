@@ -15,12 +15,31 @@ class FakeRandom:
         return values[0]
 
     def choices(self, values, k=1):
-        return [values[0] for _ in range(k)]
+        n = len(values)
+        return [values[i % n] for i in range(k)]
+        # return [values[0] for _ in range(k)]
 
 
 def test_choice():
     choice = hp.Choice([1, 2, 14])
     assert choice.pick(FakeRandom()) == 1
+
+
+def test_choices():
+    choices = hp.Choices(
+        [3, 1, 2, 4, 0, 5],
+        k=3,
+    )
+    assert choices.pick(FakeRandom()) == [3, 1, 2]
+
+
+def test_sorted_choices():
+    vals = [3, 1, 2, 4, 0, 5]
+    sorted_choices = hp.SortedChoices(vals, k=3, ascending=True)
+    assert sorted_choices.pick(FakeRandom()) == [1, 2, 3]
+
+    sorted_choices = hp.SortedChoices(vals, k=5, ascending=False)
+    assert sorted_choices.pick(FakeRandom()) == [4, 3, 2, 1, 0]
 
 
 def test_pick():
@@ -43,7 +62,7 @@ def test_pick():
         'something_static': 32,
         'hidden': [
             {'foo': 3.4, 'bar': 99},
-            {'foo': 3.4, 'bar': 99},
+            {'foo': 5.5, 'bar': 3},
             {'foo': 3.4, 'bar': 99}
         ]
     }

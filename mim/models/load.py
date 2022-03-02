@@ -22,7 +22,7 @@ def load_keras_model(base_path, split_number, **kwargs):
 
 def load_model_from_experiment_result(
         xp_name, commit=None, which='best', split_number=0, trainable=False,
-        final_layer_index=-1, **kwargs):
+        final_layer_index=-1, input_key=None, **kwargs):
     assert which in ['last', 'best']
     xp_base_path = os.path.join(
         PATH_TO_TEST_RESULTS,
@@ -44,59 +44,56 @@ def load_model_from_experiment_result(
     }
     v = Validator(
         allow_different_commits=False,
-        allow_uncommitted=True
+        allow_uncommitted=False
     )
     v.validate_consistency([metadata, expected_metadata])
 
     model = keras.models.load_model(filepath=xp_model_path)
     model.trainable = trainable
 
-    model = keras.Model(model.input, model.layers[final_layer_index].output)
+    if input_key is None:
+        inp = model.input
+    else:
+        inp = model.input[input_key]
+    model = keras.Model(inp, model.layers[final_layer_index].output)
     return model
 
 
-def load_ribeiro_model(dense_layers=None, dropout=0.0, freeze_resnet=False,
-                       **kwargs):
+def load_ribeiro_model(freeze_resnet=False, suffix=None):
     resnet = keras.models.load_model(
         filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
     )
-    inp = {'ecg_0': resnet.input}
     resnet.trainable = not freeze_resnet
-    x = resnet.layers[-2].output
+    if suffix is not None:
+        for layer in resnet.layers:
+            layer._name += suffix
 
-    for size in dense_layers:
-        x = keras.layers.Dense(size, activation='relu')(x)
-        x = keras.layers.Dropout(dropout)(x)
-
-    output = keras.layers.Dense(1, activation='sigmoid')(x)
-    return keras.Model(inp, output)
+    return resnet.input, resnet.layers[-2].output
 
 
 def pre_process_using_ribeiro(**kwargs):
-    model = keras.models.load_model(
-        filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
-    )
-    model = keras.Model(
-        {'ecg_0': model.input},
-        model.layers[-2].output
-    )
-
-    def pre_process(data):
-        return process_ecg(model, data)
-
-    return pre_process
+    resnet_input, resnet_output = load_ribeiro_model()
+    model = keras.Model({'ecg_0': resnet_input}, resnet_output)
+    return _pre_process_with_model(model)
 
 
 def pre_process_using_xp(**load_model_kwargs):
     model = load_model_from_experiment_result(**load_model_kwargs)
+    return _pre_process_with_model(model)
 
-    def pre_process(data):
-        return process_ecg(model, data)
+
+def _pre_process_with_model(model):
+    def pre_process(train, val):
+        log.debug('Processing ECGs using pre-trained model')
+        processed_train = _process_ecg(model, train)
+        processed_val = _process_ecg(model, val)
+        log.debug('Finished processing ECGs')
+        return processed_train, processed_val
 
     return pre_process
 
 
-def process_ecg(model, data):
+def _process_ecg(model, data):
     """
     The point of this function is to take all the ecg-data from the input
     dataset and pass it through the given model. The output is our processed
@@ -123,8 +120,6 @@ def process_ecg(model, data):
     # Maybe add a "data.keys" or similar and verify that the format is
     # correct here? Or we could make a special type of Data/Container, that
     # enforces the x, y, index structure?
-
-    log.debug('Processing ECGs using pre-trained model')
     new_dict = {}
     for feature in data['x'].shape.keys():
         if feature.startswith('ecg'):
@@ -145,5 +140,4 @@ def process_ecg(model, data):
         index=data.index,
         fits_in_memory=True
     )
-    log.debug('Finished processing ECGs')
     return new_data

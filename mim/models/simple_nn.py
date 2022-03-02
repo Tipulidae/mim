@@ -20,8 +20,11 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.layers.experimental.preprocessing import Normalization
 from tensorflow.keras.regularizers import l2
 
-from mim.models.load import load_model_from_experiment_result
 from mim.util.logs import get_logger
+from mim.models.load import (
+    load_model_from_experiment_result,
+    load_ribeiro_model
+)
 
 log = get_logger('simple_nn')
 
@@ -56,113 +59,52 @@ def logistic_regression(train, validation=None):
     return keras.Model(inp, output)
 
 
-def super_basic_cnn(train, validation=None, dropout=0, filters=32,
-                    kernel_size=16, pool_size=8, hidden_size=10):
-    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
-    x = inp['ecg']
-    x = Conv1D(
-        filters=filters,
-        kernel_size=kernel_size,
-        kernel_regularizer="l2",
-        padding='same')(x)
-    x = BatchNormalization()(x)
-    x = ReLU()(x)
-    x = MaxPool1D(pool_size=pool_size)(x)
-    x = Dropout(dropout)(x)
-
-    x = Conv1D(
-        filters=filters,
-        kernel_size=kernel_size,
-        kernel_regularizer="l2",
-        padding='same')(x)
-    x = BatchNormalization()(x)
-    x = ReLU()(x)
-    x = MaxPool1D(pool_size=pool_size)(x)
-    x = Dropout(dropout)(x)
-
-    x = Flatten()(x)
-    x = Dense(hidden_size, activation="relu")(x)
-    x = Dropout(dropout)(x)
-
-    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
-    return keras.Model(inp, output)
-
-
-def basic_cnn2(train, validation=None, dropout=0, layers=None,
-               hidden_layer=None, batch_norm=True):
-    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
-    x = inp['ecg']
-    for layer in layers:
-        x = Conv1D(
-            filters=layer['filters'],
-            kernel_size=layer['kernel_size'],
-            kernel_regularizer="l2",
-            padding='same')(x)
-        if batch_norm:
-            x = BatchNormalization()(x)
-
-        x = ReLU()(x)
-        x = MaxPool1D(pool_size=2)(x)
-        x = Dropout(dropout)(x)
-
-    x = Flatten()(x)
-    if hidden_layer:
-        x = Dense(10)(x)
-        x = Dropout(hidden_layer['dropout'])(x)
-
-    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
-    return keras.Model(inp, output)
-
-
-def basic_cnn3(train, validation=None, dropout=0, layers=None,
-               pool_size=2, hidden_dropout=None):
-    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
-    x = BatchNormalization()(inp['ecg'])
-
-    n = len(layers)
-    max_pool_size = math.floor((train['x']['ecg'].shape[0] / 20) ** (1 / n))
-    pool_size = min(max_pool_size, pool_size)
-    for layer in layers:
-        x = Conv1D(
-            filters=layer['filters'],
-            kernel_size=layer['kernel_size'],
-            kernel_regularizer="l2",
-            padding='same')(x)
-        x = BatchNormalization()(x)
-        x = ReLU()(x)
-        x = MaxPool1D(pool_size=pool_size)(x)
-        x = Dropout(layer['dropout'])(x)
-
-    x = Flatten()(x)
-    if hidden_dropout is not None:
-        x = Dense(10)(x)
-        x = Dropout(hidden_dropout)(x)
-
-    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
-    return keras.Model(inp, output)
-
-
 def ecg_cnn(
         train,
         validation=None,
         cnn_kwargs=None,
         ecg_ffnn_kwargs=None,
+        ecg_combiner='concatenate',
+        ecg_comb_ffnn_kwargs=None,
         flat_ffnn_kwargs=None,
         final_ffnn_kwargs=None):
     inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
     ecg_layers = []
     if 'ecg_0' in inp:
-        ecg_layers.append(ecg_network(inp['ecg_0'], **cnn_kwargs))
+        ecg_layers.append(_ecg_network(inp['ecg_0'], **cnn_kwargs))
     if 'ecg_1' in inp:
-        ecg_layers.append(ecg_network(inp['ecg_1'], **cnn_kwargs))
+        ecg_layers.append(_ecg_network(inp['ecg_1'], **cnn_kwargs))
+
+    return _ecg_and_flat_feature_combiner(
+        inp=inp,
+        ecg_layers=ecg_layers,
+        ecg_ffnn_kwargs=ecg_ffnn_kwargs,
+        ecg_comb_ffnn_kwargs=ecg_comb_ffnn_kwargs,
+        ecg_combiner=ecg_combiner,
+        flat_ffnn_kwargs=flat_ffnn_kwargs,
+        final_ffnn_kwargs=final_ffnn_kwargs,
+        output_size=len(train['y'].columns)
+    )
+
+
+def _ecg_and_flat_feature_combiner(
+        inp, ecg_layers, ecg_ffnn_kwargs, ecg_comb_ffnn_kwargs, ecg_combiner,
+        flat_ffnn_kwargs, final_ffnn_kwargs, output_size
+):
+    assert len(ecg_layers) >= 1
+    if ecg_ffnn_kwargs is not None:
+        ecg_layers = [_ffnn(x, **ecg_ffnn_kwargs) for x in ecg_layers]
 
     if len(ecg_layers) > 1:
-        x = Concatenate()(ecg_layers)
+        if ecg_combiner == 'difference':
+            x = difference_combiner(ecg_layers)
+        else:
+            x = Concatenate()(ecg_layers)
     else:
         x = ecg_layers[0]
 
-    if ecg_ffnn_kwargs is not None:
-        x = _ffnn(x, **ecg_ffnn_kwargs)
+    if ecg_comb_ffnn_kwargs is not None:
+        x = _ffnn(x, **ecg_comb_ffnn_kwargs)
 
     if 'flat_features' in inp:
         flat_features = BatchNormalization()(inp['flat_features'])
@@ -173,27 +115,57 @@ def ecg_cnn(
     if final_ffnn_kwargs is not None:
         x = _ffnn(x, **final_ffnn_kwargs)
 
-    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    output = Dense(output_size, activation="sigmoid",
+                   kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
 
 
-def _ffnn(x, sizes, dropouts, batch_norms):
+def _ffnn(x, sizes, dropouts, batch_norms, activation='relu',
+          activity_regularizer=None,
+          activity_regularizers=None,
+          kernel_regularizer=None,
+          kernel_regularizers=None,
+          bias_regularizer=None,
+          bias_regularizers=None):
+    num_layers = len(sizes)
+    if activity_regularizers is None:
+        if activity_regularizer is None:
+            activity_regularizer = 0.0
+        activity_regularizers = num_layers*[activity_regularizer]
+    if kernel_regularizers is None:
+        if kernel_regularizer is None:
+            kernel_regularizer = 0.0
+        kernel_regularizers = num_layers*[kernel_regularizer]
+    if bias_regularizers is None:
+        if bias_regularizer is None:
+            bias_regularizer = 0.0
+        bias_regularizers = num_layers*[bias_regularizer]
+
     assert _all_lists_have_same_length(
-        [sizes, dropouts, batch_norms]
+        [sizes, dropouts, batch_norms, activity_regularizers,
+         kernel_regularizers, bias_regularizers]
     )
-    for size, dropout, batch_norm in zip(sizes, dropouts, batch_norms):
-        x = Dense(size, activation='relu')(x)
-        if batch_norm:
+
+    for layer in range(num_layers):
+        x = Dense(
+            sizes[layer],
+            activation=activation,
+            activity_regularizer=l2(activity_regularizers[layer]),
+            kernel_regularizer=l2(kernel_regularizers[layer]),
+            bias_regularizer=l2(bias_regularizers[layer])
+        )(x)
+
+        if batch_norms[layer]:
             x = BatchNormalization()(x)
-        if dropout > 0:
-            x = Dropout(dropout)(x)
+        if dropouts[layer] > 0:
+            x = Dropout(dropouts[layer])(x)
 
     return x
 
 
-def ecg_network(
+def _ecg_network(
         x,
-        downsample=False,
+        down_sample=False,
         num_layers=2,
         dropout=0.3,
         dropouts=None,
@@ -208,10 +180,9 @@ def ecg_network(
         weight_decay=None,
         weight_decays=None,
         pool_size=None,
-        pool_sizes=None,
-        ffnn_kwargs=None):
+        pool_sizes=None):
 
-    if downsample:
+    if down_sample:
         x = AveragePooling1D(2, padding='same')(x)
 
     if pool_sizes is None:
@@ -268,9 +239,6 @@ def ecg_network(
         x = Dropout(dropouts[layer])(x)
 
     x = Flatten()(x)
-    if ffnn_kwargs is not None:
-        x = _ffnn(x, **ffnn_kwargs)
-
     return x
 
 
@@ -335,30 +303,78 @@ def serial_ecg(train, validation=None, feature_extraction=None,
     return model
 
 
-def ffnn(train, validation=None, dense_ecg=None, dropout_ecg=0, dense=None,
-         dropout=0):
-    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+def pretrained_resnet(
+        train, validation=None, freeze_resnet=False, ecg_ffnn_kwargs=None,
+        ecg_combiner='concatenate', ecg_comb_ffnn_kwargs=None,
+        flat_ffnn_kwargs=None, final_ffnn_kwargs=None
+):
+    """
+    Load a pre-trained ResNet model for each input ECG, and plug this into
+    the serial-ecg architecture with additional, optional ffnns.
+    """
+    data_shape = train['x'].shape
+    inp = {}
+    ecg_layers = []
+    for ecg in [key for key in data_shape if key.startswith('ecg')]:
+        resnet_input, resnet_output = load_ribeiro_model(
+            freeze_resnet, suffix=f"_{ecg}")
+        inp[ecg] = resnet_input
+        ecg_layers.append(resnet_output)
+
+    if 'flat_features' in data_shape:
+        inp['flat_features'] = Input(shape=data_shape['flat_features'])
+
+    return _ecg_and_flat_feature_combiner(
+        inp=inp,
+        ecg_layers=ecg_layers,
+        ecg_ffnn_kwargs=ecg_ffnn_kwargs,
+        ecg_comb_ffnn_kwargs=ecg_comb_ffnn_kwargs,
+        ecg_combiner=ecg_combiner,
+        flat_ffnn_kwargs=flat_ffnn_kwargs,
+        final_ffnn_kwargs=final_ffnn_kwargs,
+        output_size=len(train['y'].columns)
+    )
+
+
+def ffnn(
+        train,
+        validation=None,
+        ecg_ffnn_kwargs=None,
+        ecg_combiner='concatenate',
+        ecg_comb_ffnn_kwargs=None,
+        flat_ffnn_kwargs=None,
+        final_ffnn_kwargs=None,
+):
+    inp = _make_input(train['x'].shape)
     ecg_layers = []
     if 'ecg_0' in inp:
         ecg_layers.append(inp['ecg_0'])
     if 'ecg_1' in inp:
         ecg_layers.append(inp['ecg_1'])
+    if 'forberg_ecg_0' in inp:
+        ecg_layers.append(inp['forberg_ecg_0'])
+    if 'forberg_ecg_1' in inp:
+        ecg_layers.append(inp['forberg_ecg_1'])
+    if 'forberg_diff' in inp:
+        ecg_layers.append(inp['forberg_diff'])
 
-    if len(ecg_layers) > 1:
-        x = Concatenate()(ecg_layers)
+    return _ecg_and_flat_feature_combiner(
+        inp=inp,
+        ecg_layers=ecg_layers,
+        ecg_ffnn_kwargs=ecg_ffnn_kwargs,
+        ecg_comb_ffnn_kwargs=ecg_comb_ffnn_kwargs,
+        ecg_combiner=ecg_combiner,
+        flat_ffnn_kwargs=flat_ffnn_kwargs,
+        final_ffnn_kwargs=final_ffnn_kwargs,
+        output_size=len(train['y'].columns)
+    )
+
+
+def _make_input(shape):
+    if isinstance(shape, dict):
+        return {key: _make_input(value) for key, value in shape.items()}
     else:
-        x = ecg_layers[0]
-
-    for size in dense_ecg:
-        x = Dense(size, activation='relu')(x)
-        x = Dropout(dropout_ecg)(x)
-
-    if 'flat_features' in inp:
-        flat_features = BatchNormalization()(inp['flat_features'])
-        x = Concatenate()([x, flat_features])
-
-    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
-    return keras.Model(inp, output)
+        return Input(shape=shape)
 
 
 def stack_model(model, combiner, stack_size=2):

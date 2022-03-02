@@ -11,6 +11,10 @@ from mim.massage.esc_trop import (
     make_lab_features,
     make_double_ecg_features,
     make_ecg_table,
+    make_mace30_dataframe,
+    make_ami30_dataframe,
+    make_mace_chapters_dataframe,
+    make_forberg_features,
     _read_esc_trop_csv
 )
 from mim.extractors.extractor import Data, Container, ECGData, Extractor
@@ -25,12 +29,19 @@ class EscTrop(Extractor):
         return make_index_visits(**self.index)
 
     def make_labels(self, index, target='mace30', **kwargs):
-        assert target in ['mace30', 'ami30']
-        mace = make_mace_table(index, **kwargs)
-        assert index.index.equals(mace.index)
+        assert target in ['mace30', 'ami30', 'mace_chapters']
+        mace_table = make_mace_table(index, **kwargs)
 
-        labels = mace[target].astype(int).values
-        return Data(labels, columns=[target])
+        if target == 'mace30':
+            df = make_mace30_dataframe(mace_table)
+        elif target == 'ami30':
+            df = make_ami30_dataframe(mace_table)
+        else:
+            df = make_mace_chapters_dataframe(mace_table)
+
+        assert index.index.equals(df.index)
+
+        return Data(df.values, columns=list(df))
 
     def make_features(self, index):
         ed_features = make_ed_features(index)
@@ -54,10 +65,59 @@ class EscTrop(Extractor):
                     x_dict[ecg] = self.make_ecg_data(ecg_features[ecg])
 
         if 'flat_features' in self.features:
+            data = features[self.features['flat_features']].values
             x_dict['flat_features'] = Data(
-                features[self.features['flat_features']].values,
-                columns=self.features['flat_features']
+                data,
+                columns=self.features['flat_features'],
             )
+
+        if 'forberg' in self.features:
+            f0 = make_forberg_features(ecg_features.ecg_0)
+            f1 = make_forberg_features(ecg_features.ecg_1)
+            diff = (f1 - f0)
+
+            if 'combine' in self.features['forberg']:
+                # This is just a hack to allow the forberg-features to be
+                # combined into a single vector, rather than split into
+                # separate vectors in the Data dict. This is so that they can
+                # be pre-processed together by PCA, rather than separately.
+                # Meanwhile, I need to be able to have the features from each
+                # ECG in a separate vector for the FFNN-model to work
+                # properly, hence the switch here.
+                values = []
+                columns = []
+                if 'ecg_0' in self.features['forberg']:
+                    values.append(f0.values)
+                    columns += [f"{name}_ecg_0" for name in f0.columns]
+
+                if 'ecg_1' in self.features['forberg']:
+                    values.append(f1.values)
+                    columns += [f"{name}_ecg_1" for name in f1.columns]
+
+                if 'diff' in self.features['forberg']:
+                    values.append(diff.values)
+                    columns += [f"{name}_diff" for name in diff.columns]
+
+                x_dict['forberg_features'] = Data(
+                    np.concatenate(values, axis=1),
+                    columns=columns
+                )
+            else:
+                if 'ecg_0' in self.features['forberg']:
+                    x_dict['forberg_ecg_0'] = Data(
+                        f0.values,
+                        columns=list(f0.columns)
+                    )
+                if 'ecg_1' in self.features['forberg']:
+                    x_dict['forberg_ecg_1'] = Data(
+                        f1.values,
+                        columns=list(f1.columns)
+                    )
+                if 'diff' in self.features['forberg']:
+                    x_dict['forberg_diff'] = Data(
+                        diff.values,
+                        columns=list(diff.columns)
+                    )
 
         return x_dict
 
@@ -88,9 +148,12 @@ class EscTrop(Extractor):
             index=index.reset_index().index,
             fits_in_memory=self.fits_in_memory
         )
-
+        if self.cv_kwargs is not None and 'test_size' in self.cv_kwargs:
+            test_size = self.cv_kwargs['test_size']
+        else:
+            test_size = 1 / 4
         hold_out_splitter = CrossValidationWrapper(
-            ChronologicalSplit(test_size=1/4)
+            ChronologicalSplit(test_size=test_size)
         )
         dev, _ = next(hold_out_splitter.split(data))
         log.debug('Finished extracting esc-trop data')

@@ -13,12 +13,14 @@ from sklearn.metrics import (
     roc_curve
 )
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 from mim.util.logs import get_logger
 from mim.util.util import ranksort, insensitive_iglob
 from mim.util.metrics import (
     positive_predictive_value,
     negative_predictive_value,
+    rule_in_rule_out
 )
 from mim.experiments.hyper_parameter import flatten
 from mim.config import PATH_TO_TEST_RESULTS
@@ -27,7 +29,7 @@ log = get_logger("Presenter")
 
 
 class Presenter:
-    def __init__(self, name):
+    def __init__(self, name, verbose=2):
         self.results = dict()
         paths = insensitive_iglob(
             f"{PATH_TO_TEST_RESULTS}/{name}/**/results.pickle",
@@ -36,11 +38,15 @@ class Presenter:
 
         for path in sorted(paths):
             _, xp_name = os.path.split(os.path.dirname(path))
-            log.info(f"Loading {xp_name}")
+            if verbose > 1:
+                log.info(f"Loading {xp_name}")
             if xp_name in self.results:
                 log.warning(f"Two experiments with the name {xp_name}!")
 
             self.results[xp_name] = pd.read_pickle(path)
+
+        if verbose > 0:
+            log.info(f"Finished loading {len(self.results)} experiments.")
 
     def describe(self, like='.*'):
         results = []
@@ -78,35 +84,45 @@ class Presenter:
             index=['train', 'test']
         )
 
-    def scores(self, like='.*'):
+    def scores(self, like='.*', auc=True, rule_in_out=False):
         results = []
-        for name, xp in self._results_that_match_pattern(like):
+        for name, xp in list(self._results_that_match_pattern(like)):
             targets, predictions = self._target_predictions(xp)
-            results.append(pd.Series(
-                data=[
-                    roc_auc_score(targets, predictions)
-                ],
-                index=[
-                    'auc'
-                ],
-                name=name))
+            targets = targets.values.ravel()
+            predictions = predictions.values.ravel()
+
+            data = []
+            index = []
+            if auc:
+                data.append(roc_auc_score(targets, predictions))
+                index.append('auc')
+            if rule_in_out:
+                riro = rule_in_rule_out(targets, predictions).mean(axis=0)
+                data.extend(list(riro))
+                index.extend(['rule-in', 'intermediate', 'rule-out'])
+
+            s = pd.Series(data=data, index=index, name=name)
+            results.append(s)
         return pd.DataFrame(results)
 
     def predictions(self, like='.*'):
         # Return dataframe with the true targets and predictions for each
         # experiment
-        all_predictions = []
-        all_targets = []
+        predictions = []
+        the_target = None
         for name, xp in self._results_that_match_pattern(like):
-            targets, predictions = self._target_predictions(xp)
-            all_targets.append(targets.values)
-            all_predictions.append(
-                predictions.iloc[:, 0].rename(name)
-            )
-        assert all_columns_equal(np.concatenate(all_targets, axis=1))
+            target, prediction = self._target_predictions(xp)
+            if the_target is None:
+                the_target = target
 
-        target = pd.DataFrame(all_targets[0], columns=['y'])
-        return target.join(pd.DataFrame(all_predictions).T)
+            assert the_target.equals(target)
+            predictions.append(
+                prediction.iloc[:, 0].rename(name)
+            )
+
+        predictions = pd.DataFrame(predictions).T
+        predictions.index = the_target.index
+        return the_target.join(predictions)
 
     def prediction_ranks(self, like='.*'):
         predictions = self.predictions(like=like)
@@ -170,6 +186,16 @@ class Presenter:
         plt.ylabel('True Positive Rate')
         plt.legend(lines, labels)
         plt.grid(which='both')
+
+        plt.gca().add_patch(
+            patches.Rectangle(
+                (0, 0), 0.1, 1.0, linewidth=0, alpha=0.1, facecolor='red')
+        )
+        plt.gca().add_patch(
+            patches.Rectangle(
+                (0, 0.99), 1.0, 0.01, linewidth=0, alpha=0.1,
+                facecolor='green')
+        )
 
         df = pd.DataFrame(
             [self.results[xp]['test_score'] for xp in xps],
@@ -257,6 +283,19 @@ class Presenter:
 
         return history
 
+    def max_auc(self):
+        def get_max_auc(xp):
+            return self.history(
+                xp, columns=['val_auc'], folds='first'
+            ).max()[0]
+
+        auc = pd.DataFrame({
+            'final_auc': self.scores()['auc'],
+            'max_auc': {xp: get_max_auc(xp) for xp in self.results},
+        })
+        auc['overfit'] = auc.max_auc - auc.final_auc
+        return auc
+
     def plot_history(self, names, columns=None,
                      folds='first', **plot_kwargs):
         if columns is None:
@@ -303,8 +342,9 @@ class Presenter:
         return targets, predictions
 
     def _target_predictions(self, xp):
+        targets = pd.concat(xp['targets'])
         predictions = pd.concat(xp['predictions']['prediction'], axis=0)
-        targets = pd.DataFrame(np.concatenate(xp['targets']))
+        predictions.index = targets.index
         return targets, predictions
 
 

@@ -1,126 +1,35 @@
-# -*- coding: utf-8 -*-
-
 from enum import Enum
 
 from tensorflow.keras.optimizers import Adam, SGD
 from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
 from sklearn.metrics import roc_auc_score
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 from mim.experiments.experiments import Experiment
 from mim.extractors.esc_trop import EscTrop
-from mim.models.simple_nn import ecg_cnn, ffnn, logistic_regression, \
-    logistic_regression_ab
-from mim.models.load import pre_process_using_xp, load_ribeiro_model
+from mim.extractors.extractor import sklearn_process
+from mim.models.simple_nn import (
+    ecg_cnn,
+    ffnn,
+    logistic_regression,
+    logistic_regression_ab,
+    pretrained_resnet
+)
 from mim.cross_validation import ChronologicalSplit
 
 
 class ESCT(Experiment, Enum):
-    # RANDOM FOREST, FLAT FEATURES:
-    M_RF1_DT = Experiment(
-        description='Predicting MACE with Random Forest, using only the '
-                    'time since last ECG.',
-        model=RandomForestClassifier,
-        model_kwargs={
-            'n_estimators': 1000,
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_dt']
-            },
-        },
-        building_model_requires_development_data=False,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    M_RF1_AGE = M_RF1_DT._replace(
-        description='Predicting MACE with Random Forest, using only the '
-                    'patient age.',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['age']
-            },
-        },
-    )
-    M_RF1_SEX = M_RF1_DT._replace(
-        description='Predicting MACE with Random Forest, using only the '
-                    'patient sex.',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['male']
-            },
-        },
-    )
-    M_RF1_TNT = M_RF1_DT._replace(
-        description='Predicting MACE with Random Forest, using only the '
-                    'first TnT lab measurement.',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['tnt_1']
-            },
-        },
-    )
-    M_RF1_DT_AGE = M_RF1_DT._replace(
-        description='Predicting MACE with Random Forest, using only the '
-                    'time since last ECG and patient age.',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_dt', 'age']
-            },
-        },
-    )
-    M_RF1_DT_AGE_SEX = M_RF1_DT._replace(
-        description='Predicting MACE with Random Forest, using only the '
-                    'time since last ECG, patient age and sex.',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_dt', 'age', 'male']
-            },
-        },
-    )
-    M_RF1_DT_AGE_SEX_TNT = M_RF1_DT._replace(
-        description='Predicting MACE with Random Forest, using only the '
-                    'time since last ECG, age, sex and first TnT measurement.',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-        },
-    )
-
-    # AB Log Reg, Flat Features:
-    AB_M_LR1_DT_AGE_SEX_LOGTNT = Experiment(
-        description="foo",
-        model=logistic_regression_ab,
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_tnt_1', "age", "male", "log_dt"]
-            },
-        },
-        epochs=300,
-        batch_size=-1,
-        optimizer={
-            'name': SGD,
-            'kwargs': {'learning_rate': 1},
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-
-    # KERAS LOGISTIC REGRESSION, FLAT FEATURES:
-    M_LR1_DT = Experiment(
-        description='Logistic regression, mace vs dt',
+    # LOGISTIC REGRESSION USING FLAT FEATURES:
+    M_FF_LR1 = Experiment(
+        description='Predicting MACE using flat-features. Tensorflow logistic '
+                    'regression model. ',
         model=logistic_regression,
         extractor=EscTrop,
         extractor_kwargs={
             "features": {
-                'flat_features': ['log_dt']
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
             },
         },
         epochs=300,
@@ -134,328 +43,1834 @@ class ESCT(Experiment, Enum):
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
     )
-    M_LR1_AGE = M_LR1_DT._replace(
-        description='Logistic regression, mace vs dt',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_dt']
-            },
-        },
-    )
-    M_LR1_SEX = M_LR1_DT._replace(
-        description='Logistic regression, mace vs sex',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['male']
-            },
-        },
-    )
-    M_LR1_TNT = M_LR1_DT._replace(
-        description='Logistic regression, mace vs tnt',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['tnt_1']
-            },
-        },
-    )
-    M_LR1_DT_AGE = M_LR1_DT._replace(
-        description='Logistic regression, mace vs dt + age',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_dt', 'age']
-            },
-        },
-    )
-    M_LR1_DT_AGE_SEX = M_LR1_DT._replace(
-        description='Logistic regression, mace vs dt + age + sex',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_dt', 'age', 'male']
-            },
-        },
-    )
-    M_LR1_DT_AGE_SEX_TNT = M_LR1_DT._replace(
-        description='Logistic regression, mace vs dt + age + sex + tnt',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-        },
-    )
-
-    # SKLEARN LOGISTIC REGRESSION, FLAT FEATURES:
-    M_LR2_DT_AGE_SEX_TNT = Experiment(
+    M_FF_LR2 = Experiment(
         description='Scikit-learns logistic regression model, mace vs flat '
                     'features.',
         model=LogisticRegression,
         extractor=EscTrop,
         extractor_kwargs={
             "features": {
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
             },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'flat_features': {
+                'processor': StandardScaler,
+            }
         },
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
     )
-
-    # SINGLE RAW ECG, CNN VARIATIONS:
-    M_R1_CNN1 = Experiment(
-        description='Predicting MACE-30 using single raw ECG in a simple '
-                    '2-layer CNN.',
-        model=ecg_cnn,
-        model_kwargs={
-            'cnn_kwargs': {
-                'num_layers': 2,
-                'dropout': 0.3,
-                'filter_first': 32,
-                'filter_last': 32,
-                'kernel_first': 16,
-                'kernel_last': 16,
-                'pool_size': 16,
-                'batch_norm': True,
-                'dense': False,
-                'downsample': False
-            },
-            'dense_size': 10,
-            'dropout': 0.3
-        },
-        epochs=200,
-        batch_size=64,
-        optimizer={
-            'name': Adam,
-            'kwargs': {'learning_rate': 1e-4}
-        },
+    M_FF_LR3 = Experiment(
+        description="Anders Björkelund's logistic regression model.",
+        model=logistic_regression_ab,
         extractor=EscTrop,
         extractor_kwargs={
             "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0']
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
             },
+        },
+        epochs=300,
+        batch_size=-1,
+        optimizer={
+            'name': SGD,
+            'kwargs': {'learning_rate': 1},
         },
         building_model_requires_development_data=True,
         cv=ChronologicalSplit,
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
     )
-    M_R1_CNN2 = M_R1_CNN1._replace(
-        description='Try adjusting the final dense-layer size from 10 to 100.'
-                    'Also downsamples the ECG first, to its original 500Hz.',
+
+    # LOGISTIC REGRESSION USING "FORBERG"-FEATURES
+    M_F1_LR2 = Experiment(
+        description='Scikit-learn logistic regression model, mace vs '
+                    'features from Forberg et al. Features are normalized '
+                    'and then reduced in dimension by PCA. ',
+        model=LogisticRegression,
+        model_kwargs={
+            'class_weight': 'balanced',
+            'max_iter': 300,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            "features": {
+                'forberg': ['ecg_0', 'combine']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'forberg_features': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 100,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            }
+        },
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        scoring=roc_auc_score,
+    )
+    M_F2_LR2 = M_F1_LR2._replace(
+        description='Scikit-learn logistic regression model, mace vs '
+                    'features from Forberg et al. Features are normalized '
+                    'and then reduced in dimension by PCA. ',
+        extractor_kwargs={
+            "features": {
+                'forberg': ['ecg_0', 'diff', 'combine']
+            },
+        },
+        pre_processor_kwargs={
+            'forberg_features': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 145,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            },
+        },
+    )
+    M_F1_FF_LR2 = M_F1_LR2._replace(
+        description='Scikit-learn logistic regression model, mace vs '
+                    'features from Forberg et al. Features are normalized '
+                    'and then reduced in dimension by PCA.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male', 'log_tnt_1'],
+                'forberg': ['ecg_0', 'combine']
+            },
+        },
+        pre_processor_kwargs={
+            'forberg_features': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 2,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            },
+            'flat_features': {
+                'processor': StandardScaler,
+            }
+        },
+    )
+    M_F2_FF_LR2 = M_F1_LR2._replace(
+        description='Scikit-learn logistic regression model, mace vs '
+                    'features from Forberg et al. Features are normalized '
+                    'and then reduced in dimension by PCA. I tried a bunch '
+                    'of settings for dimension, ~150 gave the best AUC.',
+        extractor_kwargs={
+            "features": {
+                'flat_features': ['log_dt', 'age', 'male', 'log_tnt_1'],
+                'forberg': ['ecg_0', 'diff', 'combine']
+            },
+        },
+        pre_processor_kwargs={
+            'forberg_features': {
+                'processor': 'Pipeline',
+                'steps': [
+                    ('scaler', StandardScaler, {}),
+                    ('pca', PCA, {
+                        'n_components': 5,
+                        'whiten': False,
+                        'random_state': 42
+                    })
+                ]
+            },
+            'flat_features': {
+                'processor': StandardScaler,
+            }
+        },
+    )
+
+    # FFNN USING FORBERG-FEATURES
+    M_F1_NN1 = Experiment(
+        description='Best iteration (xp_184) from M_F1_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.001],
+                'bias_regularizers': [0.1]
+            },
+            'ecg_combiner': None,
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [False],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.001]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'forberg': ['ecg_0']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'forberg_ecg_0': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0001,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_F2_NN2 = Experiment(
+        description='Best iteration (xp_324) from M_F2_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [200],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.0001],
+                'bias_regularizers': [0.01]
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.0],
+                'batch_norms': [False],
+                'activity_regularizers': [0.001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.0]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'forberg': ['ecg_0', 'ecg_1']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'forberg_ecg_0': {'processor': StandardScaler},
+            'forberg_ecg_1': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0001,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_F1_FF_NN3 = Experiment(
+        description='Best iteration (xp_353) from M_F1_FF_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.2],
+                'batch_norms': [True],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.001]
+            },
+            'ecg_combiner': None,
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.001],
+                'bias_regularizers': [0.0]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.01]
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt'],
+                'forberg': ['ecg_0']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'flat_features': {'processor': StandardScaler},
+            'forberg_ecg_0': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0003,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_F2_FF_NN4 = Experiment(
+        description='Best iteration (xp_224) from M_F2_FF_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [25],
+                'dropouts': [0.3],
+                'batch_norms': [True],
+                'activity_regularizers': [0.001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.1]
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.1]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.0],
+                'kernel_regularizers': [0.0],
+                'bias_regularizers': [0.001]
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt'],
+                'forberg': ['ecg_0', 'ecg_1']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'flat_features': {'processor': StandardScaler},
+            'forberg_ecg_0': {'processor': StandardScaler},
+            'forberg_ecg_1': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0003,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_F2_FF_NN5 = Experiment(
+        description='Second best iteration (xp_63) from M_F2_FF_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [200],
+                'dropouts': [0.4],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.0]
+            },
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.1],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0],
+                'kernel_regularizers': [0.001],
+                'bias_regularizers': [0.1]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.4],
+                'batch_norms': [True],
+                'activity_regularizers': [0.001],
+                'kernel_regularizers': [0.0001],
+                'bias_regularizers': [0.001]
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt'],
+                'forberg': ['ecg_0', 'ecg_1']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'flat_features': {'processor': StandardScaler},
+            'forberg_ecg_0': {'processor': StandardScaler},
+            'forberg_ecg_1': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0003,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_F2_FF_NN6 = Experiment(
+        description='Third best iteration (xp_208) from M_F2_FF_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [200],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.001],
+                'bias_regularizers': [0.1]
+            },
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.4],
+                'batch_norms': [True],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.1]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.1],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0],
+                'kernel_regularizers': [0.0],
+                'bias_regularizers': [0.0001]
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt'],
+                'forberg': ['ecg_0', 'ecg_1']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'flat_features': {'processor': StandardScaler},
+            'forberg_ecg_0': {'processor': StandardScaler},
+            'forberg_ecg_1': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.001,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+
+    # CNN1, (2nd) best random-search model for 1 ECG
+    M_R1_CNN1 = Experiment(
+        description='Uses xp_210 from M_R1_CNN_RS, which was the second '
+                    'best in terms of AUC, but looked better than the best '
+                    'when considering the overall learning trend. ',
+        model=ecg_cnn,
         model_kwargs={
             'cnn_kwargs': {
                 'num_layers': 2,
-                'dropout': 0.3,
-                'filter_first': 32,
-                'filter_last': 32,
-                'kernel_first': 16,
-                'kernel_last': 16,
-                'pool_size': 16,
-                'batch_norm': True,
-                'dense': False,
-                'downsample': True
+                'down_sample': True,
+                'dropouts': [0.5, 0.4],
+                'pool_size': 15,
+                'filter_first': 28,
+                'filter_last': 8,
+                'kernel_first': 61,
+                'kernel_last': 17,
+                'batch_norms': [False, False],
+                'weight_decays': [0.0, 0.01],
             },
-            'dense_size': 100,
-            'dropout': 0.3
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.4],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.0001}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+    M_R1_CNN1b = M_R1_CNN1._replace(
+        description='Replaces the final layer with something smaller.',
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'down_sample': True,
+                'dropouts': [0.5, 0.4],
+                'pool_size': 15,
+                'filter_first': 28,
+                'filter_last': 8,
+                'kernel_first': 61,
+                'kernel_last': 17,
+                'batch_norms': [False, False],
+                'weight_decays': [0.0, 0.01],
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.4],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
+        },
+    )
+    # CNN2, best random-search model for 2 ECGs
+    M_R2_CNN2 = Experiment(
+        description='Uses xp_26 from M_R2_CNN_RS, which was best in terms '
+                    'of AUC.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'down_sample': True,
+                'dropouts': [0.0, 0.2],
+                'pool_size': 19,
+                'filter_first': 32,
+                'filter_last': 64,
+                'kernel_first': 49,
+                'kernel_last': 17,
+                'batch_norms': [False, True],
+                'weight_decays': [0.001, 0.1],
+            },
+            'ecg_ffnn_kwargs': None,
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            },
+            'ecg_combiner': 'concatenate',
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.00001}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+    M_R2_CNN2b = M_R2_CNN2._replace(
+        description='Changes the random state to the exact same as in the '
+                    'RS experiment...',
+        random_state=634181651
+    )
+
+    # CNN3, best random-search model for 1 ECG + flat-features
+    M_R1_CNN3 = Experiment(
+        description='Uses xp_379 from M_R1_FF_CNN_RS, which was the top '
+                    'performing model found after 400 iterations of random '
+                    'search. In the random search, flat-features were '
+                    'included, but in this experiment we only use the ECG.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'down_sample': True,
+                'num_layers': 3,
+                'dropouts': [0.3, 0.5, 0.2],
+                'pool_size': 8,
+                'filter_first': 12,
+                'filter_last': 16,
+                'kernel_first': 13,
+                'kernel_last': 41,
+                'batch_norms': [True, True, False],
+                'weight_decays': [0.01, 0.001, 0.01],
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.001}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+    M_R1_FF_CNN3 = M_R1_CNN3._replace(
+        description='Uses the CNN3 (or xp_379) model with flat-features, as '
+                    'intended. This should replicate the results from '
+                    'experiment xp_379.',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        },
+    )
+    M_R2_FF_CNN3 = M_R1_CNN3._replace(
+        description='Uses the CNN3 (or xp_379) model, except with 2 ECGs '
+                    'instead of just one. The CNN combiner defaults to '
+                    'concatenation, but there is no additional ecg_ffnn '
+                    'added, which might be a useful variation.',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        },
+    )
+
+    # CNN4, best random-search model for 2 ECGs + flat-features
+    M_R1_CNN4 = Experiment(
+        description='Uses xp_294 from M_R2_FF_CNN_RS, which was the top '
+                    'performing model found after 400 iterations of random '
+                    'search. The model is optimized on 2 ECGs and flat-'
+                    'features, but here I only use 1 ECG and no flat-'
+                    'features.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'down_sample': True,
+                'num_layers': 2,
+                'dropouts': [0.3, 0.4],
+                'pool_size': 22,
+                'filter_first': 48,
+                'filter_last': 48,
+                'kernel_first': 9,
+                'kernel_last': 21,
+                'batch_norms': [False, True],
+                'weight_decays': [0.1, 0.0],
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.1],
+                'batch_norms': [False]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.001}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+    M_R1_FF_CNN4 = M_R1_CNN4._replace(
+        description='Uses the CNN4 model with 1 ECG and flat-features. ',
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
         }
     )
-    M_R1_CNN3 = M_R1_CNN2._replace(
-        description='Add class-weights to the training, and also reduce '
-                    'learning-rate when validation loss plateaus.',
-        class_weight={0: 1, 1: 10},
-        reduce_lr_on_plateau={
-            'monitor': 'val_loss',
-            'factor': 0.5,
-            'patience': 5,
-            'min_lr': 1e-6
-        },
-    )
-    M_R1_NOTCH_CNN3 = M_R1_CNN3._replace(
-        description='Uses notch-filter and clipping to remove outliers and '
-                    'baseline wander.',
+    M_R2_FF_CNN4 = M_R1_CNN4._replace(
+        description='Uses the CNN4 model with 2 ECGs and flat-features, '
+                    'as it was optimized for. Should replicate xp_294 from '
+                    'M_R2_FF_CNN_RS, with an AUC of ~0.8735.',
         extractor_kwargs={
-            "features": {
+            'features': {
                 'ecg_mode': 'raw',
-                'ecgs': ['ecg_0']
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
             },
-            "processing": {
-                'notch-filter',
-                'clip_outliers'
+        }
+    )
+    M_R2_FF_CNN4b = Experiment(
+        description='Adjusts the network slightly to not use such a large '
+                    'final dense layer.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'down_sample': True,
+                'num_layers': 2,
+                'dropouts': [0.3, 0.4],
+                'pool_size': 22,
+                'filter_first': 48,
+                'filter_last': 48,
+                'kernel_first': 9,
+                'kernel_last': 21,
+                'batch_norms': [False, True],
+                'weight_decays': [0.1, 0.0],
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.1],
+                'batch_norms': [False]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.5],
+                'batch_norms': [False]
             }
         },
-    )
-    M_R1_CNN4 = M_R1_CNN2._replace(
-        description='Increasing dropout, trying out a new lr schedule',
-        model_kwargs={
-            'cnn_kwargs': {
-                'num_layers': 2,
-                'dropout': 0.5,
-                'filter_first': 32,
-                'filter_last': 32,
-                'kernel_first': 16,
-                'kernel_last': 16,
-                'pool_size': 16,
-                'batch_norm': True,
-                'dense': False,
-                'downsample': True
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
             },
-            'dense_size': 100,
-            'dropout': 0.5
-        },
-        class_weight={0: 1, 1: 10},
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [153*20, 153*40, 153*150],
-                        'values': [1e-3, 1e-4, 1e-5, 1e-6],
-                    }
-                },
-            }
-        },
-    )
-    M_R1_CNN5 = M_R1_CNN4._replace(
-        description='Adjusting pool-size and kernel-size.',
-        model_kwargs={
-            'cnn_kwargs': {
-                'num_layers': 2,
-                'dropout': 0.5,
-                'filter_first': 32,
-                'filter_last': 32,
-                'kernel_first': 32,
-                'kernel_last': 16,
-                'batch_norm': True,
-                'dense': False,
-                'downsample': True
-            },
-            'dense_size': 100,
-            'dropout': 0.5
-        },
-    )
-    M_R1_CNN6 = M_R1_CNN4._replace(
-        description='Increasing dropout even further',
-        model_kwargs={
-            'cnn_kwargs': {
-                'num_layers': 2,
-                'dropout': 0.7,
-                'filter_first': 32,
-                'filter_last': 32,
-                'kernel_first': 16,
-                'kernel_last': 16,
-                'pool_size': 16,
-                'batch_norm': True,
-                'dense': False,
-                'downsample': True
-            },
-            'dense_size': 100,
-            'dropout': 0.5
         },
         optimizer={
             'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [153 * 50, 153 * 100],
-                        'values': [1e-3, 1e-4, 1e-5],
-                    }
-                },
-            }
+            'kwargs': {'learning_rate': 0.001}
         },
-    )
-
-    # CNN4, 1 ECG + FLAT FEATURES
-    M_R1_CNN4_DT = M_R1_CNN4._replace(
-        description='Adds the (logarithm of the) time since last ECG.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt']
-            },
-        },
-    )
-    M_R1_CNN4_AGE = M_R1_CNN4._replace(
-        description='Adds age.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['age']
-            },
-        },
-    )
-    M_R1_CNN4_SEX = M_R1_CNN4._replace(
-        description='Adds sex (1 = male, 0 = female).',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['male']
-            },
-        },
-    )
-    M_R1_CNN4_TNT = M_R1_CNN4._replace(
-        description='Adds the first TnT lab measurement.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['tnt_1']
-            },
-        },
-    )
-    M_R1_CNN4b_TNT = M_R1_CNN4_TNT._replace(
-        description='Adjusts the learning-rate schedule. Also, what if we '
-                    'skip the class-weights?',
         epochs=100,
-        class_weight=None,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # CNN5, second best random-search model for 1 ECG + ff
+    M_R1_FF_CNN5 = Experiment(
+        description='Uses xp_382 from M_R1_FF_CNN_RS, which was the second '
+                    'best in terms of both AUC and rule-out. ',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'down_sample': True,
+                'dropouts': [0.3, 0.4],
+                'pool_size': 21,
+                'filter_first': 52,
+                'filter_last': 60,
+                'kernel_first': 61,
+                'kernel_last': 45,
+                'batch_norms': [False, True],
+                'weight_decays': [0.1, 0.0],
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.2],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.001}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # CNN6, second best random-search model for 2 ECGs + ff
+    M_R2_FF_CNN6 = Experiment(
+        description='Second best model using 2ECGs + ff (xp_245).',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'down_sample': True,
+                'num_layers': 4,
+                'dropouts': [0.3, 0.0, 0.5, 0.3],
+                'pool_size': 6,
+                'filter_first': 20,
+                'filter_last': 20,
+                'kernel_first': 21,
+                'kernel_last': 17,
+                'batch_norms': [True, False, False, False],
+                'weight_decays': [0.01, 0.001, 0.01, 0.01],
+            },
+            'ecg_combiner': 'difference',
+            'ecg_ffnn_kwargs': None,
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.0003}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+    M_R2_FF_CNN6b = Experiment(
+        description='Model adjusted slightly to reduce the final dense '
+                    'size.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'down_sample': True,
+                'num_layers': 4,
+                'dropouts': [0.3, 0.0, 0.5, 0.3],
+                'pool_size': 6,
+                'filter_first': 20,
+                'filter_last': 20,
+                'kernel_first': 21,
+                'kernel_last': 17,
+                'batch_norms': [True, False, False, False],
+                'weight_decays': [0.01, 0.001, 0.01, 0.01],
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_ffnn_kwargs': None,
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.5],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.0003}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1/3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # CNN7, best random-search model for 1 ECG
+    M_R1_CNN7 = Experiment(
+        description='Uses xp_261 from M_R1_CNN_RS, which was the '
+                    'best in terms of AUC, but learning curve might have '
+                    'been a fluke. Testing it here anyway to be sure.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 3,
+                'down_sample': True,
+                'dropouts': [0.3, 0.4, 0.3],
+                'pool_size': 10,
+                'filter_first': 36,
+                'filter_last': 32,
+                'kernel_first': 49,
+                'kernel_last': 37,
+                'batch_norms': [True, False, True],
+                'weight_decays': [0.001, 0.001, 0.01],
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.3],
+                'batch_norms': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.001}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # RN1, 1 ECG
+    M_R1_RN1 = Experiment(
+        description='xp_141 from R1_RN_RS',
+        model=pretrained_resnet,
+        model_kwargs={
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': {
+                'sizes': [200, 100],
+                'dropouts': [0.0, 0.1],
+                'batch_norms': [False, True],
+                'activity_regularizers': [0.0, 0.0001],
+                'kernel_regularizers': [0.01, 0.0],
+                'bias_regularizers': [0.0001, 0.1]
+            },
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.0],
+                'batch_norms': [False],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.1],
+                'bias_regularizers': [0.001]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.0003}
+        },
+        epochs=50,
+        batch_size=32,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # RN2, 2 ECGs
+    M_R2_RN2 = Experiment(
+        description='xp_133 from R1_RN_RS, 2nd best model.',
+        model=pretrained_resnet,
+        model_kwargs={
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': {
+                'sizes': [200, 50],
+                'dropouts': [0.2, 0.0],
+                'batch_norms': [False, False],
+                'activity_regularizers': [0.001, 0.00001],
+                'kernel_regularizers': [0.01, 0.01],
+                'bias_regularizers': [0.01, 0.001]
+            },
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [20],
+                'dropouts': [0.3],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.01]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
         optimizer={
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
                     'scheduler': PiecewiseConstantDecay,
                     'scheduler_kwargs': {
-                        'boundaries': [153 * 5],
-                        'values': [1e-3, 1e-4],
+                        'boundaries': [5490],
+                        'values': [0.001, 0.00001]
+                    }
+                }
+            }
+        },
+        epochs=50,
+        batch_size=32,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # RN3, 1 ECG+ff
+    M_R1_FF_RN3 = Experiment(
+        description='xp_166 from R1_FF_RN_RS, 2nd best model',
+        model=pretrained_resnet,
+        model_kwargs={
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.5],
+                'batch_norms': [False],
+                'activity_regularizers': [0.00001],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.0],
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.0],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.01],
+                'bias_regularizers': [0.1]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.2],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.0],
+                'bias_regularizers': [0.0001],
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [7320],
+                        'values': [0.0003, 0.00003]
                     }
                 },
             }
         },
-    )
-    M_R1_CNN4_DT_AGE = M_R1_CNN4._replace(
-        description='Adds time since last ECG and age.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age']
-            },
-        },
-    )
-    M_R1_CNN4_DT_AGE_SEX = M_R1_CNN4._replace(
-        description='Adds time since last ECG, age and sex.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age', 'male']
-            },
-        },
-    )
-    M_R1_CNN4_DT_AGE_SEX_TNT = M_R1_CNN4._replace(
-        description='Adds time since last ECG, age, sex and TnT.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-        },
+        epochs=50,
+        batch_size=32,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
     )
 
-    # ABs CNN MODEL, 1 ECG + FLAT FEATURES
+    # RN4, 2 ECGs+ff
+    M_R2_FF_RN4 = Experiment(
+        description='xp_24 from R2_FF_RN_RS',
+        model=pretrained_resnet,
+        model_kwargs={
+            'freeze_resnet': False,
+            'ecg_ffnn_kwargs': {
+                'sizes': [25],
+                'dropouts': [0.2],
+                'batch_norms': [False],
+                'activity_regularizers': [0.01],
+                'kernel_regularizers': [0.001],
+                'bias_regularizers': [0.001]
+            },
+            'ecg_combiner': 'difference',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropouts': [0.0],
+                'batch_norms': [False],
+                'activity_regularizers': [0.0001],
+                'kernel_regularizers': [0.0001],
+                'bias_regularizers': [0.0001]
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.2],
+                'batch_norms': [True],
+                'activity_regularizers': [0.0],
+                'kernel_regularizers': [0.0001],
+                'bias_regularizers': [0.01],
+            },
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+                'flat_features': ['log_tnt_1', 'age', 'male', 'log_dt']
+            },
+            'processing': {
+                'scale': 1000,
+                'ribeiro': True
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': PiecewiseConstantDecay,
+                    'scheduler_kwargs': {
+                        'boundaries': [10065],
+                        'values': [0.003, 0.00001]
+                    }
+                },
+            }
+        },
+        epochs=50,
+        batch_size=32,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+    )
+
+    # ENSEMBLES
+    # NN1 ensemble
+    M_F1_NN1_r1 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1001,
+    )
+    M_F1_NN1_r2 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1002,
+    )
+    M_F1_NN1_r3 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1003,
+    )
+    M_F1_NN1_r4 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1004,
+    )
+    M_F1_NN1_r5 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1005,
+    )
+    M_F1_NN1_r6 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1006,
+    )
+    M_F1_NN1_r7 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1007,
+    )
+    M_F1_NN1_r8 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1008,
+    )
+    M_F1_NN1_r9 = M_F1_NN1._replace(
+        description='Same as M_F1_NN1, but with a different random seed.',
+        random_state=1009,
+    )
+
+    # NN2 ensemble
+    M_F2_NN2_r1 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1011,
+    )
+    M_F2_NN2_r2 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1012,
+    )
+    M_F2_NN2_r3 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1013,
+    )
+    M_F2_NN2_r4 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1014,
+    )
+    M_F2_NN2_r5 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1015,
+    )
+    M_F2_NN2_r6 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1016,
+    )
+    M_F2_NN2_r7 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1017,
+    )
+    M_F2_NN2_r8 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1018,
+    )
+    M_F2_NN2_r9 = M_F2_NN2._replace(
+        description='Same as M_F2_NN2, but with a different random seed.',
+        random_state=1019,
+    )
+
+    # NN3 ensemble
+    M_F1_FF_NN3_r1 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1021,
+    )
+    M_F1_FF_NN3_r2 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1022,
+    )
+    M_F1_FF_NN3_r3 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1023,
+    )
+    M_F1_FF_NN3_r4 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1024,
+    )
+    M_F1_FF_NN3_r5 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1025,
+    )
+    M_F1_FF_NN3_r6 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1026,
+    )
+    M_F1_FF_NN3_r7 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1027,
+    )
+    M_F1_FF_NN3_r8 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1028,
+    )
+    M_F1_FF_NN3_r9 = M_F1_FF_NN3._replace(
+        description='Same as M_F1_FF_NN3, but with a different random seed.',
+        random_state=1029,
+    )
+
+    # NN4 ensemble
+    M_F2_FF_NN4_r1 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1031,
+    )
+    M_F2_FF_NN4_r2 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1032,
+    )
+    M_F2_FF_NN4_r3 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1033,
+    )
+    M_F2_FF_NN4_r4 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1034,
+    )
+    M_F2_FF_NN4_r5 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1035,
+    )
+    M_F2_FF_NN4_r6 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1036,
+    )
+    M_F2_FF_NN4_r7 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1037,
+    )
+    M_F2_FF_NN4_r8 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1038,
+    )
+    M_F2_FF_NN4_r9 = M_F2_FF_NN4._replace(
+        description='Same as M_F2_FF_NN4, but with a different random seed.',
+        random_state=1039,
+    )
+
+    # NN5 ensemble (2nd best on 2ECGs + ff)
+    M_F2_FF_NN5_r1 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1031,
+    )
+    M_F2_FF_NN5_r2 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1032,
+    )
+    M_F2_FF_NN5_r3 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1033,
+    )
+    M_F2_FF_NN5_r4 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1034,
+    )
+    M_F2_FF_NN5_r5 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1035,
+    )
+    M_F2_FF_NN5_r6 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1036,
+    )
+    M_F2_FF_NN5_r7 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1037,
+    )
+    M_F2_FF_NN5_r8 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1038,
+    )
+    M_F2_FF_NN5_r9 = M_F2_FF_NN5._replace(
+        description='Same as M_F2_FF_NN5, but with a different random seed.',
+        random_state=1039,
+    )
+
+    # NN6 ensemble (3rd best on 2ECGs + ff)
+    M_F2_FF_NN6_r1 = M_F2_FF_NN6._replace(
+        description='Same as M_F2_FF_NN6, but with a different random seed.',
+        random_state=1031,
+    )
+    M_F2_FF_NN6_r2 = M_F2_FF_NN6._replace(
+        description='Same as M_F2_FF_NN6, but with a different random seed.',
+        random_state=1032,
+    )
+    M_F2_FF_NN6_r3 = M_F2_FF_NN6._replace(
+        description='Same as M_F2_FF_NN6, but with a different random seed.',
+        random_state=1033,
+    )
+    M_F2_FF_NN6_r4 = M_F2_FF_NN6._replace(
+        description='Same as M_F2_FF_NN6, but with a different random seed.',
+        random_state=1034,
+    )
+    M_F2_FF_NN6_r5 = M_F2_FF_NN6._replace(
+        description='Same as M_F2_FF_NN6, but with a different random seed.',
+        random_state=1035,
+    )
+    M_F2_FF_NN6_r6 = M_F2_FF_NN6._replace(
+        description='Same as M_F2_FF_NN6, but with a different random seed.',
+        random_state=1036,
+    )
+    M_F2_FF_NN6_r7 = M_F2_FF_NN6._replace(
+        description='Same as M_F2_FF_NN6, but with a different random seed.',
+        random_state=1037,
+    )
+    M_F2_FF_NN6_r8 = M_F2_FF_NN6._replace(
+        description='Same as M_F2_FF_NN6, but with a different random seed.',
+        random_state=1038,
+    )
+    M_F2_FF_NN6_r9 = M_F2_FF_NN6._replace(
+        description='Same as M_F2_FF_NN6, but with a different random seed.',
+        random_state=1039,
+    )
+
+    # CNN1 ensemble
+    M_R1_CNN1_r1 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1041,
+    )
+    M_R1_CNN1_r2 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1042,
+    )
+    M_R1_CNN1_r3 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1043,
+    )
+    M_R1_CNN1_r4 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1044,
+    )
+    M_R1_CNN1_r5 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1045,
+    )
+    M_R1_CNN1_r6 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1046,
+    )
+    M_R1_CNN1_r7 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1047,
+    )
+    M_R1_CNN1_r8 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1048,
+    )
+    M_R1_CNN1_r9 = M_R1_CNN1._replace(
+        description='Same as M_R1_CNN1, but with a different random seed.',
+        random_state=1049,
+    )
+
+    # CNN2 ensemble
+    M_R2_CNN2_r1 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1051,
+    )
+    M_R2_CNN2_r2 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1052,
+    )
+    M_R2_CNN2_r3 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1053,
+    )
+    M_R2_CNN2_r4 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1054,
+    )
+    M_R2_CNN2_r5 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1055,
+    )
+    M_R2_CNN2_r6 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1056,
+    )
+    M_R2_CNN2_r7 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1057,
+    )
+    M_R2_CNN2_r8 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1058,
+    )
+    M_R2_CNN2_r9 = M_R2_CNN2._replace(
+        description='Same as M_R2_CNN2, but with a different random seed.',
+        random_state=1059,
+    )
+
+    # CNN3 ensemble
+    M_R1_FF_CNN3_r1 = M_R1_FF_CNN3._replace(
+        description='Same as M_R1_FF_CNN3, but with a different random seed.',
+        random_state=1061,
+    )
+    M_R1_FF_CNN3_r2 = M_R1_FF_CNN3._replace(
+        description='Same as M_R1_FF_CNN3, but with a different random seed.',
+        random_state=1062,
+    )
+    M_R1_FF_CNN3_r3 = M_R1_FF_CNN3._replace(
+        description='Same as M_R1_FF_CNN3, but with a different random seed.',
+        random_state=1063,
+    )
+    M_R1_FF_CNN3_r4 = M_R1_FF_CNN3._replace(
+        description='Same as M_R1_FF_CNN3, but with a different random seed.',
+        random_state=1064,
+    )
+    M_R1_FF_CNN3_r5 = M_R1_FF_CNN3._replace(
+        description='Same as M_R1_FF_CNN3, but with a different random seed.',
+        random_state=1065,
+    )
+    M_R1_FF_CNN3_r6 = M_R1_FF_CNN3._replace(
+        description='Same as M_R1_FF_CNN3, but with a different random seed.',
+        random_state=1066,
+    )
+    M_R1_FF_CNN3_r7 = M_R1_FF_CNN3._replace(
+        description='Same as M_R1_FF_CNN3, but with a different random seed.',
+        random_state=1067,
+    )
+    M_R1_FF_CNN3_r8 = M_R1_FF_CNN3._replace(
+        description='Same as M_R1_FF_CNN3, but with a different random seed.',
+        random_state=1068,
+    )
+    M_R1_FF_CNN3_r9 = M_R1_FF_CNN3._replace(
+        description='Same as M_R1_FF_CNN3, but with a different random seed.',
+        random_state=1069,
+    )
+
+    # CNN4 ENSEMBLE
+    M_R2_FF_CNN4_r1 = M_R2_FF_CNN4._replace(
+        description='Same as M_R2_FF_CNN4, but with a different random seed.',
+        random_state=1071,
+    )
+    M_R2_FF_CNN4_r2 = M_R2_FF_CNN4._replace(
+        description='Same as M_R2_FF_CNN4, but with a different random seed.',
+        random_state=1072,
+    )
+    M_R2_FF_CNN4_r3 = M_R2_FF_CNN4._replace(
+        description='Same as M_R2_FF_CNN4, but with a different random seed.',
+        random_state=1073,
+    )
+    M_R2_FF_CNN4_r4 = M_R2_FF_CNN4._replace(
+        description='Same as M_R2_FF_CNN4, but with a different random seed.',
+        random_state=1074,
+    )
+    M_R2_FF_CNN4_r5 = M_R2_FF_CNN4._replace(
+        description='Same as M_R2_FF_CNN4, but with a different random seed.',
+        random_state=1075,
+    )
+    M_R2_FF_CNN4_r6 = M_R2_FF_CNN4._replace(
+        description='Same as M_R2_FF_CNN4, but with a different random seed.',
+        random_state=1076,
+    )
+    M_R2_FF_CNN4_r7 = M_R2_FF_CNN4._replace(
+        description='Same as M_R2_FF_CNN4, but with a different random seed.',
+        random_state=1077,
+    )
+    M_R2_FF_CNN4_r8 = M_R2_FF_CNN4._replace(
+        description='Same as M_R2_FF_CNN4, but with a different random seed.',
+        random_state=1078,
+    )
+    M_R2_FF_CNN4_r9 = M_R2_FF_CNN4._replace(
+        description='Same as M_R2_FF_CNN4, but with a different random seed.',
+        random_state=1079,
+    )
+
+    # RN1 Ensemble
+    M_R1_RN1_r1 = M_R1_RN1._replace(
+        description='Same as M_R1_RN1, but with different random seed',
+        random_state=1081,
+    )
+    M_R1_RN1_r2 = M_R1_RN1._replace(
+        description='Same as M_R1_RN1, but with different random seed',
+        random_state=1082,
+    )
+    M_R1_RN1_r3 = M_R1_RN1._replace(
+        description='Same as M_R1_RN1, but with different random seed',
+        random_state=1083,
+    )
+    M_R1_RN1_r4 = M_R1_RN1._replace(
+        description='Same as M_R1_RN1, but with different random seed',
+        random_state=1084,
+    )
+    M_R1_RN1_r5 = M_R1_RN1._replace(
+        description='Same as M_R1_RN1, but with different random seed',
+        random_state=1085,
+    )
+    M_R1_RN1_r6 = M_R1_RN1._replace(
+        description='Same as M_R1_RN1, but with different random seed',
+        random_state=1086,
+    )
+    M_R1_RN1_r7 = M_R1_RN1._replace(
+        description='Same as M_R1_RN1, but with different random seed',
+        random_state=1087,
+    )
+    M_R1_RN1_r8 = M_R1_RN1._replace(
+        description='Same as M_R1_RN1, but with different random seed',
+        random_state=1088,
+    )
+    M_R1_RN1_r9 = M_R1_RN1._replace(
+        description='Same as M_R1_RN1, but with different random seed',
+        random_state=1089,
+    )
+
+    # RN2 Ensemble
+    M_R2_RN2_r1 = M_R2_RN2._replace(
+        description='Same as M_R2_RN2, but with different random seed',
+        random_state=1091,
+    )
+    M_R2_RN2_r2 = M_R2_RN2._replace(
+        description='Same as M_R2_RN2, but with different random seed',
+        random_state=1092,
+    )
+    M_R2_RN2_r3 = M_R2_RN2._replace(
+        description='Same as M_R2_RN2, but with different random seed',
+        random_state=1093,
+    )
+    M_R2_RN2_r4 = M_R2_RN2._replace(
+        description='Same as M_R2_RN2, but with different random seed',
+        random_state=1094,
+    )
+    M_R2_RN2_r5 = M_R2_RN2._replace(
+        description='Same as M_R2_RN2, but with different random seed',
+        random_state=1095,
+    )
+    M_R2_RN2_r6 = M_R2_RN2._replace(
+        description='Same as M_R2_RN2, but with different random seed',
+        random_state=1096,
+    )
+    M_R2_RN2_r7 = M_R2_RN2._replace(
+        description='Same as M_R2_RN2, but with different random seed',
+        random_state=1097,
+    )
+    M_R2_RN2_r8 = M_R2_RN2._replace(
+        description='Same as M_R2_RN2, but with different random seed',
+        random_state=1098,
+    )
+    M_R2_RN2_r9 = M_R2_RN2._replace(
+        description='Same as M_R2_RN2, but with different random seed',
+        random_state=1099,
+    )
+
+    # RN3 Ensemble
+    M_R1_FF_RN3_r1 = M_R1_FF_RN3._replace(
+        description='Same as M_R1_FF_RN3, but with different random seed',
+        random_state=1101,
+    )
+    M_R1_FF_RN3_r2 = M_R1_FF_RN3._replace(
+        description='Same as M_R1_FF_RN3, but with different random seed',
+        random_state=1102,
+    )
+    M_R1_FF_RN3_r3 = M_R1_FF_RN3._replace(
+        description='Same as M_R1_FF_RN3, but with different random seed',
+        random_state=1103,
+    )
+    M_R1_FF_RN3_r4 = M_R1_FF_RN3._replace(
+        description='Same as M_R1_FF_RN3, but with different random seed',
+        random_state=1104,
+    )
+    M_R1_FF_RN3_r5 = M_R1_FF_RN3._replace(
+        description='Same as M_R1_FF_RN3, but with different random seed',
+        random_state=1105,
+    )
+    M_R1_FF_RN3_r6 = M_R1_FF_RN3._replace(
+        description='Same as M_R1_FF_RN3, but with different random seed',
+        random_state=1106,
+    )
+    M_R1_FF_RN3_r7 = M_R1_FF_RN3._replace(
+        description='Same as M_R1_FF_RN3, but with different random seed',
+        random_state=1107,
+    )
+    M_R1_FF_RN3_r8 = M_R1_FF_RN3._replace(
+        description='Same as M_R1_FF_RN3, but with different random seed',
+        random_state=1108,
+    )
+    M_R1_FF_RN3_r9 = M_R1_FF_RN3._replace(
+        description='Same as M_R1_FF_RN3, but with different random seed',
+        random_state=1109,
+    )
+
+    # RN4 Ensemble
+    M_R2_FF_RN4_r1 = M_R2_FF_RN4._replace(
+        description='Same as M_R2_FF_RN4, but with different random seed',
+        random_state=1111,
+    )
+    M_R2_FF_RN4_r2 = M_R2_FF_RN4._replace(
+        description='Same as M_R2_FF_RN4, but with different random seed',
+        random_state=1112,
+    )
+    M_R2_FF_RN4_r3 = M_R2_FF_RN4._replace(
+        description='Same as M_R2_FF_RN4, but with different random seed',
+        random_state=1113,
+    )
+    M_R2_FF_RN4_r4 = M_R2_FF_RN4._replace(
+        description='Same as M_R2_FF_RN4, but with different random seed',
+        random_state=1114,
+    )
+    M_R2_FF_RN4_r5 = M_R2_FF_RN4._replace(
+        description='Same as M_R2_FF_RN4, but with different random seed',
+        random_state=1115,
+    )
+    M_R2_FF_RN4_r6 = M_R2_FF_RN4._replace(
+        description='Same as M_R2_FF_RN4, but with different random seed',
+        random_state=1116,
+    )
+    M_R2_FF_RN4_r7 = M_R2_FF_RN4._replace(
+        description='Same as M_R2_FF_RN4, but with different random seed',
+        random_state=1117,
+    )
+    M_R2_FF_RN4_r8 = M_R2_FF_RN4._replace(
+        description='Same as M_R2_FF_RN4, but with different random seed',
+        random_state=1118,
+    )
+    M_R2_FF_RN4_r9 = M_R2_FF_RN4._replace(
+        description='Same as M_R2_FF_RN4, but with different random seed',
+        random_state=1119,
+    )
+
+    # Anders Björkelund CNN model
     M_R1_AB1 = Experiment(
         description='Predicting MACE-30 using only single raw ECG, '
                     'using the CNN architecture from Anders '
@@ -463,7 +1878,7 @@ class ESCT(Experiment, Enum):
         model=ecg_cnn,
         model_kwargs={
             'cnn_kwargs': {
-                'downsample': False,
+                'down_sample': False,
                 'num_layers': 3,
                 'dropouts': [0.0, 0.3, 0.0],
                 'kernels': [64, 16, 16],
@@ -471,13 +1886,13 @@ class ESCT(Experiment, Enum):
                 'weight_decays': [1e-4, 1e-3, 1e-4],
                 'pool_sizes': [32, 4, 8],
                 'batch_norm': False,
-                'ffnn_kwargs': {
-                    'sizes': [10],
-                    'dropouts': [0.0],
-                    'batch_norms': [False]
-                },
             },
-            'ecg_ffnn_kwargs': None,
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0],
+                'batch_norms': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
             'flat_ffnn_kwargs': None,
             'final_ffnn_kwargs': {
                 'sizes': [10],
@@ -503,7 +1918,17 @@ class ESCT(Experiment, Enum):
         cv_kwargs={'test_size': 1 / 3},
         scoring=roc_auc_score,
     )
-    M_R1_AB1_DT_AGE_SEX_TNT = M_R1_AB1._replace(
+    M_R2_AB1 = M_R1_AB1._replace(
+        description='Same AB model, but using 2 ECGs instead of one. Each '
+                    'ECG trains its own separate network.',
+        extractor_kwargs={
+            "features": {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0', 'ecg_1'],
+            },
+        },
+    )
+    M_R1_FF_AB1 = M_R1_AB1._replace(
         description='Predicting MACE-30 using single raw ECG and flat-'
                     'features, using the CNN architecture from Anders '
                     'Björkelund et al. ',
@@ -511,939 +1936,17 @@ class ESCT(Experiment, Enum):
             "features": {
                 'ecg_mode': 'raw',
                 'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
+                'flat_features': ['log_dt', 'age', 'male', 'log_tnt_1']
             },
         },
     )
-
-    # LOGISTIC REGRESSION USING 1 ECG PROCESSED WITH CNN4 + FLAT FEATURES
-    M_R1_CNN4_LR1_DT = Experiment(
-        description='Pre-processing 1 input ECG with CNN4, into a single '
-                    'scalar, then adding delta-t and feeding it into a '
-                    'logistic-regression model.',
-        model=logistic_regression,
-        pre_processor=pre_process_using_xp,
-        pre_processor_kwargs={
-            'xp_name': 'ESCT/M_R1_CNN4',
-            'commit': 'eb783dc3ab36f554b194cffe463919620d123496',
-            'final_layer_index': -1
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt']
-            },
-        },
-        epochs=300,
-        batch_size=-1,
-        optimizer={
-            'name': SGD,
-            'kwargs': {'learning_rate': 1},
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    M_R1_CNN4_LR1_AGE = M_R1_CNN4_LR1_DT._replace(
-        description='ECG + Age',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['age']
-            },
-        },
-    )
-    M_R1_CNN4_LR1_SEX = M_R1_CNN4_LR1_DT._replace(
-        description='ECG + Sex',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['male']
-            },
-        },
-    )
-    M_R1_CNN4_LR1_TNT = M_R1_CNN4_LR1_DT._replace(
-        description='ECG + tnt',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['tnt_1']
-            },
-        },
-    )
-    M_R1_CNN4_LR1_DT_AGE = M_R1_CNN4_LR1_DT._replace(
-        description='ECG + dt + age',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age']
-            },
-        },
-    )
-    M_R1_CNN4_LR1_DT_AGE_SEX = M_R1_CNN4_LR1_DT._replace(
-        description='ECG + dt + age + sex',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age', 'male']
-            },
-        },
-    )
-    M_R1_CNN4_LR1_DT_AGE_SEX_TNT = M_R1_CNN4_LR1_DT._replace(
-        description='ECG + age + sex + tnt',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-        },
-    )
-
-    # SINGLE RAW ECG, RESNET VARIATIONS
-    M_R1_RN1 = Experiment(
-        description="Pretrained ResNet architecture from Ribeiro et al.",
-        model=load_ribeiro_model,
-        model_kwargs={
-            'dense_layers': [],
-            'dropout': 0.0,
-            'freeze_resnet': False
-        },
-        epochs=200,
-        batch_size=32,
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [305 * 20, 305 * 100],
-                        'values': [1e-3, 1e-4, 1e-5],
-                    }
-                },
-            }
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0']
-            },
-            'processing': {
-                'scale': 1000,
-                'ribeiro': True
-            }
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    M_R1_RN2 = M_R1_RN1._replace(
-        description="Pretrained ResNet, with class-weights",
-        class_weight={0: 1, 1: 10.7},
-    )
-    M_R1_RN3 = M_R1_RN1._replace(
-        description='Pretrained ResNet, but adding a final dense 100 at the '
-                    'end.',
-        model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.0,
-            'freeze_resnet': False
-        },
-    )
-    M_R1_RN4 = M_R1_RN1._replace(
-        description='Pretrained ResNet, but adding final dense 100 layer with '
-                    'dropout at the end.',
-        model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.3,
-            'freeze_resnet': False
-        },
-    )
-    M_R1_RN5 = M_R1_RN1._replace(
-        description='Adjusting the learning-rate scheduler and reducing epoch '
-                    'number. ',
-        model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.0,
-            'freeze_resnet': False
-        },
-        epochs=50,
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [305 * 10, 305 * 20],
-                        'values': [1e-3, 1e-4, 1e-5],
-                    }
-                },
-            }
-        },
-    )
-
-    # FFNN USING 1 ECG PROCESSED WITH RESNET + FLAT FEATURES
-    M_R1_RN5_NN1_DT_AGE_SEX_TNT = Experiment(
-        description='Loads the pre-trained R1_RN5 model and uses it as a '
-                    'feature extractor for the input ECG. Feed this into a '
-                    'dense-100 layer, then concatenate some flat-features '
-                    'before the final sigmoid layer.',
-        model=ffnn,
-        model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.3
-        },
-        pre_processor=pre_process_using_xp,
-        pre_processor_kwargs={
-            'xp_name': 'ESCT/M_R1_RN5',
-            'commit': '61fb8038d91ee119a1a889c3c86b27931f1f57b5',
-            'which': 'last',
-            'final_layer_index': -3
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-            'processing': {
-                'scale': 1000,
-                'ribeiro': True
-            }
-        },
-        epochs=200,
-        batch_size=32,
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [305 * 100],
-                        'values': [1e-3, 1e-4],
-                    }
-                },
-            }
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    M_R1_RN5_NN2_DT_AGE_SEX_TNT = M_R1_RN5_NN1_DT_AGE_SEX_TNT._replace(
-        description='Reducing the size of the NN to just a Dense-10. Also, '
-                    'no dropout for now.',
-        model_kwargs={
-            'dense_layers': [10],
-            'dropout': 0.0
-        },
-        epochs=100,
-        batch_size=32,
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [305 * 50],
-                        'values': [1e-3, 1e-4],
-                    }
-                },
-            }
-        },
-    )
-    M_R1_RN5_NN3_DT_AGE_SEX_TNT = M_R1_RN5_NN1_DT_AGE_SEX_TNT._replace(
-        description='Neural network with 100 -> 1 dense layers.',
-        model_kwargs={
-            'dense_layers': [100, 1],
-            'dropout': 0.0
-        },
-        epochs=100,
-        batch_size=32,
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [305 * 50],
-                        'values': [1e-3, 1e-4],
-                    }
-                },
-            }
-        },
-    )
-
-    # LOGISTIC REGRESSION USING 1 ECG PROCESSED WITH RESNET + FLAT FEATURES
-    M_R1_RN5_LR1_DT_AGE_SEX_TNT = Experiment(
-        description='Loads the pre-trained R1_RN5 model and uses it as a '
-                    'feature extractor for the input ECG, giving only the '
-                    'final scalar as output for each ECG. Add the flat-'
-                    'features and plug it all into a logistic regression '
-                    'model.',
-        model=logistic_regression,
-        pre_processor=pre_process_using_xp,
-        pre_processor_kwargs={
-            'xp_name': 'ESCT/M_R1_RN5',
-            'commit': '61fb8038d91ee119a1a889c3c86b27931f1f57b5',
-            'which': 'last',
-            'final_layer_index': -1
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-            'processing': {
-                'scale': 1000,
-                'ribeiro': True
-            }
-        },
-        epochs=300,
-        batch_size=-1,
-        optimizer={
-            'name': SGD,
-            'kwargs': {'learning_rate': 1},
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-
-    # FFNN USING 2 ECGs PROCESSED WITH CNN4 + FLAT FEATURES
-    M_R2_CNN4_NN1 = Experiment(
-        description='Loads the pre-trained R1_CNN4 model and uses it as a '
-                    'feature extractor for the two input ECGs. The model '
-                    'itself is a simple feed-forward neural network with '
-                    'a single hidden layer of size 100.',
-        model=ffnn,
-        model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.3
-        },
-        pre_processor=pre_process_using_xp,
-        pre_processor_kwargs={
-            'xp_name': 'ESCT/M_R1_CNN4',
-            'commit': 'eb783dc3ab36f554b194cffe463919620d123496',
-            'final_layer_index': -3
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1']
-            },
-        },
-        class_weight={0: 1, 1: 10},
-        epochs=200,
-        batch_size=64,
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [153 * 100],
-                        'values': [1e-4, 1e-5],
-                    }
-                },
-            }
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    M_R2_CNN4_NN1_DT = M_R2_CNN4_NN1._replace(
-        description='Use pretrained CNN as feature extractor for ECGs. Feed '
-                    'into dense-100 layer, then concatenate time since last '
-                    'ecg.',
+    M_R2_FF_AB1 = M_R1_AB1._replace(
+        description='Same AB model, 2 ECGs + flat-features.',
         extractor_kwargs={
             "features": {
                 'ecg_mode': 'raw',
                 'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt']
+                'flat_features': ['log_tnt_1', 'male', 'age', 'log_dt']
             },
         },
     )
-    M_R2_CNN4_NN1_AGE = M_R2_CNN4_NN1._replace(
-        description='Use pretrained CNN as feature extractor for ECGs. Feed '
-                    'into dense-100 layer, then concatenate age.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['age']
-            },
-        },
-    )
-    M_R2_CNN4_NN1_SEX = M_R2_CNN4_NN1._replace(
-        description='Use pretrained CNN as feature extractor for ECGs. Feed '
-                    'into dense-100 layer, then concatenate sex.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['male']
-            },
-        },
-    )
-    M_R2_CNN4_NN1_TNT = M_R2_CNN4_NN1._replace(
-        description='Use pretrained CNN as feature extractor for ECGs. Feed '
-                    'into dense-100 layer, then concatenate tnt.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['tnt_1']
-            },
-        },
-    )
-    M_R2_CNN4_NN1_DT_AGE = M_R2_CNN4_NN1._replace(
-        description='Use pretrained CNN as feature extractor for ECGs. Feed '
-                    'into dense-100 layer, then concatenate time since last '
-                    'ecg and age.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt', 'age']
-            },
-        },
-    )
-    M_R2_CNN4_NN1_DT_AGE_SEX = M_R2_CNN4_NN1._replace(
-        description='Use pretrained CNN as feature extractor for ECGs. Feed '
-                    'into dense-100 layer, then concatenate time since last '
-                    'ecg, age and sex',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt', 'age', 'male']
-            },
-        },
-    )
-    M_R2_CNN4_NN1_DT_AGE_SEX_TNT = M_R2_CNN4_NN1._replace(
-        description='Use pretrained CNN as feature extractor for ECGs. Feed '
-                    'into dense-100 layer, then concatenate time since last '
-                    'ecg, age, sex and tnt.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-        },
-    )
-
-    # RF USING 2 ECGs PROCESSED WITH CNN4
-    M_R2_CNN4_RF1 = M_R2_CNN4_NN1._replace(
-        description='Try Random Forest instead.',
-        model=RandomForestClassifier,
-        model_kwargs={
-            'n_estimators': 1000,
-        },
-        pre_processor_kwargs={
-            'xp_name': 'ESCT/M_R1_CNN4',
-            'commit': 'eb783dc3ab36f554b194cffe463919620d123496',
-            'final_layer_index': -3
-        },
-        building_model_requires_development_data=False,
-    )
-
-    # LOGISTIC REGRESSION USING 2 ECGs PROCESSED WITH CNN4 + FLAT FEATURES
-    M_R2_CNN4_LR1_DT = Experiment(
-        description='Logistic regression, 2 ECGs + dt vs MACE 30',
-        model=logistic_regression,
-        pre_processor=pre_process_using_xp,
-        pre_processor_kwargs={
-            'xp_name': 'ESCT/M_R1_CNN4',
-            'commit': 'eb783dc3ab36f554b194cffe463919620d123496',
-            'final_layer_index': -1
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt']
-            },
-        },
-        epochs=300,
-        batch_size=-1,
-        optimizer={
-            'name': SGD,
-            'kwargs': {'learning_rate': 1},
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    M_R2_CNN4_LR1_AGE = M_R2_CNN4_LR1_DT._replace(
-        description='Logistic regression, 2 ECGs + age vs MACE 30',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['age']
-            },
-        },
-    )
-    M_R2_CNN4_LR1_SEX = M_R2_CNN4_LR1_DT._replace(
-        description='Logistic regression, 2 ECGs + sex vs MACE 30',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['male']
-            },
-        },
-    )
-    M_R2_CNN4_LR1_TNT = M_R2_CNN4_LR1_DT._replace(
-        description='Logistic regression, 2 ECGs + tnt vs MACE 30',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['tnt_1']
-            },
-        },
-    )
-    M_R2_CNN4_LR1_DT_AGE = M_R2_CNN4_LR1_DT._replace(
-        description='Logistic regression, 2 ECGs + dt + age vs MACE 30',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt', 'age']
-            },
-        },
-    )
-    M_R2_CNN4_LR1_DT_AGE_SEX = M_R2_CNN4_LR1_DT._replace(
-        description='Logistic regression, 2 ECGs + dt + age + sex vs MACE 30',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt', 'age', 'male']
-            },
-        },
-    )
-    M_R2_CNN4_LR1_DT_AGE_SEX_TNT = M_R2_CNN4_LR1_DT._replace(
-        description='Logistic regression, 2 ECGs + all flat features vs '
-                    'MACE 30',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-        },
-    )
-
-    # LOGISTIC REGRESSION USING 2 ECGs PROCESSED WITH RESNET + FLAT FEATURES
-    M_R2_RN5_LR1_DT_AGE_SEX_TNT = M_R1_RN5_LR1_DT_AGE_SEX_TNT._replace(
-        description='Process both input ECGs with the pre-trained ResNet, '
-                    'using only the predictions for each as input, together '
-                    'with the flat-features.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-            'processing': {
-                'scale': 1000,
-                'ribeiro': True
-            }
-        },
-    )
-
-    # FFNN USING 2 ECGs PROCESSED WITH RESNET + FLAT FEATURES
-    M_R2_RN5_NN1 = Experiment(
-        description='Loads the pre-trained R1_RN5 model and uses it as a '
-                    'feature extractor for the two input ECGs. The model '
-                    'itself is a simple feed-forward neural network with '
-                    'a single hidden layer of size 100.',
-        model=ffnn,
-        model_kwargs={
-            'dense_layers': [100],
-            'dropout': 0.3
-        },
-        pre_processor=pre_process_using_xp,
-        pre_processor_kwargs={
-            'xp_name': 'ESCT/M_R1_RN5',
-            'commit': '61fb8038d91ee119a1a889c3c86b27931f1f57b5',
-            'which': 'last',
-            'final_layer_index': -3
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1']
-            },
-            'processing': {
-                'scale': 1000,
-                'ribeiro': True
-            }
-        },
-        epochs=200,
-        batch_size=32,
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [305 * 100],
-                        'values': [1e-3, 1e-4],
-                    }
-                },
-            }
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    M_R2_RN5_NN1_DT_AGE_SEX_TNT = M_R2_RN5_NN1._replace(
-        description='Use two ECGs this time.',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-            'processing': {
-                'scale': 1000,
-                'ribeiro': True
-            }
-        },
-    )
-
-    # RF USING 2 ECGs PROCESSED WITH RESNET
-    M_R2_RN5_RF1 = M_R2_RN5_NN1._replace(
-        description='Pre-process the two input ECGs using pretrained ResNet, '
-                    'concatenate the result and feed it into a Random Forest '
-                    'classifier.',
-        model=RandomForestClassifier,
-        model_kwargs={
-            'n_estimators': 1000,
-        },
-        pre_processor_kwargs={
-            'xp_name': 'ESCT/M_R1_RN5',
-            'commit': '61fb8038d91ee119a1a889c3c86b27931f1f57b5',
-            'which': 'last',
-            'final_layer_index': -3
-        },
-        building_model_requires_development_data=False,
-    )
-
-    # AMI-30
-    AMI_LR1_TNT = Experiment(
-        description='Logistic regression, ami vs tnt',
-        model=logistic_regression,
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['tnt_1']
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        },
-        epochs=300,
-        batch_size=-1,
-        optimizer={
-            'name': SGD,
-            'kwargs': {'learning_rate': 1},
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    AMI_LR1_DT_AGE_SEX_TNT = AMI_LR1_TNT._replace(
-        description='Logistic regression, ami vs tnt + dt + age + sex',
-        extractor_kwargs={
-            "features": {
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        }
-    )
-
-    AMI_R1_CNN2 = Experiment(
-        description='Predicting AMI-30 using single raw ECG in a simple '
-                    '2-layer CNN.',
-        model=ecg_cnn,
-        model_kwargs={
-            'cnn_kwargs': {
-                'num_layers': 2,
-                'dropout': 0.3,
-                'filter_first': 32,
-                'filter_last': 32,
-                'kernel_first': 16,
-                'kernel_last': 16,
-                'pool_size': 16,
-                'batch_norm': True,
-                'dense': False,
-                'downsample': True
-            },
-            'dense_size': 100,
-            'dropout': 0.3
-        },
-        epochs=200,
-        batch_size=64,
-        optimizer={
-            'name': Adam,
-            'kwargs': {'learning_rate': 1e-4}
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0']
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    AMI_R1_CNN4 = Experiment(
-        description='Predicting AMI-30 with CNN4 and only 1 ECG input.',
-        model=ecg_cnn,
-        model_kwargs={
-            'cnn_kwargs': {
-                'downsample': True,
-                'num_layers': 2,
-                'dropout': 0.5,
-                'filter_first': 32,
-                'filter_last': 32,
-                'kernel_first': 16,
-                'kernel_last': 16,
-                'pool_size': 16,
-                'batch_norm': True,
-                'ffnn_kwargs': None,
-            },
-            'ecg_ffnn_kwargs': {
-                'sizes': [100],
-                'dropouts': [0.5],
-                'batch_norms': [False]
-            },
-            'flat_ffnn_kwargs': None,
-            'final_ffnn_kwargs': None
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0']
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [153*20, 153*40, 153*150],
-                        'values': [1e-3, 1e-4, 1e-5, 1e-6],
-                    }
-                },
-            }
-        },
-        class_weight={0: 1, 1: 10.7},
-        epochs=200,
-        batch_size=64,
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-
-    AMI_R1_CNN4_TNT = AMI_R1_CNN4._replace(
-        description='Predicting AMI-30 with CNN4 and 1 ECG input + TnT',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['tnt_1']
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        },
-    )
-    AMI_R1_CNN4_DT_AGE_SEX_TNT = AMI_R1_CNN4._replace(
-        description='Predicting AMI-30 with CNN4 and 1 ECG input + flat-'
-                    'features',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        },
-    )
-
-    # TODO: Once AMI_R1_CNN4 is done
-    # AMI_R1_CNN4_LR1_TNT
-    # AMI_R1_CNN4_LR1_DT_AGE_SEX_TNT
-    #
-    # AMI_R2_CNN4_LR1_TNT
-    # AMI_R2_CNN4_LR1_DT_AGE_SEX_TNT
-
-    AMI_R1_AB1 = Experiment(
-        description='Predicting AMI-30 using Björkelund et al, except only '
-                    '1 ECG input and nothing else.',
-        model=ecg_cnn,
-        model_kwargs={
-            'cnn_kwargs': {
-                'downsample': False,
-                'num_layers': 3,
-                'dropouts': [0.0, 0.3, 0.0],
-                'kernels': [64, 16, 16],
-                'filters': [64, 16, 8],
-                'weight_decays': [1e-4, 1e-3, 1e-4],
-                'pool_sizes': [32, 4, 8],
-                'batch_norm': False,
-                'ffnn_kwargs': {
-                    'sizes': [10],
-                    'dropouts': [0.0],
-                    'batch_norms': [False]
-                },
-            },
-            'final_ffnn_kwargs': {
-                'sizes': [10],
-                'dropouts': [0.5],
-                'batch_norms': [False]
-            }
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0']
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        },
-        optimizer={
-            'name': Adam,
-            'kwargs': {'learning_rate': 3e-3}
-        },
-        epochs=200,
-        batch_size=64,
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-    AMI_R1_AB1_DT_AGE_SEX_TNT = AMI_R1_AB1._replace(
-        description='Predicting AMI with AB1, using 1 ECG plus the flat-'
-                    'features',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        },
-    )
-    AMI_R2_AB1_DT_AGE_SEX_TNT = AMI_R1_AB1._replace(
-        description='Predicting AMI with AB1, using 2 ECGs plus the flat-'
-                    'features',
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0', 'ecg_1'],
-                'flat_features': ['log_dt', 'age', 'male', 'tnt_1']
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        },
-    )
-
-    AMI_R1_RN5 = Experiment(
-        description="Pretrained ResNet architecture from Ribeiro et al, "
-                    "predicting AMI-30.",
-        model=load_ribeiro_model,
-        model_kwargs={
-            'dense_layers': [],
-            'dropout': 0.0,
-            'freeze_resnet': False
-        },
-        epochs=200,
-        batch_size=32,
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': PiecewiseConstantDecay,
-                    'scheduler_kwargs': {
-                        'boundaries': [305 * 20, 305 * 100],
-                        'values': [1e-3, 1e-4, 1e-5],
-                    }
-                },
-            }
-        },
-        extractor=EscTrop,
-        extractor_kwargs={
-            "features": {
-                'ecg_mode': 'raw',
-                'ecgs': ['ecg_0']
-            },
-            'processing': {
-                'scale': 1000,
-                'ribeiro': True
-            },
-            'labels': {
-                'target': 'ami30'
-            }
-        },
-        building_model_requires_development_data=True,
-        cv=ChronologicalSplit,
-        cv_kwargs={'test_size': 1 / 3},
-        scoring=roc_auc_score,
-    )
-
-    # TODO once AMI_R1_RN5 is done
-    # AMI_R1_RN5_NN1_TNT
-    # AMI_R1_RN5_NN1_DT_AGE_SEX_TNT
-    #
-    # AMI_R2_RN5_NN1_TNT
-    # AMI_R2_RN5_NN1_DT_AGE_SEX_TNT

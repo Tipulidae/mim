@@ -105,8 +105,7 @@ class Experiment(NamedTuple):
 
         for i, (train, validation) in enumerate(cv.split(data)):
             pre_process = self.get_pre_processor(i)
-            train = pre_process(train)
-            validation = pre_process(validation)
+            train, validation = pre_process(train, validation)
             result = _validate(
                 train,
                 validation,
@@ -125,7 +124,7 @@ class Experiment(NamedTuple):
 
     def get_pre_processor(self, split=0):
         if self.pre_processor is None:
-            return lambda x: x
+            return lambda x, y: (x, y)
 
         return self.pre_processor(
             split_number=split, **self.pre_processor_kwargs)
@@ -275,7 +274,7 @@ def _validate(train, val, model, scoring, split_number=None, pre_process=None):
 
     train_score = scoring(
         train['y'].as_numpy(),
-        model.predict(train['x'])['prediction']
+        model.predict(train['x'])['prediction'],
     )
 
     y_val = val['y'].as_numpy()
@@ -284,7 +283,10 @@ def _validate(train, val, model, scoring, split_number=None, pre_process=None):
         index=pd.Index(val['index'].as_numpy(), name=val['index'].columns[0]),
         columns=val['y'].columns
     )
-    test_score = scoring(y_val, prediction['prediction'])
+    test_score = scoring(
+        y_val,
+        prediction['prediction'],
+    )
     log.debug(f'test score: {test_score}, train score: {train_score}')
 
     try:
