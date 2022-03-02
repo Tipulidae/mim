@@ -863,7 +863,8 @@ def make_dataframe_for_anders():
         'Vardkontakt_InskrivningDatum': 'admission_date',
         'Kön': 'male',
         'Ålder vid inklusion': 'age',
-        'BesokOrsakId': 'cause'
+        'BesokOrsakId': 'cause',
+        'Sjukhus_Namn': 'hospital',
     }
 
     index = _read_esc_trop_csv(
@@ -920,7 +921,11 @@ def make_dataframe_for_anders():
         final_lab_values
         .dropna(how='any')
         .sort_index()
-        .join(index.set_index('Alias')[['male', 'age', 'admission_date']])
+        .join(
+            index
+            .set_index('Alias')
+            .loc[:, ['male', 'age', 'admission_date', 'hospital']]
+        )
     )
     log.debug(f"{len(features)} patients with all lab-values")
 
