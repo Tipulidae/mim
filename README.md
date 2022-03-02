@@ -1,6 +1,11 @@
 ## Installation and setup
 In order to run things as intended, some setup is required. The setup is automated, but requires make and conda. Once installed, you can just run ``$ make`` to install everything else. This will create some githooks, some empty folders, and new conda environments. 
 
+The pre-commit hooks require a programmed called pre-commit, which is included
+in the conda environment. Thus, you need to first make the conda environment,
+then activate it (conda activate mim), and then you can make the hooks with `$
+make hooks`.
+
 There are two conda environments: `mim` and `mim-gpu`. The only difference between them is that one installs tensorflow without GPU support, and the other installs with GPU support. The script will prompt you to install one or both of them. If you later need to update the environments, you can run that part of the make script again with `$ make conda`
 
 ## Githooks
