@@ -24,6 +24,7 @@ class BgColors(Enum):
     RED = "#dsgdsgsd"
     # etc, but too lazy to realize it now
 
+
 class RowEvent:
     def __init__(self, row, timestamp):
         self.row = row
@@ -102,6 +103,7 @@ class SoSLakemedelEvent(RowEvent):
              f'<td></td><td></td></tr>'
 
         return s
+
 
 class SoSSlutenEvent(RowEvent):
     SHORTNAME = "SoS_SV"
@@ -374,4 +376,3 @@ def write_patient_html(alias, filename, dfs):
         for e in sorted(events, key=lambda x: x.timestamp):
             fid.write(e.to_html())
             fid.write("\n")
-            #print(e.to_html())
