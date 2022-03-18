@@ -452,7 +452,7 @@ def make_mace_chapters_dataframe(mace_table):
     # entered into melior but not sos or swedeheart.
     chapters = [
         'I20', 'I21', 'I22', 'I44', 'I46', 'I47', 'I49', 'J81', 'R57',
-        'DF', 'DG', 'FN', 'FP', 'TF', 'death'
+        'DF', 'FN', 'FP', 'TF', 'death'
     ]
     df = pd.concat(
         [mace_table.filter(like=chapter).any(axis=1).rename(chapter) for
@@ -697,10 +697,6 @@ def _make_mace_interventions(index_visits):
         "DF017",
         "DF025",
         "DF028",
-        "DG017",
-        "DG021",
-        "DG023",
-        "DG026",
         "FNA00",
         "FNA10",
         "FNC10",
