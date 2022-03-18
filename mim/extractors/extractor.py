@@ -6,6 +6,7 @@ import pandas as pd
 import tensorflow as tf
 import h5py
 from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
 
 from typing import Dict
 
@@ -220,6 +221,11 @@ def sklearn_process(split_number=0, **processors):
     processes all of the underlying data with the specified processor,
     returning new Data (or Container) objects.
 
+    The training data is used to learn parameters, for scaling etc., and
+    applied to the validation data. Categorical columns are identified
+    automatically, but the returned Data may change the ordering of the
+    columns.
+
     The processor can be a sklearn Pipeline, or a Transformer like the
     StandardScaler.
 
@@ -249,6 +255,7 @@ def sklearn_process(split_number=0, **processors):
             },
             columns=train.columns,
             index=train.index,
+            groups=train.groups,
             fits_in_memory=train.fits_in_memory
         )
 
@@ -260,6 +267,7 @@ def sklearn_process(split_number=0, **processors):
             },
             columns=val.columns,
             index=val.index,
+            groups=val.groups,
             fits_in_memory=val.fits_in_memory
         )
         return new_train, new_val
@@ -324,18 +332,49 @@ def process_container(train, val, processors):
 #     return new_train, new_val
 
 
-def process_data(train, val, processor, **kwargs):
-    train_data = train.as_numpy()
-    cat, num = _infer_categorical(train_data)
-
+def build_processor(processor, **kwargs):
+    # TODO:
+    # While I think this works, the column transformer will end up shuffling
+    # the order of the columns - very annoying. Could be that the easiest
+    # solution is to make my own column-transformer wrapper, which shuffles
+    # the columns back again. Or something else. It's todo, anyway.
     if processor == 'Pipeline':
-        p = Pipeline(steps=[
-            (label, transform(**transform_kwargs))
-            for label, transform, transform_kwargs in kwargs['steps']
-        ])
+        p = Pipeline(
+            steps=[
+                (label, build_processor(transform, **transform_kwargs))
+                for label, transform, transform_kwargs in kwargs['steps']
+            ])
+    elif processor == 'ColumnTransformer':
+        if 'remainder' in kwargs:
+            if isinstance(kwargs['remainder'], dict):
+                remainder = build_processor(**kwargs['remainder'])
+            else:
+                remainder = kwargs['remainder']
+        else:
+            remainder = 'drop'
+
+        p = ColumnTransformer(
+            transformers=[
+                (label, build_processor(transform, **transform_kwargs), cols)
+                for label, transform, transform_kwargs, cols
+                in kwargs['transformers']
+            ],
+            remainder=remainder
+        )
     else:
         p = processor(**kwargs)
 
+    return p
+
+
+def process_data(train, val, processor, allow_categorical=False, **kwargs):
+    train_data = train.as_numpy()
+    cat, num = _infer_categorical(train_data)
+    if allow_categorical:
+        cat = []
+        num = list(range(train_data.shape[1]))
+
+    p = build_processor(processor, **kwargs)
     p.fit(train_data[:, num])
 
     new_train_data = np.concatenate(

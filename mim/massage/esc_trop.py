@@ -275,7 +275,7 @@ def make_forberg_features(ecg_ids):
 
 
 def make_ed_features(index):
-    ed = _read_esc_trop_csv(
+    ed = read_csv(
         "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv"
     ).set_index('Alias')
     col_map = {
@@ -304,7 +304,7 @@ def make_troponin_table():
         'Labanalys_Namn': 'name',
         'Analyssvar_Varde': 'tnt'
     }
-    lab = _read_esc_trop_csv(
+    lab = read_csv(
         'ESC_TROP_LabAnalysSvar_InkluderadeIndexBesök_2017_2018.csv'
     )
     lab = lab.loc[:, list(col_map)].rename(columns=col_map)
@@ -351,7 +351,7 @@ def make_double_ecg_features(index, include_delta_t=False):
     return ecg[features]
 
 
-def _read_esc_trop_csv(name, **kwargs):
+def read_csv(name, **kwargs):
     base_path = "/mnt/air-crypt/air-crypt-raw/andersb/data/" \
                 "ESC_Trop_17-18-2020-09-21/data/"
     return pd.read_csv(
@@ -363,7 +363,7 @@ def _read_esc_trop_csv(name, **kwargs):
 
 
 def make_pauls_mace(index_visits):
-    mace = _read_esc_trop_csv(
+    mace = read_csv(
         "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv",
         usecols=['MACE inom 30 dagar', 'KontaktId']
     )
@@ -488,7 +488,7 @@ def _make_diagnoses_from_sos():
 
 
 def _make_diagnoses_from_rikshia():
-    rikshia = _read_esc_trop_csv(
+    rikshia = read_csv(
         'ESC_TROP_SWEDEHEART_DAT221_rikshia_pop1.csv',
         dtype=str
     )
@@ -608,7 +608,7 @@ def make_index_visits(
     Creates a DataFrame with Alias as index and columns, admission_date and
     id, which corresponds to KontaktId in the original CSV-file.
     """
-    index_visits = _read_esc_trop_csv(
+    index_visits = read_csv(
         "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv"
     )
     n = len(index_visits)
@@ -728,7 +728,7 @@ def _make_mace_interventions(index_visits):
 
 
 def _make_actions(csv_name):
-    actions = _read_esc_trop_csv(
+    actions = read_csv(
         csv_name,
         usecols=[
             "Alias", "PatientAtgard_Kod", "PatientAtgard_ModifieradDatum"
@@ -746,7 +746,7 @@ def _make_actions(csv_name):
 
 
 def _make_diagnoses(csv_name):
-    diagnoses = _read_esc_trop_csv(
+    diagnoses = read_csv(
         csv_name,
         usecols=[
             'Alias', 'PatientDiagnos_Kod', 'PatientDiagnos_ModifieradDatum'
@@ -773,7 +773,7 @@ def _fix_dors_date(s):
 
 
 def _make_mace_deaths(index_visits):
-    deaths = _read_esc_trop_csv('ESC_TROP_SOS_R_DORS__14204_2019.csv')
+    deaths = read_csv('ESC_TROP_SOS_R_DORS__14204_2019.csv')
     deaths = deaths.set_index('Alias')[['DODSDAT']].rename(
         columns={'DODSDAT': 'diagnosis_date'})
 
@@ -789,7 +789,7 @@ def _make_mace_deaths(index_visits):
 
 
 def _make_diagnoses_from_dors():
-    deaths = _read_esc_trop_csv('ESC_TROP_SOS_R_DORS__14204_2019.csv')
+    deaths = read_csv('ESC_TROP_SOS_R_DORS__14204_2019.csv')
     diagnoses = (
         deaths
         .set_index('Alias')
@@ -811,7 +811,7 @@ def _make_diagnoses_from_dors():
 
 
 def _make_index_stemi():
-    hia = _read_esc_trop_csv(
+    hia = read_csv(
         'ESC_TROP_SWEDEHEART_DAT221_rikshia_pop1.csv',
         usecols=[
             'Alias',
@@ -867,7 +867,7 @@ def make_dataframe_for_anders():
         'Sjukhus_Namn': 'hospital',
     }
 
-    index = _read_esc_trop_csv(
+    index = read_csv(
         'ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv',
         usecols=index_colmap.keys()
     ).rename(columns=index_colmap)
@@ -889,7 +889,7 @@ def make_dataframe_for_anders():
         'Labanalys_Namn': 'lab_name',
         'Analyssvar_Varde': 'value'
     }
-    lab = _read_esc_trop_csv(
+    lab = read_csv(
         'ESC_TROP_LabAnalysSvar_InkluderadeIndexBesök_2017_2018.csv',
         usecols=lab_colmap.keys(),
     )

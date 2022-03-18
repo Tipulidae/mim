@@ -93,7 +93,7 @@ def _ecg_and_flat_feature_combiner(
 ):
     assert len(ecg_layers) >= 1
     if ecg_ffnn_kwargs is not None:
-        ecg_layers = [_ffnn(x, **ecg_ffnn_kwargs) for x in ecg_layers]
+        ecg_layers = [ffnn_helper(x, **ecg_ffnn_kwargs) for x in ecg_layers]
 
     if len(ecg_layers) > 1:
         if ecg_combiner == 'difference':
@@ -104,29 +104,29 @@ def _ecg_and_flat_feature_combiner(
         x = ecg_layers[0]
 
     if ecg_comb_ffnn_kwargs is not None:
-        x = _ffnn(x, **ecg_comb_ffnn_kwargs)
+        x = ffnn_helper(x, **ecg_comb_ffnn_kwargs)
 
     if 'flat_features' in inp:
         flat_features = BatchNormalization()(inp['flat_features'])
         if flat_ffnn_kwargs is not None:
-            flat_features = _ffnn(flat_features, **flat_ffnn_kwargs)
+            flat_features = ffnn_helper(flat_features, **flat_ffnn_kwargs)
         x = Concatenate()([x, flat_features])
 
     if final_ffnn_kwargs is not None:
-        x = _ffnn(x, **final_ffnn_kwargs)
+        x = ffnn_helper(x, **final_ffnn_kwargs)
 
     output = Dense(output_size, activation="sigmoid",
                    kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
 
 
-def _ffnn(x, sizes, dropouts, batch_norms, activation='relu',
-          activity_regularizer=None,
-          activity_regularizers=None,
-          kernel_regularizer=None,
-          kernel_regularizers=None,
-          bias_regularizer=None,
-          bias_regularizers=None):
+def ffnn_helper(x, sizes, dropouts, batch_norms, activation='relu',
+                activity_regularizer=None,
+                activity_regularizers=None,
+                kernel_regularizer=None,
+                kernel_regularizers=None,
+                bias_regularizer=None,
+                bias_regularizers=None):
     num_layers = len(sizes)
     if activity_regularizers is None:
         if activity_regularizer is None:

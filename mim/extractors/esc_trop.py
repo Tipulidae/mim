@@ -15,7 +15,7 @@ from mim.massage.esc_trop import (
     make_ami30_dataframe,
     make_mace_chapters_dataframe,
     make_forberg_features,
-    _read_esc_trop_csv
+    read_csv
 )
 from mim.extractors.extractor import Data, Container, ECGData, Extractor
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
@@ -185,7 +185,7 @@ class EscTropECG(Extractor):
             log.debug(f"{len(ecgs)} ECGs after excluding index and 'previous'"
                       f" ECGs")
 
-        ed = _read_esc_trop_csv(
+        ed = read_csv(
             "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv"
         ).set_index('Alias')
 
