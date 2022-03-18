@@ -3,6 +3,7 @@ from mim.experiments.serial_ecg import ESCT
 from mim.experiments.ab_glucose import ABGlucose
 from mim.experiments.hyper_experiments import HyperSearch
 from mim.experiments.autoencoders import GenderPredict
+from mim.experiments.article2 import SK1718
 
 
 def experiment_from_name(name):
@@ -21,5 +22,7 @@ def experiment_from_name(name):
         return HyperSearch
     elif name == "genderpredict":
         return GenderPredict
+    elif name == "article2":
+        return SK1718
     else:
         raise ValueError(f'No Experiment with name {name}')
