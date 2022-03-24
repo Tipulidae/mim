@@ -17,16 +17,19 @@ class PTBXL(Extractor):
             info = info.iloc[:200, :]
 
         info.scp_codes = info.scp_codes.apply(ast.literal_eval)
+        info['bmi'] = info.weight / ((info.height/100)**2)
 
-        statements = pd.read_csv(path+'scp_statements.csv', index_col=0)
+        # statements = pd.read_csv(path+'scp_statements.csv', index_col=0)
+        #
+        # def is_mi(scp_dict):
+        #     for scp in scp_dict:
+        #         if statements.loc[scp].diagnostic_class == 'MI':
+        #             return 1
+        #     return 0
 
-        def is_mi(scp_dict):
-            for scp in scp_dict:
-                if statements.loc[scp].diagnostic_class == 'MI':
-                    return 1
-            return 0
-
-        y = info.scp_codes.apply(is_mi)
+        # y = info.scp_codes.apply(is_mi)
+        info = info.dropna(subset=['bmi'])
+        y = info['bmi'] >= 30
         x = np.array([wfdb.rdsamp(path+f)[0] for f in tqdm(info.filename_lr)])
 
         # Holding out the last fold
