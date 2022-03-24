@@ -4,6 +4,7 @@ from mim.experiments.ab_glucose import ABGlucose
 from mim.experiments.hyper_experiments import HyperSearch
 from mim.experiments.autoencoders import GenderPredict
 from mim.experiments.article2 import SK1718
+from mim.experiments.ptbxl import PTBXL
 
 
 def experiment_from_name(name):
@@ -24,5 +25,7 @@ def experiment_from_name(name):
         return GenderPredict
     elif name == "article2":
         return SK1718
+    elif name == 'ptbxl':
+        return PTBXL
     else:
         raise ValueError(f'No Experiment with name {name}')

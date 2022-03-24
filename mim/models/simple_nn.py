@@ -59,6 +59,20 @@ def logistic_regression(train, validation=None):
     return keras.Model(inp, output)
 
 
+def ptbxl_cnn(
+        train,
+        validation=None,
+        cnn_kwargs=None,
+        ffnn_kwargs=None):
+    #inp = {'x': Input(shape=train['x'].shape)}
+    inp = Input(shape=train['x'].shape)
+    x = BatchNormalization()(inp)
+    x = _ecg_network(x, **cnn_kwargs)
+    x = ffnn_helper(x, **ffnn_kwargs)
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
+
+
 def ecg_cnn(
         train,
         validation=None,
