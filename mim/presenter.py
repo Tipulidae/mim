@@ -13,7 +13,7 @@ from sklearn.metrics import (
     roc_curve
 )
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+# import matplotlib.patches as patches
 
 from mim.util.logs import get_logger
 from mim.util.util import ranksort, insensitive_iglob
@@ -187,15 +187,15 @@ class Presenter:
         plt.legend(lines, labels)
         plt.grid(which='both')
 
-        plt.gca().add_patch(
-            patches.Rectangle(
-                (0, 0), 0.1, 1.0, linewidth=0, alpha=0.1, facecolor='red')
-        )
-        plt.gca().add_patch(
-            patches.Rectangle(
-                (0, 0.99), 1.0, 0.01, linewidth=0, alpha=0.1,
-                facecolor='green')
-        )
+        # plt.gca().add_patch(
+        #     patches.Rectangle(
+        #         (0, 0), 0.1, 1.0, linewidth=0, alpha=0.1, facecolor='red')
+        # )
+        # plt.gca().add_patch(
+        #     patches.Rectangle(
+        #         (0, 0.99), 1.0, 0.01, linewidth=0, alpha=0.1,
+        #         facecolor='green')
+        # )
 
         df = pd.DataFrame(
             [self.results[xp]['test_score'] for xp in xps],
