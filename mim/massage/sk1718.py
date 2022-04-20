@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from mim.util.logs import get_logger
+from mim.util.metadata import save
 
 log = get_logger("Skåne 17-18 massage")
 
@@ -306,3 +307,112 @@ def make_pontus_lab_values(index):
     # Convert all the measurements to float (or nan), then drop nans
     lab = lab_values_to_float(lab).dropna(how='any')
     return lab
+
+
+def load_outcomes_from_ab_brsm():
+    colmap = {
+        'Alias': 'Alias',
+        'KontaktId': 'KontaktId',
+        'LopNr': 'LopNr',
+        'Vardkontakt_InskrivningDatum': 'admission_date',
+        'Vardkontakt_PatientAlderVidInskrivning': 'age',
+        'Patient_Kon': 'sex',
+        'outcome-30d-I200-SV': 'I200',
+        'outcome-30d-I21-SV': 'I21',
+        'outcome-30d-I22-SV': 'I22',
+        'outcome-30d-DEATH': 'death',
+    }
+    data = pd.read_csv(
+        '/mnt/air-crypt/air-crypt-esc-trop/andersb/scratch/brsm-U.csv',
+        parse_dates=['Vardkontakt_InskrivningDatum'],
+        usecols=colmap.keys(),
+    )
+
+    return (
+        data
+        .rename(columns=colmap)
+        .set_index(['Alias', 'admission_date'])
+        .sort_index()
+    )
+
+
+def make_multihot_diagnoses(index):
+    """
+
+    :param index: DataFrame with columns LopNr and Alias.
+    :return: DataFrame with Alias, diagnosis_date as multi-index, and
+    around 1500 columns, one for each possible ICD10 diagnosis in the sos-
+    material. Each row corresponds to a multi-hot encoding of a hospital
+    visit. The columns are sorted by frequency, so that the first column is
+    the most common diagnosis, and the last column is the least common.
+    """
+    # output: df with columns Alias, date, <icd1>, <icd2>, ...
+
+    # assert any([sv, ov])
+
+    diagnosis_cols = ['hdia'] + [f'DIA{x}' for x in range(1, 31)]
+
+    def _multihot(path):
+        log.info(f'Loading {path}')
+        sos = read_csv(
+            path,
+            usecols=['LopNr', 'INDATUM'] + diagnosis_cols,
+            parse_dates=['INDATUM'],
+            low_memory=False,
+        )
+        log.info('Stacking diagnoses')
+        sos = (
+            sos
+            .reset_index()  # We will use this to disambiguate same-day events
+            .join(index.set_index('LopNr').Alias, on='LopNr', how='inner')
+            .rename(columns={'INDATUM': 'diagnosis_date'})
+            .set_index(['Alias', 'diagnosis_date', 'index'])
+            .sort_index()
+            .loc[:, diagnosis_cols]
+            .stack()
+            .rename('icd10')
+            .reset_index(level=3, drop=True)
+            .reset_index(level=[2, 1])
+            .drop_duplicates()
+        )
+
+        log.info('Pivoting diagnoses')
+        icd_order = (
+            sos
+            .icd10
+            .value_counts()
+            .reset_index()
+            .sort_values(by=['icd10', 'index'], ascending=[False, True])
+            .loc[:, 'index']
+            .values
+        )
+        sos['diagnosis'] = True
+        sos = sos.pivot_table(
+            index=['Alias', 'diagnosis_date', 'index'],
+            columns='icd10',
+            values='diagnosis'
+        )
+
+        sos = sos.fillna(0).astype(bool).loc[:, icd_order]
+        log.info('Done making multi-hot diagnoses!')
+        return sos
+
+    sv = _multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv')
+    ov = _multihot('SOS_T_T_T_R_PAR_OV_24129_2020.csv')
+
+    sv.columns += '_sv'
+    ov.columns += '_ov'
+
+    log.info('Concatenating diagnoses')
+    svov = pd.concat([sv, ov], join='outer').fillna(False)
+    return svov
+
+
+def save_multihot_diagnoses():
+    df = pd.read_csv(
+        '/mnt/air-crypt/air-crypt-esc-trop/andersb/scratch/brsm-U.csv'
+    )
+    index = df[['LopNr', 'Alias', 'Vardkontakt_InskrivningDatum']]
+    svov = make_multihot_diagnoses(index).astype(pd.SparseDtype(bool, False))
+    save(svov, '/mnt/air-crypt/air-crypt-esc-trop/axel/'
+               'sk1718_brsm_multihot.pickle')
