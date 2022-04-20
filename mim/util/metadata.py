@@ -293,3 +293,15 @@ def public_methods(obj):
     for f in dir(obj):
         if callable(getattr(obj, f)) and not f.startswith('_'):
             yield f, getattr(obj, f)
+
+
+def save(data, path):
+    md = Metadata().report()
+    pd.to_pickle((data, md), path)
+
+
+def load(path, allow_uncommitted=False):
+    data, meta_data = pd.read_pickle(path)
+    v = Validator(allow_uncommitted=allow_uncommitted)
+    v.validate_consistency([meta_data])
+    return data
