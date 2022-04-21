@@ -322,18 +322,21 @@ def load_outcomes_from_ab_brsm():
         'outcome-30d-I22-SV': 'I22',
         'outcome-30d-DEATH': 'death',
     }
-    data = pd.read_csv(
-        '/mnt/air-crypt/air-crypt-esc-trop/andersb/scratch/brsm-U.csv',
-        parse_dates=['Vardkontakt_InskrivningDatum'],
-        usecols=colmap.keys(),
+    data = (
+        pd.read_csv(
+            '/mnt/air-crypt/air-crypt-esc-trop/andersb/scratch/brsm-U.csv',
+            parse_dates=['Vardkontakt_InskrivningDatum'],
+            usecols=colmap.keys())
+        .rename(columns=colmap)
+        .sort_values(by=['Alias', 'admission_date'])
+        # .set_index(['Alias', 'admission_date'])
+        # .sort_index()
     )
 
-    return (
-        data
-        .rename(columns=colmap)
-        .set_index(['Alias', 'admission_date'])
-        .sort_index()
-    )
+    data['admission_index'] = range(len(data))
+    data.admission_date = data.admission_date.dt.floor('D')
+
+    return data
 
 
 def make_multihot_diagnoses(index):
@@ -408,11 +411,42 @@ def make_multihot_diagnoses(index):
     return svov
 
 
-def save_multihot_diagnoses():
-    df = pd.read_csv(
-        '/mnt/air-crypt/air-crypt-esc-trop/andersb/scratch/brsm-U.csv'
+def make_multihot_staggered(multihot, brsm):
+    """
+
+    :param multihot: Multihot encoded diagnoses, one row for each "SV" or
+    "OV" event, corresponding to the diagnoses set at that event. Index
+    should be (Alias, diagnosis_date, index)-triplet.
+    :param brsm: Dataframe containing one row for each chest-pain visit.
+    Required columns are Alias, admission_date and admission_index.
+    :return: New version of the multihot-encoded diagnosis matrix, but
+    staggered such that each row corresponds to a single event-index pair.
+    Thus, if a patient is represented twice in the index (brsm), each
+    diagnosis event preceding the index date will be included twice: once for
+    each index-visit. Diagnosis events occuring after the index-visits are
+    removed.
+    """
+    log.info("Staggering diagnosis history")
+    mh = multihot.reset_index().join(brsm.set_index('Alias'), on='Alias')
+    mh = (
+        mh[mh.diagnosis_date < mh.admission_date]
+        .sort_values(
+            by=['Alias', 'admission_index', 'diagnosis_date', 'index'])
+        .reset_index(drop=True)
     )
-    index = df[['LopNr', 'Alias', 'Vardkontakt_InskrivningDatum']]
-    svov = make_multihot_diagnoses(index).astype(pd.SparseDtype(bool, False))
-    save(svov, '/mnt/air-crypt/air-crypt-esc-trop/axel/'
-               'sk1718_brsm_multihot.pickle')
+    mh['data_index'] = range(len(mh))
+    return mh
+
+
+def save_staggered_multihot_diagnoses():
+    # Load the brsm-U index from Anders,
+    # create the multihot diagnosis history from sos sv+ov
+    # stagger the result in preparation for time-series analysis
+    # save the whole thing as a pickle for future use.
+    brsm = load_outcomes_from_ab_brsm()
+    brsm = brsm[['Alias', 'LopNr', 'admission_date', 'admission_index']]
+    svov = make_multihot_diagnoses(brsm).astype(pd.SparseDtype(bool, False))
+    mh = make_multihot_staggered(svov, brsm).drop(columns=['index', 'LopNr'])
+    save(mh, '/mnt/air-crypt/air-crypt-esc-trop/axel/'
+             'sk1718_brsm_staggered_diagnoses.pickle')
+    log.info('Staggered diagnoses saved!')
