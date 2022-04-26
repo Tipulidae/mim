@@ -297,7 +297,10 @@ def prepare_dataset(data, batch_size=1, prefetch=None, **kwargs):
     # This would be bad if data doesn't fit in memory though, because tf will
     # load the entire dataset in memory before shuffling.
     if data.fits_in_memory:
-        fixed_data = fixed_data.shuffle(len(data))
+        fixed_data = fixed_data.shuffle(
+            len(data),
+            reshuffle_each_iteration=True  # Best to be explicit I suppose
+        )
 
     fixed_data = fixed_data.batch(batch_size)
 

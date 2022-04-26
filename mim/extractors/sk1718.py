@@ -2,10 +2,13 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 
-from mim.extractors.extractor import Data, Container, Extractor
+from mim.extractors.extractor import Data, RaggedData, Container, Extractor
 from mim.cross_validation import CrossValidationWrapper
 from mim.util.logs import get_logger
-from mim.massage.sk1718 import lab_value_to_float
+from mim.util.metadata import load
+from mim.massage import sk1718 as massage
+from mim.massage.sk1718 import lab_value_to_float, load_outcomes_from_ab_brsm
+
 
 log = get_logger("Skåne-1718 extractor")
 
@@ -112,7 +115,15 @@ def make_basic_features(data):
     )
 
 
-class Sk1718(Extractor):
+class Base(Extractor):
+    def get_data(self) -> Container:
+        raise NotImplementedError
+
+    def get_labels(self, brsm):
+        outcome_columns = ['I200', 'I21', 'I22', 'death']
+        y = brsm.loc[:, outcome_columns].any(axis=1)
+        return Data(y.values, columns=['ACS'])
+
     def hold_out(self, data):
         if self.cv_kwargs is not None and 'test_size' in self.cv_kwargs:
             test_size = self.cv_kwargs['test_size']
@@ -132,32 +143,115 @@ class Sk1718(Extractor):
 
         return dev
 
+
+class Flat(Base):
     def get_data(self) -> Container:
-        brsm, lab_values = load_and_clean_ab_brsm()
+        brsm = load_outcomes_from_ab_brsm()
+        sv = massage._multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', brsm)
 
-        # Always include age and sex
-        x_dict = {'basic': make_basic_features(brsm)}
+        if 'sv' in self.features:
+            sv = massage._multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', brsm)
+            k = 100
 
-        if 'lab_values' in self.features:
-            x_dict['lab_values'] = Data(
-                lab_values.values,
-                columns=list(lab_values.columns)
+            # levels will be:
+            # Interval, SV/OV, ICD/OP,
+            sv_icd = massage.sum_events_in_interval(
+                sv['ICD'].iloc[:, :k],
+                brsm,
+                periods=5
+            )
+            sv_op = massage.sum_events_in_interval(
+                sv['OP'].iloc[:, :k],
+                brsm,
+                periods=5
             )
 
-        if 'medicine' in self.features:
-            x_dict['medicine'] = make_medicine_features(
-                brsm, **self.features['medicine']
-            )
+            sv = pd.concat([sv_icd, sv_op], axis=1, keys=['ICD', 'OP'])
 
-        if 'comorbidities' in self.features:
-            x_dict['comorbidities'] = make_comorbidity_features(
-                brsm, **self.features['comorbidities']
-            )
+        return sv
+
+
+def foo(mh, brsm, spec):
+    cols = list(mh.columns)
+    mhs = massage.make_multihot_staggered(mh, brsm)
+
+    intervals = pd.interval_range(
+        start=pd.Timedelta(0),
+        end=pd.Timedelta('1825D'),
+        **spec
+    )
+    event_age = mhs.diagnosis_date - mhs.event_date
+
+    sums = []
+    for interval in intervals:
+        sums.append(
+            mhs.loc[
+                event_age.between(
+                    interval.left,
+                    interval.right,
+                    inclusive=interval.closed
+                ), ['admission_index'] + cols]
+            .groupby('admission_index')
+            .sum()
+         )
+
+    return sums
+
+
+class Ragged(Base):
+    def get_data(self) -> Container:
+        brsm = load_outcomes_from_ab_brsm()
+        mh = load('/mnt/air-crypt/air-crypt-esc-trop/axel/'
+                  'sk1718_brsm_staggered_diagnoses.pickle')
+
+        sv_cols = list(mh.filter(regex='_sv'))
+        ov_cols = list(mh.filter(regex='_ov'))
+        data = mh[sv_cols[:100] + ov_cols[:100]]
+
+        row_starts = (
+            mh.groupby('admission_index')[['data_index']]
+            .first().join(brsm, how='outer')
+            .fillna(method='bfill').data_index.astype(int)
+        )
+        row_ends = (
+            mh.groupby('admission_index')[['data_index']]
+            .last().join(brsm, how='outer')
+            .fillna(method='ffill').data_index.astype(int) + 1
+        )
+
+        # x_dict = {}
+        # x_dict['icd_history'] =
+
+        # brsm, lab_values = load_and_clean_ab_brsm()
+        #
+        # # Always include age and sex
+        # x_dict = {'basic': make_basic_features(brsm)}
+        #
+        # if 'lab_values' in self.features:
+        #     x_dict['lab_values'] = Data(
+        #         lab_values.values,
+        #         columns=list(lab_values.columns)
+        #     )
+        #
+        # if 'medicine' in self.features:
+        #     x_dict['medicine'] = make_medicine_features(
+        #         brsm, **self.features['medicine']
+        #     )
+        #
+        # if 'comorbidities' in self.features:
+        #     x_dict['comorbidities'] = make_comorbidity_features(
+        #         brsm, **self.features['comorbidities']
+        #     )
 
         data = Container(
             {
-                'x': Container(x_dict),
-                'y': make_acs_labels(brsm, **self.labels),
+                'x': RaggedData(
+                    data.values,
+                    # index=range(len(y)),
+                    slices=list(zip(row_starts, row_ends)),
+                    columns=list(data)
+                ),
+                # 'y': Data(y.values, columns=['ACS']),
                 'index': Data(
                     brsm.KontaktId.values,
                     columns=['KontaktId']

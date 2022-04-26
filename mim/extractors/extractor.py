@@ -20,7 +20,9 @@ class Data:
             dtype=tf.int64,
             fits_in_memory=True,
             groups=None,
-            predefined_splits=None):
+            predefined_splits=None,
+            shape=None,
+    ):
         self.data = data
         if columns is None:
             self._columns = [0]
@@ -35,7 +37,10 @@ class Data:
         else:
             self._index = index
 
-        self._shape = infer_shape(data)
+        if shape is None:
+            self._shape = infer_shape(data)
+        else:
+            self._shape = shape
 
     def split(self, index_a, index_b):
         return self.lazy_slice(index_a), self.lazy_slice(index_b)
@@ -125,6 +130,29 @@ class Data:
     def __iter__(self):
         for i in range(len(self)):
             yield self[i]
+
+
+class RaggedData(Data):
+    def __init__(self, *args, slices=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if len(slices) != len(self.index):
+            raise ValueError("Ragged slices must be a list of same length as "
+                             "the index.")
+        self.slices = slices
+        self._shape = [None] + self._shape
+
+    def as_numpy(self):
+        ind = []
+        row_lengths = []
+        for i in self._index:
+            start, stop = self.slices[i]
+            ind += list(range(start, stop))
+            row_lengths.append(stop - start)
+
+        return tf.RaggedTensor.from_row_lengths(self.data[ind], row_lengths)
+
+    def __getitem__(self, item):
+        return self.data[range(*self.slices[self._index[item]])]
 
 
 class Container(Data):
@@ -305,31 +333,6 @@ def process_container(train, val, processors):
         fits_in_memory=val.fits_in_memory
     )
     return new_train, new_val
-
-# def process_container(train, val, processor, **processor_kwargs):
-#     train_dict = {}
-#     val_dict = {}
-#     for key, value in train.columns.items():
-#         if isinstance(value, dict):
-#             train_dict[key], val_dict[key] = process_container(
-#                 train, val, processor, **processor_kwargs)
-#         else:
-#             train_dict[key], val_dict[key] = process_data(
-#                 train[key], val[key], processor, **processor_kwargs)
-#
-#     new_train = Container(
-#         train_dict,
-#         columns=train.columns,
-#         index=train.index,
-#         fits_in_memory=train.fits_in_memory
-#     )
-#     new_val = Container(
-#         val_dict,
-#         columns=val.columns,
-#         index=val.index,
-#         fits_in_memory=val.fits_in_memory
-#     )
-#     return new_train, new_val
 
 
 def build_processor(processor, **kwargs):
