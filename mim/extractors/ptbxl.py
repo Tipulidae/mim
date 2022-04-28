@@ -1,4 +1,4 @@
-import ast
+import os
 
 import numpy as np
 import pandas as pd
@@ -9,61 +9,82 @@ from mim.config import PATH_TO_DATA
 from mim.extractors.extractor import Extractor, Data, Container
 
 
+PTBXL_PATH = os.path.join(PATH_TO_DATA, 'ptbxl')
+
+
+def make_labels(info, sex=True, age=True, height=True, weight=True):
+    assert any([sex, age, height, weight])
+    labels = []
+    if sex:
+        labels.append("sex")
+    if age:
+        labels.append("age")
+    if height:
+        labels.append("height")
+    if weight:
+        labels.append("weight")
+
+    return Data(
+        info[labels].values,
+        columns=labels
+    )
+
+
+def make_features(info, resolution='low', leads=12):
+    filename = 'filename_lr' if resolution == 'low' else 'filename_hr'
+
+    assert leads == 12 or leads == 1
+    if leads == 1:
+        channels = [0]
+        columns = ['I']
+    else:
+        channels = list(range(12))
+        columns = ['I', 'II', 'III', 'AVR', 'AVL', 'AVF',
+                   'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+
+    x = np.array([
+        wfdb.rdsamp(os.path.join(PTBXL_PATH, f), channels=channels)[0]
+        for f in tqdm(info[filename])
+    ])
+
+    return Data(x, columns=columns)
+
+
+def make_index(size=-1):
+    index = (
+        pd.read_csv(
+            os.path.join(PTBXL_PATH, 'ptbxl_database.csv'),
+            index_col='ecg_id'
+        )
+        .sort_values(by=['patient_id', 'recording_date'])
+        .dropna(subset=['sex', 'age', 'weight', 'height'])
+        .drop_duplicates(subset=['patient_id'], keep='first')
+    )
+    index.patient_id = index.patient_id.astype(int)
+
+    if 0 < size <= len(index):
+        index = index.iloc[:size, :]
+
+    return index
+
+
 class PTBXL(Extractor):
     def get_data(self) -> Container:
-        path = PATH_TO_DATA+'/ptbxl/'
-        info = pd.read_csv(path+'ptbxl_database.csv', index_col='ecg_id')
-        if self.index['size'] == 'XS':
-            info = info.iloc[:200, :]
-
-        # holding out the last fold
-        info = info[info.strat_fold < 9]
-
-        info = (
-            info
-            .sort_values(by=['patient_id', 'recording_date'])
-            .drop_duplicates(subset=['patient_id'], keep='first')
-        )
-        info.scp_codes = info.scp_codes.apply(ast.literal_eval)
-        info['bmi'] = info.weight / ((info.height/100)**2)
-        info = info.dropna(subset=['bmi'])
-        y = (info['bmi'] >= 30).values
-        x = np.array([wfdb.rdsamp(path+f)[0] for f in tqdm(info.filename_lr)])
-
-        # n = len(y)
-        num_patients, sample_frequency, num_leads = x.shape
-        groups = np.arange(num_patients)
-
-        index_data = info.patient_id.values
-
-        if 'leads' in self.index and self.index['leads'] == 'single':
-            y = repeat_k_times(y, k=num_leads)
-            groups = repeat_k_times(np.arange(num_patients), k=num_leads)
-            index_data = repeat_k_times(index_data, k=num_leads)
-
-            x = x.transpose((0, 2, 1)).reshape((-1, sample_frequency))
-            x = np.expand_dims(x, axis=-1)  # Otherwise tf complains
+        index = make_index(**self.index)
+        n = len(index)
 
         data = Container(
             {
-                'x': Data(x),
-                'y': Data(y),
+                'x': make_features(index, **self.features),
+                'y': make_labels(index, **self.labels),
                 'index': Data(
-                    index_data,
+                    index.patient_id.values,
                     columns=['patient_id'],
                 )
             },
-            index=range(len(y)),
-            groups=groups,
+            index=range(n),
+            groups=list(range(n)),
             fits_in_memory=True,
         )
 
         return data
-
-
-def repeat_k_times(x, k):
-    """
-    Example: repeat_k_times([1, 2, 3, 4], 3]) ->
-    [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]
-    """
-    return np.tile(x, (k, 1)).ravel(order='F')
