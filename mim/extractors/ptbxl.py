@@ -12,7 +12,7 @@ from mim.extractors.extractor import Extractor, Data, Container
 PTBXL_PATH = os.path.join(PATH_TO_DATA, 'ptbxl')
 
 
-def make_labels(info, sex=True, age=True, height=True, weight=True):
+def make_labels(info, sex=False, age=False, height=False, weight=False):
     assert any([sex, age, height, weight])
     labels = []
     if sex:
@@ -30,7 +30,7 @@ def make_labels(info, sex=True, age=True, height=True, weight=True):
     )
 
 
-def make_features(info, resolution='low', leads=12):
+def make_features(info, resolution='high', leads=12):
     filename = 'filename_lr' if resolution == 'low' else 'filename_hr'
 
     assert leads == 12 or leads == 1
