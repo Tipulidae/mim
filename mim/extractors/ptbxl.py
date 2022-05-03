@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -12,22 +13,18 @@ from mim.extractors.extractor import Extractor, Data, Container
 PTBXL_PATH = os.path.join(PATH_TO_DATA, 'ptbxl')
 
 
-def make_labels(info, sex=False, age=False, height=False, weight=False):
-    assert any([sex, age, height, weight])
-    labels = []
-    if sex:
-        labels.append("sex")
-    if age:
-        labels.append("age")
-    if height:
-        labels.append("height")
-    if weight:
-        labels.append("weight")
+def make_labels(info, **selected):
+    selected = defaultdict(bool, selected)
+    allowed_labels = ['sex', 'age', 'height', 'weight']
+    selected_labels = [label for label in allowed_labels if selected[label]]
+    assert selected_labels
 
-    return Data(
-        info[labels].values,
-        columns=labels
-    )
+    label_dict = {
+        label: Data(info[[label]].values, columns=[label])
+        for label in selected_labels
+    }
+
+    return Container(label_dict)
 
 
 def make_features(info, resolution='high', leads=12):
@@ -60,6 +57,7 @@ def make_index(size=-1):
         .dropna(subset=['sex', 'age', 'weight', 'height'])
         .drop_duplicates(subset=['patient_id'], keep='first')
     )
+    index = index[index.strat_fold < 9]
     index.patient_id = index.patient_id.astype(int)
 
     if 0 < size <= len(index):

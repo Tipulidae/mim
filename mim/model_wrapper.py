@@ -3,6 +3,7 @@
 import os
 from enum import Enum
 
+import numpy as np
 import pandas as pd
 import sklearn.ensemble as ensemble
 import sklearn.linear_model as linear_model
@@ -201,6 +202,7 @@ class KerasWrapper(Model):
             initial_epoch=0,
             optimizer='adam',
             loss='binary_crossentropy',
+            loss_weights=None,
             metrics=None,
             ignore_callbacks=False,
             checkpoint_path=None,
@@ -215,6 +217,7 @@ class KerasWrapper(Model):
             self.model.compile(
                 optimizer=optimizer,
                 loss=loss,
+                loss_weights=loss_weights,
                 metrics=metrics
             )
         self.checkpoint_path = checkpoint_path
@@ -229,10 +232,12 @@ class KerasWrapper(Model):
         log.info("\n\n" + keras_model_summary_as_string(model))
 
     def fit(self, data, validation_data=None, split_number=None, **kwargs):
-        keras.utils.plot_model(self.model,
-                               os.path.join(self.exp_base_path,
-                                            "network-graph.png"),
-                               True, True)
+        keras.utils.plot_model(
+            self.model,
+            os.path.join(self.exp_base_path, "network-graph.png"),
+            True,
+            True
+        )
         if self.ignore_callbacks:
             callbacks = None
         else:
@@ -282,7 +287,11 @@ class KerasWrapper(Model):
         return False
 
     def _prediction(self, x):
-        return self.model.predict(x.batch(self.batch_size))
+        prediction = self.model.predict(x.batch(self.batch_size))
+        if isinstance(prediction, list):
+            return np.concatenate(prediction, axis=1)
+
+        return prediction
 
 
 def prepare_dataset(data, batch_size=1, prefetch=None, **kwargs):

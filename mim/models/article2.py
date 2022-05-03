@@ -3,7 +3,7 @@ from tensorflow.keras.layers import (
     Input, Concatenate, Dense, BatchNormalization
 )
 
-from mim.models.simple_nn import ffnn_helper
+from mim.models.util import ffnn_helper
 
 
 def simple_ffnn(train, validation=None, **ffnn_kwargs):

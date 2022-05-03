@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import itertools
 from copy import copy
 from time import time
 from pathlib import Path
@@ -44,6 +45,7 @@ class Experiment(NamedTuple):
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
+    loss_weights: Any = None
     class_weight: Union[dict, hp.Param] = None
     epochs: Union[int, hp.Param] = None
     initial_epoch: int = 0
@@ -188,12 +190,12 @@ class Experiment(NamedTuple):
             else:
                 optimizer = self.optimizer
 
-            metric_list = []
-            for metric in self.metrics:
-                if metric == 'auc':
-                    metric_list.append(tf.keras.metrics.AUC())
-                else:
-                    metric_list.append(metric)
+            # metric_list = []
+            # for metric in self.metrics:
+            #     if metric == 'auc':
+            #         metric_list.append(tf.keras.metrics.AUC())
+            #     else:
+            #         metric_list.append(metric)
 
             return KerasWrapper(
                 model,
@@ -206,8 +208,9 @@ class Experiment(NamedTuple):
                 initial_epoch=self.initial_epoch,
                 optimizer=optimizer,
                 loss=self.loss,
+                loss_weights=self.loss_weights,
                 class_weight=self.class_weight,
-                metrics=metric_list,
+                metrics=fix_metrics(self.metrics),
                 skip_compile=self.skip_compile,
                 ignore_callbacks=self.ignore_callbacks,
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
@@ -272,21 +275,32 @@ def _validate(train, val, model, scoring, split_number=None, pre_process=None):
     prediction = model.predict(val['x'])
     score_time = time() - fit_time - t0
 
-    train_score = scoring(
-        train['y'].as_numpy(),
-        model.predict(train['x'])['prediction'],
-    )
+    if scoring is None:
+        train_score = None
+    else:
+        train_score = scoring(
+            train['y'].as_numpy(),
+            model.predict(train['x'])['prediction'],
+        )
 
-    y_val = val['y'].as_numpy()
+    y_val = val['y'].as_flat_numpy()
+    cols = val['y'].columns
+    if isinstance(cols, dict):
+        cols = itertools.chain(*cols.values())
+
     targets = pd.DataFrame(
         y_val,
         index=pd.Index(val['index'].as_numpy(), name=val['index'].columns[0]),
-        columns=val['y'].columns
+        columns=cols
     )
-    test_score = scoring(
-        y_val,
-        prediction['prediction'],
-    )
+    if scoring is None:
+        test_score = None
+    else:
+        test_score = scoring(
+            y_val,
+            prediction['prediction'],
+        )
+
     log.debug(f'test score: {test_score}, train score: {train_score}')
 
     try:
@@ -327,3 +341,20 @@ def _finish_results(results):
     results['score_time'] = np.array(results['score_time'])
     results['test_score'] = np.array(results['test_score'])
     results['feature_importance'] = np.array(results['feature_importance'])
+
+
+def fix_metrics(m):
+    if isinstance(m, list):
+        return [fix_metrics(x) for x in m]
+    elif isinstance(m, dict):
+        return {k: fix_metrics(v) for k, v in m.items()}
+    else:
+        return _map_metric_string_to_object(m)
+
+
+def _map_metric_string_to_object(name):
+    name = name.lower()
+    if name == 'auc':
+        return tf.keras.metrics.AUC()
+    else:
+        return name

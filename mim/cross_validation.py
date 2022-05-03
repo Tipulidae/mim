@@ -1,6 +1,6 @@
 from sklearn.model_selection import PredefinedSplit
 
-from mim.extractors.extractor import Container
+from mim.extractors.extractor import Container, _infer_categorical
 from mim.util.logs import get_logger
 
 log = get_logger('Cross Validation')
@@ -12,11 +12,36 @@ class CrossValidationWrapper:
 
     def split(self, data: Container):
         x = data.index
-        y = data['y'].as_numpy()
+        y = targets_for_stratification(data)
 
         groups = data.groups
         for train, val in self.cv.split(x, y=y, groups=groups):
             yield data.split(train, val)
+
+
+def targets_for_stratification(data):
+    """
+    Given a Data object with some targets y, get only those columns that
+    are reasonable to use for stratifying on in a cross-validation split.
+    Specifically, if the target is multi-dimensional and some of the
+    dimensions are non-categorical, we don't want to use them for
+    stratification (sklearn will raise an error).
+
+    Here, I first get the full target matrix, and if it's just a single
+    vector, turn it to a column-vector. Then I check which columns are
+    categorical, and return the slice that is. If no columns are categorical,
+    return None. It will be an error to use a stratified splitter on such
+    data.
+    """
+    y = data['y'].as_flat_numpy()
+    if y.ndim == 1:
+        y = y.reshape(-1, 1)  # Turn to column vector
+
+    cat, _ = _infer_categorical(y)
+    if len(cat) == 0:
+        return None
+    else:
+        return y[:, cat]
 
 
 class ChronologicalSplit:
