@@ -1,6 +1,7 @@
 from sklearn.model_selection import PredefinedSplit
 
-from mim.extractors.extractor import Container, _infer_categorical
+from mim.extractors.extractor import Container
+from mim.util.util import infer_categorical
 from mim.util.logs import get_logger
 
 log = get_logger('Cross Validation')
@@ -37,7 +38,7 @@ def targets_for_stratification(data):
     if y.ndim == 1:
         y = y.reshape(-1, 1)  # Turn to column vector
 
-    cat, _ = _infer_categorical(y)
+    cat, _ = infer_categorical(y)
     if len(cat) == 0:
         return None
     else:

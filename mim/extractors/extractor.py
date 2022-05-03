@@ -2,13 +2,14 @@ import random
 from copy import copy
 
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 import h5py
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 
 from typing import Dict
+
+from mim.util.util import infer_categorical
 
 
 class Data:
@@ -369,7 +370,7 @@ def build_processor(processor, **kwargs):
 
 def process_data(train, val, processor, allow_categorical=False, **kwargs):
     train_data = train.as_numpy()
-    cat, num = _infer_categorical(train_data)
+    cat, num = infer_categorical(train_data)
     if allow_categorical:
         cat = []
         num = list(range(train_data.shape[1]))
@@ -410,18 +411,6 @@ def process_data(train, val, processor, allow_categorical=False, **kwargs):
         predefined_splits=val.predefined_splits
     )
     return new_train, new_val
-
-
-def _infer_categorical(data):
-    df = pd.DataFrame(data)
-    cat, num = [], []
-    for col in df.columns:
-        if len(df.loc[:, col].value_counts()) > 10:
-            num.append(col)
-        else:
-            cat.append(col)
-
-    return cat, num
 
 
 def pre_process_bootstrap_validation(split_number=0, random_state=42):

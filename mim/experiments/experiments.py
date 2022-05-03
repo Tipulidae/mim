@@ -190,13 +190,6 @@ class Experiment(NamedTuple):
             else:
                 optimizer = self.optimizer
 
-            # metric_list = []
-            # for metric in self.metrics:
-            #     if metric == 'auc':
-            #         metric_list.append(tf.keras.metrics.AUC())
-            #     else:
-            #         metric_list.append(metric)
-
             return KerasWrapper(
                 model,
                 # TODO: Add data augmentation here maybe, and use in fit
@@ -279,7 +272,7 @@ def _validate(train, val, model, scoring, split_number=None, pre_process=None):
         train_score = None
     else:
         train_score = scoring(
-            train['y'].as_numpy(),
+            train['y'].as_flat_numpy().ravel(),
             model.predict(train['x'])['prediction'],
         )
 
@@ -297,7 +290,7 @@ def _validate(train, val, model, scoring, split_number=None, pre_process=None):
         test_score = None
     else:
         test_score = scoring(
-            y_val,
+            y_val.ravel(),
             prediction['prediction'],
         )
 
