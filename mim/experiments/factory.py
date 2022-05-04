@@ -26,6 +26,6 @@ def experiment_from_name(name):
     elif name == 'ptbxl':
         return import_class('mim.experiments.ptbxl', 'ptbxl')
     elif name == 'hyper_ptbxl':
-        return import_class('mim.experiments.ptbxl', 'HyperSearch')
+        return import_class('mim.experiments.ptbxl', 'HyperPTBXL')
     else:
         raise ValueError(f'No Experiment with name {name}')

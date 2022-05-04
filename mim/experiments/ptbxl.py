@@ -521,8 +521,8 @@ class ptbxl(Experiment, Enum):
     )
 
 
-class HyperSearch(HyperExperiment, Enum):
-    CNN_1L_ALL = HyperExperiment(
+class HyperPTBXL(HyperExperiment, Enum):
+    RS_1L_ALL = HyperExperiment(
         template=ptbxl.CNN1_1L_SEX_AGE_HEIGHT_WEIGHT._replace(
             description="",
             model_kwargs={
