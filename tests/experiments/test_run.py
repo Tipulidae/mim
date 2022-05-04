@@ -11,6 +11,7 @@ class SmallTestExperiment(Experiment, Enum):
         description='Test of validate, with fake data',
         extractor=FakeExtractor,
         model_kwargs={'n_estimators': 10},
+        save_model=False,
         log_conda_env=False  # True (which is default) is a little slow
     )
 
@@ -35,7 +36,8 @@ class SmallTestExperiment(Experiment, Enum):
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy'],
         scoring=sparse_categorical_accuracy,
-        log_conda_env=False
+        log_conda_env=False,
+        save_model=False
     )
 
 
