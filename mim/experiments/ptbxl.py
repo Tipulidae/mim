@@ -520,6 +520,47 @@ class ptbxl(Experiment, Enum):
         },
     )
 
+    TEST = CNN1_1L_SEX_AGE_HEIGHT_WEIGHT._replace(
+        description='Try adding separate dense layers for each output.',
+        model_kwargs={
+            'cnn_kwargs': {
+                'down_sample': False,
+                'num_layers': 4,
+                'dropout': 0.2,
+                'filter_first': 32,
+                'filter_last': 16,
+                'kernel_first': 41,
+                'kernel_last': 5,
+            },
+            'ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.1],
+            },
+            'final_ffnn_kwargs': {
+                'age': {'sizes': [10]},
+                'weight': {'sizes': [10]},
+                'sex': {
+                    'sizes': [10],
+                    'default_regularizer': 0.003,
+                    'default_dropout': 0.1
+                },
+                'height': {
+                    'sizes': [20],
+                    # 'default_regularizer': 0.003,
+                    # 'default_dropout': 0.3
+                },
+            }
+        },
+        epochs=10,
+        ignore_callbacks=True,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.001,
+            }
+        },
+    )
+
 
 class HyperPTBXL(HyperExperiment, Enum):
     RS_1L_ALL = HyperExperiment(

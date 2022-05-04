@@ -355,6 +355,18 @@ class Presenter:
 
         history.plot(**plot_kwargs)
 
+    def last_history(self, like='.*'):
+        results = []
+        for name, xp in self._results_that_match_pattern(like):
+            results.append(
+                pd.Series(
+                    {k: v[-1] for k, v in xp['history'][0].items()},
+                    name=name
+                )
+            )
+
+        return pd.DataFrame(results)
+
     def times(self):
         return pd.DataFrame.from_dict(
             {name: self.results[name]['fit_time'].sum()

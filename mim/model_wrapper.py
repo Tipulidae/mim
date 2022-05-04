@@ -79,6 +79,9 @@ class Model:
         return (self.model_type is ModelTypes.CLASSIFIER and
                 len(self.model.classes_) == 2)
 
+    def save(self, split_number, name='last.ckpt'):
+        raise NotImplementedError
+
     def _prediction(self, x):
         return self.model.predict_proba(x)
 
@@ -285,6 +288,15 @@ class KerasWrapper(Model):
     @property
     def only_last_prediction_column_is_used(self):
         return False
+
+    def save(self, split_number, name='last.ckpt'):
+        if split_number is None:
+            split_folder = ""
+        else:
+            split_folder = f'split_{split_number}'
+
+        checkpoint = os.path.join(self.checkpoint_path, split_folder)
+        self.model.save(os.path.join(checkpoint, name))
 
     def _prediction(self, x):
         prediction = self.model.predict(x.batch(self.batch_size))

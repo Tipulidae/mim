@@ -42,6 +42,7 @@ class Experiment(NamedTuple):
     cv_kwargs: dict = {}
     model: Any = RandomForestClassifier
     model_kwargs: dict = {}
+    save_model: bool = True
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
@@ -113,7 +114,8 @@ class Experiment(NamedTuple):
                 validation,
                 self.get_model(train, validation, split_number=i),
                 self.scoring,
-                split_number=i
+                split_number=i,
+                save_model=self.save_model
             )
             _update_results(results, result)
 
@@ -258,12 +260,15 @@ class Experiment(NamedTuple):
             return None
 
 
-def _validate(train, val, model, scoring, split_number=None, pre_process=None):
+def _validate(train, val, model, scoring, split_number=None, save_model=True):
     t0 = time()
     log.info(f'\n\nFitting classifier, split {split_number}')
 
     history = model.fit(train, validation_data=val, split_number=split_number)
     fit_time = time() - t0
+
+    if save_model:
+        model.save(split_number=split_number)
 
     prediction = model.predict(val['x'])
     score_time = time() - fit_time - t0
