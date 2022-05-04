@@ -5,6 +5,9 @@ from sklearn.model_selection import ShuffleSplit
 from tensorflow.keras.optimizers import Adam
 
 from mim.experiments.experiments import Experiment
+from mim.experiments.hyper_experiments import HyperExperiment
+from mim.experiments import hyper_parameter as hp
+from mim.experiments.search_strategies import RandomSearch
 from mim.extractors.ptbxl import PTBXL
 from mim.models.simple_nn import ptbxl_cnn
 
@@ -475,4 +478,124 @@ class ptbxl(Experiment, Enum):
         },
         scoring=None,
         metrics={'sex': ['acc', 'auc']}
+    )
+
+    CNN2_1L_SEX_AGE_HEIGHT_WEIGHT = CNN1_1L_SEX_AGE_HEIGHT_WEIGHT._replace(
+        description='Try adding separate dense layers for each output.',
+        model_kwargs={
+            'cnn_kwargs': {
+                'down_sample': False,
+                'num_layers': 4,
+                'dropout': 0.2,
+                'filter_first': 32,
+                'filter_last': 16,
+                'kernel_first': 41,
+                'kernel_last': 5,
+            },
+            'ffnn_kwargs': {
+                'sizes': [50],
+                'dropouts': [0.1],
+            },
+            'final_ffnn_kwargs': {
+                'age': {'sizes': [10]},
+                'weight': {'sizes': [10]},
+                'sex': {
+                    'sizes': [10],
+                    'default_regularizer': 0.003,
+                    'default_dropout': 0.1
+                },
+                'height': {
+                    'sizes': [20],
+                    # 'default_regularizer': 0.003,
+                    # 'default_dropout': 0.3
+                },
+            }
+        },
+        epochs=200,
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.001,
+            }
+        },
+    )
+
+
+class HyperSearch(HyperExperiment, Enum):
+    CNN_1L_ALL = HyperExperiment(
+        template=ptbxl.CNN1_1L_SEX_AGE_HEIGHT_WEIGHT._replace(
+            description="",
+            model_kwargs={
+                'cnn_kwargs': {
+                    'down_sample': False,
+                    'num_layers': hp.Choice([2, 3, 4]),
+                    'dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                    'filter_first': hp.Choice([16, 32, 48]),
+                    'filter_last': hp.Choice([16, 32, 48]),
+                    'kernel_first': hp.Choice([11, 21, 31, 41, 51]),
+                    'kernel_last': hp.Choice([5, 7, 11]),
+                    'weight_decay': hp.Choice([0.03, 0.01, 0.003, 0.001, 0.0])
+                },
+                # 'ffnn_kwargs': {
+                #     'sizes': hp.Choice([[50], [100]]),
+                #     'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                #     'default_regularizer': hp.Choice(
+                #         [0.03, 0.01, 0.003, 0.001, 0.0]
+                #     )
+                # },
+                'ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [10, 25, 50, 100], k=num_layers
+                        ),
+                        'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                        'default_regularizer': hp.Choice(
+                            [0.03, 0.01, 0.003, 0.001, 0.0]
+                        )
+                    } for num_layers in [1, 2]
+                ]),
+                'final_ffnn_kwargs': hp.Choice([
+                    None,
+                    {
+                        'age': {
+                            'sizes': hp.Choice([[5], [10], [20]]),
+                            'default_regularizer': hp.Choice(
+                                [0.01, 0.003, 0.001, 0.0]),
+                            'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3])
+                        },
+                        'weight': {
+                            'sizes': hp.Choice([[5], [10], [20]]),
+                            'default_regularizer': hp.Choice(
+                                [0.01, 0.003, 0.001, 0.0]),
+                            'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3])
+                        },
+                        'sex': {
+                            'sizes': hp.Choice([[5], [10], [20]]),
+                            'default_regularizer': hp.Choice(
+                                [0.01, 0.003, 0.001, 0.0]),
+                            'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3])
+                        },
+                        'height': {
+                            'sizes': hp.Choice([[5], [10], [20]]),
+                            'default_regularizer': hp.Choice(
+                                [0.01, 0.003, 0.001, 0.0]),
+                            'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3])
+                        },
+                    }
+                ]),
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([0.003, 0.001, 0.0003, 0.0001]),
+                }
+            },
+            epochs=200,
+            batch_size=64,
+            metrics={'sex': ['acc', 'auc']},
+            ignore_callbacks=True
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={'iterations': 500},
     )

@@ -87,25 +87,35 @@ def cnn_helper(
     return x
 
 
-def ffnn_helper(x, sizes, dropouts, batch_norms, activation='relu',
-                activity_regularizer=None,
-                activity_regularizers=None,
-                kernel_regularizer=None,
-                kernel_regularizers=None,
-                bias_regularizer=None,
-                bias_regularizers=None):
+def ffnn_helper(
+        x, sizes,
+        activation='relu',
+        dropouts=None,
+        default_dropout=0.0,
+        batch_norms=None,
+        default_regularizer=0.0,
+        activity_regularizer=None,
+        activity_regularizers=None,
+        kernel_regularizer=None,
+        kernel_regularizers=None,
+        bias_regularizer=None,
+        bias_regularizers=None):
     num_layers = len(sizes)
+    if dropouts is None:
+        dropouts = num_layers * [default_dropout]
+    if batch_norms is None:
+        batch_norms = num_layers * [False]
     if activity_regularizers is None:
         if activity_regularizer is None:
-            activity_regularizer = 0.0
+            activity_regularizer = default_regularizer
         activity_regularizers = num_layers*[activity_regularizer]
     if kernel_regularizers is None:
         if kernel_regularizer is None:
-            kernel_regularizer = 0.0
+            kernel_regularizer = default_regularizer
         kernel_regularizers = num_layers*[kernel_regularizer]
     if bias_regularizers is None:
         if bias_regularizer is None:
-            bias_regularizer = 0.0
+            bias_regularizer = default_regularizer
         bias_regularizers = num_layers*[bias_regularizer]
 
     assert _all_lists_have_same_length(

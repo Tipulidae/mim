@@ -1,17 +1,12 @@
 import argparse
 import re
 
+import silence_tensorflow.auto  # noqa: F401
+
 from .factory import experiment_from_name
 from mim.util.logs import get_logger
 
 log = get_logger("Run")
-
-
-# def run_hyper_experiment(hyper_experiment, restart=False):
-#     def unfinished(experiment):
-#         return restart or not experiment.is_done
-#
-#     run_experiments(filter(unfinished, hyper_experiment.experiments()))
 
 
 def run_experiments(experiments, continue_on_error=False):
