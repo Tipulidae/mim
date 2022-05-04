@@ -536,17 +536,10 @@ class HyperSearch(HyperExperiment, Enum):
                     'kernel_last': hp.Choice([5, 7, 11]),
                     'weight_decay': hp.Choice([0.03, 0.01, 0.003, 0.001, 0.0])
                 },
-                # 'ffnn_kwargs': {
-                #     'sizes': hp.Choice([[50], [100]]),
-                #     'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
-                #     'default_regularizer': hp.Choice(
-                #         [0.03, 0.01, 0.003, 0.001, 0.0]
-                #     )
-                # },
                 'ffnn_kwargs': hp.Choice([
                     {
                         'sizes': hp.SortedChoices(
-                            [10, 25, 50, 100], k=num_layers
+                            [10, 25, 50, 100], k=num_layers, ascending=False
                         ),
                         'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
                         'default_regularizer': hp.Choice(
@@ -590,12 +583,12 @@ class HyperSearch(HyperExperiment, Enum):
                     'learning_rate': hp.Choice([0.003, 0.001, 0.0003, 0.0001]),
                 }
             },
-            epochs=200,
+            epochs=300,
             batch_size=64,
             metrics={'sex': ['acc', 'auc']},
             ignore_callbacks=True
         ),
         random_seed=42,
         strategy=RandomSearch,
-        strategy_kwargs={'iterations': 500},
+        strategy_kwargs={'iterations': 1000},
     )
