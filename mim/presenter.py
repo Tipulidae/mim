@@ -327,6 +327,25 @@ class Presenter:
         auc['overfit'] = auc.max_auc - auc.final_auc
         return auc
 
+    def best_during_training(self, column='auc', bigger_is_better=True):
+        def best_and_final(xp):
+            history = self.history(
+                xp, columns=[f'val_{column}'], folds='first'
+            )
+            best = history.max()[0] if bigger_is_better else history.min()[0]
+            final = history.iloc[-1][0]
+            return best, final
+
+        score = pd.DataFrame(
+            ({
+                f'final_{column}': final,
+                f'best_{column}': best
+            } for best, final in [best_and_final(xp) for xp in self.results]),
+            index=self.results.keys()
+        )
+        score['overfit'] = score.iloc[:, 1] - score.iloc[:, 0]
+        return score
+
     def plot_history(self, names, columns=None,
                      folds='first', **plot_kwargs):
         if columns is None:
