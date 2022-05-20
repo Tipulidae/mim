@@ -633,3 +633,167 @@ class HyperPTBXL(HyperExperiment, Enum):
         strategy=RandomSearch,
         strategy_kwargs={'iterations': 1000},
     )
+
+    RS_1L_SEX = HyperExperiment(
+        template=ptbxl.CNN1_1L_SEX._replace(
+            description="",
+            model_kwargs={
+                'cnn_kwargs': {
+                    'down_sample': False,
+                    'num_layers': hp.Choice([2, 3, 4]),
+                    'dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                    'filter_first': hp.Choice([16, 32, 48]),
+                    'filter_last': hp.Choice([16, 32, 48]),
+                    'kernel_first': hp.Choice([11, 21, 31, 41, 51]),
+                    'kernel_last': hp.Choice([5, 7, 11]),
+                    'weight_decay': hp.Choice([0.03, 0.01, 0.003, 0.001, 0.0])
+                },
+                'ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [10, 25, 50, 100], k=num_layers, ascending=False
+                        ),
+                        'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                        'default_regularizer': hp.Choice(
+                            [0.03, 0.01, 0.003, 0.001, 0.0]
+                        )
+                    } for num_layers in [1, 2]
+                ]),
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([0.003, 0.001, 0.0003, 0.0001]),
+                }
+            },
+            epochs=200,
+            batch_size=64,
+            ignore_callbacks=True
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={'iterations': 200},
+    )
+
+    RS_1L_AGE = HyperExperiment(
+        template=ptbxl.CNN1_1L_AGE._replace(
+            description="",
+            model_kwargs={
+                'cnn_kwargs': {
+                    'down_sample': False,
+                    'num_layers': hp.Choice([2, 3, 4]),
+                    'dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                    'filter_first': hp.Choice([16, 32, 48]),
+                    'filter_last': hp.Choice([16, 32, 48]),
+                    'kernel_first': hp.Choice([11, 21, 31, 41, 51]),
+                    'kernel_last': hp.Choice([5, 7, 11]),
+                    'weight_decay': hp.Choice([0.03, 0.01, 0.003, 0.001, 0.0])
+                },
+                'ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [10, 25, 50, 100], k=num_layers, ascending=False
+                        ),
+                        'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                        'default_regularizer': hp.Choice(
+                            [0.03, 0.01, 0.003, 0.001, 0.0]
+                        )
+                    } for num_layers in [1, 2]
+                ]),
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([0.003, 0.001, 0.0003, 0.0001]),
+                }
+            },
+            epochs=200,
+            batch_size=64,
+            ignore_callbacks=True
+        ),
+        random_seed=43,
+        strategy=RandomSearch,
+        strategy_kwargs={'iterations': 200},
+    )
+
+    RS_1L_HEIGHT = HyperExperiment(
+        template=ptbxl.CNN1_1L_HEIGHT._replace(
+            description="",
+            model_kwargs={
+                'cnn_kwargs': {
+                    'down_sample': False,
+                    'num_layers': hp.Choice([2, 3, 4]),
+                    'dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                    'filter_first': hp.Choice([16, 32, 48]),
+                    'filter_last': hp.Choice([16, 32, 48]),
+                    'kernel_first': hp.Choice([11, 21, 31, 41, 51]),
+                    'kernel_last': hp.Choice([5, 7, 11]),
+                    'weight_decay': hp.Choice([0.03, 0.01, 0.003, 0.001, 0.0])
+                },
+                'ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [10, 25, 50, 100], k=num_layers, ascending=False
+                        ),
+                        'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                        'default_regularizer': hp.Choice(
+                            [0.03, 0.01, 0.003, 0.001, 0.0]
+                        )
+                    } for num_layers in [1, 2]
+                ]),
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([0.003, 0.001, 0.0003, 0.0001]),
+                }
+            },
+            epochs=200,
+            batch_size=64,
+            ignore_callbacks=True
+        ),
+        random_seed=44,
+        strategy=RandomSearch,
+        strategy_kwargs={'iterations': 200},
+    )
+
+    RS_1L_WEIGHT = HyperExperiment(
+        template=ptbxl.CNN1_1L_WEIGHT._replace(
+            description="",
+            model_kwargs={
+                'cnn_kwargs': {
+                    'down_sample': False,
+                    'num_layers': hp.Choice([2, 3, 4]),
+                    'dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                    'filter_first': hp.Choice([16, 32, 48]),
+                    'filter_last': hp.Choice([16, 32, 48]),
+                    'kernel_first': hp.Choice([11, 21, 31, 41, 51]),
+                    'kernel_last': hp.Choice([5, 7, 11]),
+                    'weight_decay': hp.Choice([0.03, 0.01, 0.003, 0.001, 0.0])
+                },
+                'ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [10, 25, 50, 100], k=num_layers, ascending=False
+                        ),
+                        'default_dropout': hp.Choice([0.0, 0.1, 0.2, 0.3]),
+                        'default_regularizer': hp.Choice(
+                            [0.03, 0.01, 0.003, 0.001, 0.0]
+                        )
+                    } for num_layers in [1, 2]
+                ]),
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([0.003, 0.001, 0.0003, 0.0001]),
+                }
+            },
+            epochs=200,
+            batch_size=64,
+            ignore_callbacks=True
+        ),
+        random_seed=45,
+        strategy=RandomSearch,
+        strategy_kwargs={'iterations': 200},
+    )
