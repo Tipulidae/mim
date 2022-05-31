@@ -5,7 +5,13 @@ import pandas as pd
 import h5py
 from tqdm import tqdm
 
-from mim.massage.carlson_ecg import ECGStatus
+from mim.massage.carlson_ecg import (
+    ECGStatus,
+    expected_lead_names,
+    glasgow_vector_names,
+    glasgow_scalar_names,
+    glasgow_diagnoses
+)
 from mim.util.logs import get_logger
 
 log = get_logger("ESC-Trop Massage")
@@ -959,6 +965,123 @@ def make_dataframe_for_anders():
         .astype(int)
     )
     return features
+
+
+def make_lindow_dataframe():
+    """
+    Create a dataframe with Alias as index and columns for TnT and index-ECG.
+    The ECG columns are:
+    * LBBB - Whether Glasgow thinks the ECG indicates LBBB
+    * Incomplete_LBBB - Whether Glasgow thinks the ECG indicates partial LBBB
+    * OverallQRSdur - Aggregated QRS durations (glasgow)
+    * QRSdur_{lead} - QRS duration for all 12 leads individually
+    * QRS_above_120 - True if any of the QRSdur_{lead} columns are true
+    * path - Complete path to the original matlab-file
+
+    The dataframe also contains, for convenience:
+    * admission_date
+    * age
+    * sex
+    * tnt_1 - (1st troponin)
+    * tnt_date_1 - (timestamp for 1st troponin)
+    * tnt_2
+    * tnt_date_2
+    * ecg - index of ECG in the hdf5-file
+    * ecg_date
+    """
+    index_visits = read_csv(
+        "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv",
+        usecols=[
+            'BesokOrsakId', 'Alias', 'Vardkontakt_InskrivningDatum',
+            'KontaktId', 'Kön', 'Ålder vid inklusion'
+        ],
+        parse_dates=[
+            'Vardkontakt_InskrivningDatum'
+        ]
+    )
+    index_visits = (
+        index_visits
+        .dropna(subset=['BesokOrsakId'])
+        .drop(columns=['BesokOrsakId'])
+        .rename(columns={
+            'Vardkontakt_InskrivningDatum': 'admission_date',
+            'KontaktId': 'id',
+            'Kön': 'sex',
+            'Ålder vid inklusion': 'age', })
+        .sort_values(by=['admission_date', 'id'])
+        .drop_duplicates(subset=['Alias'], keep='first')
+        .set_index('Alias')
+        .join(make_troponin_table(), on='id', how='left')
+        .drop(columns=['id', 'log_tnt_1', 'log_tnt_2'])
+    )
+
+    ecg_table = (
+        make_ecg_table()
+        .rename_axis('ecg')
+        .reset_index()
+        .set_index('Alias')
+    )
+
+    index_visits = index_visits.join(ecg_table, how='left').reset_index()
+    index_visits['dt'] = (
+        (index_visits.ecg_date - index_visits.admission_date)
+        .dt.total_seconds().abs()
+    )
+    index_visits = (
+        index_visits[index_visits.dt <= 3600]
+        .sort_values(by=['Alias', 'dt'])
+        .drop_duplicates(subset=['Alias'], keep='first')
+    )
+    index_visits.ecg = index_visits.ecg.astype(int)
+
+    qrs_durations = []
+    qrs_overall = []
+    diagnoses = []
+    paths = []
+
+    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    with h5py.File(ecg_path, 'r') as ecg:
+        OVERALL_QRS = glasgow_scalar_names.index('OverallQRSdur')
+        QRS = glasgow_vector_names.index('QRSduration')
+        ILBBB = glasgow_diagnoses.index('Incomplete LBBB')
+        LBBB = glasgow_diagnoses.index('Left bundle branch block')
+        for ecg_id in tqdm(index_visits.ecg.sort_values()):
+            qrs_overall.append(ecg['glasgow']['scalars'][ecg_id, OVERALL_QRS])
+            qrs_durations.append(ecg['glasgow']['vectors'][ecg_id, QRS, :])
+            diagnoses.append(
+                ecg['glasgow']['diagnoses'][ecg_id, [ILBBB, LBBB]]
+            )
+            paths.append(ecg['meta']['path'][ecg_id])
+
+    durations = pd.DataFrame(
+        np.stack(qrs_durations),
+        columns=[f'QRSdur_{lead}' for lead in expected_lead_names],
+        index=index_visits.sort_values(by='ecg').Alias
+    )
+    durations['QRS_above_120'] = durations.any(axis=1)
+    overall_duration = pd.DataFrame(
+        qrs_overall,
+        columns=['OverallQRSdur'],
+        index=index_visits.sort_values(by='ecg').Alias
+    )
+    lbbb = pd.DataFrame(
+        np.stack(diagnoses),
+        columns=['Incomplete_LBBB', 'LBBB'],
+        index=index_visits.sort_values(by='ecg').Alias
+    )
+    paths = pd.DataFrame(
+        paths,
+        columns=['path'],
+        index=index_visits.sort_values(by='ecg').Alias
+    )
+    index_visits = (
+        index_visits
+        .set_index('Alias')
+        .join([lbbb, overall_duration, durations, paths])
+        .drop(columns=['dt'])
+    )
+
+    return index_visits
 
 
 def _make_ecg_paths(index):

@@ -15,6 +15,8 @@ from mim.massage.carlson_ecg import (
     glasgow_vector_names,
     glasgow_diagnoses_index,
     glasgow_diagnoses,
+    glasgow_rhythms_index,
+    glasgow_rhythms,
     extract_field,
     flatten_nested
 )
@@ -110,6 +112,25 @@ class ECG:
 
         return diagnoses_vector
 
+    def init_glasgow_rhythms(self):
+        rhythm_vector = np.zeros((len(glasgow_rhythms_index),)).astype(bool)
+
+        if ECGStatus.MISSING_RHYTHM in self.status:
+            return rhythm_vector
+
+        rhythms = flatten_nested(extract_field(
+            self.ecg_dict['Measurements'], 'R'
+        ))
+        if not rhythms:
+            return rhythm_vector
+
+        parts = set.union(*[set(r.split(' with ')) for r in rhythms])
+        for part in parts:
+            if part in glasgow_rhythms_index:
+                rhythm_vector[glasgow_rhythms_index[part]] = True
+
+        return rhythm_vector
+
     @property
     def is_raw_ecg_ok(self):
         return self.status.isdisjoint({
@@ -167,9 +188,6 @@ class ECG:
 
 
 def create_esc_trop_ecg_hdf5():
-    # TODO:
-    #  Refactor this, maybe add a metadata report to it, and run once more
-    #  just to be safe.
     esc_trop_paths = list(sorted(
         glob.iglob('/mnt/air-crypt/air-crypt-esc-trop/ekg/mat/**/*.mat',
                    recursive=True)
@@ -211,6 +229,13 @@ def to_hdf5(ecg_paths, target_path):
             (n, len(glasgow_diagnoses_index)),
             dtype=np.bool,
             chunks=(1, len(glasgow_diagnoses_index)),
+            fletcher32=True
+        )
+        glasgow.create_dataset(
+            'rhythms',
+            (n, len(glasgow_rhythms_index)),
+            dtype=np.bool,
+            chunks=(1, len(glasgow_rhythms_index)),
             fletcher32=True
         )
 
@@ -266,6 +291,11 @@ def to_hdf5(ecg_paths, target_path):
             dtype=h5py.string_dtype(encoding='utf-8')
         )
         meta.create_dataset(
+            "glasgow_rhythms_names",
+            (len(glasgow_rhythms_index),),
+            dtype=h5py.string_dtype(encoding='utf-8')
+        )
+        meta.create_dataset(
             "lead_names",
             (len(expected_lead_names),),
             dtype=h5py.string_dtype(encoding='utf-8')
@@ -281,6 +311,7 @@ def to_hdf5(ecg_paths, target_path):
         data['meta']['glasgow_vector_names'][()] = glasgow_vector_names
         data['meta']['glasgow_scalar_names'][()] = glasgow_scalar_names
         data['meta']['glasgow_diagnoses_names'][()] = glasgow_diagnoses
+        data['meta']['glasgow_rhythms_names'][()] = glasgow_rhythms
         data['meta']['lead_names'][()] = expected_lead_names
         data['meta']['report'][()] = Metadata().report(
             conda=False, file_data=False, as_string=True)
@@ -292,6 +323,7 @@ def to_hdf5(ecg_paths, target_path):
             data['glasgow']['scalars'][i] = ecg.init_glasgow_scalars()
             data['glasgow']['vectors'][i] = ecg.init_glasgow_vectors()
             data['glasgow']['diagnoses'][i] = ecg.init_glasgow_diagnoses()
+            data['glasgow']['rhythms'][i] = ecg.init_glasgow_rhythms()
             meta = ecg.metadata
             data['meta']['date'][i] = meta['date']
             data['meta']['alias'][i] = meta['alias']
