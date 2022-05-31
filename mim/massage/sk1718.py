@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from mim.util.logs import get_logger
+from mim.util.metadata import save
 
 log = get_logger("Skåne 17-18 massage")
 
@@ -306,3 +307,239 @@ def make_pontus_lab_values(index):
     # Convert all the measurements to float (or nan), then drop nans
     lab = lab_values_to_float(lab).dropna(how='any')
     return lab
+
+
+def load_outcomes_from_ab_brsm():
+    colmap = {
+        'Alias': 'Alias',
+        'KontaktId': 'KontaktId',
+        'LopNr': 'LopNr',
+        'Vardkontakt_InskrivningDatum': 'admission_date',
+        'Vardkontakt_PatientAlderVidInskrivning': 'age',
+        'Patient_Kon': 'sex',
+        'outcome-30d-I200-SV': 'I200',
+        'outcome-30d-I21-SV': 'I21',
+        'outcome-30d-I22-SV': 'I22',
+        'outcome-30d-DEATH': 'death',
+    }
+    data = (
+        pd.read_csv(
+            '/mnt/air-crypt/air-crypt-esc-trop/andersb/scratch/brsm-U.csv',
+            parse_dates=['Vardkontakt_InskrivningDatum'],
+            usecols=colmap.keys())
+        .rename(columns=colmap)
+        .sort_values(by=['Alias', 'admission_date'])
+        # .set_index(['Alias', 'admission_date'])
+        # .sort_index()
+    )
+
+    data['admission_index'] = range(len(data))
+    data.admission_date = data.admission_date.dt.floor('D')
+
+    return data
+
+
+def _multihot(path, index):
+    log.info(f'Loading {path}')
+    diagnosis_cols = ['hdia'] + [f'DIA{x}' for x in range(1, 31)]
+    op_cols = ['OP']
+    sos = (
+        read_csv(
+            path,
+            usecols=['LopNr', 'INDATUM'] + diagnosis_cols + op_cols,
+            parse_dates=['INDATUM'],
+            low_memory=False)
+        .reset_index()  # We will use this to disambiguate same-day events
+        .rename(columns={'INDATUM': 'diagnosis_date', 'index': 'sos_index'})
+        .join(index.set_index('LopNr').Alias, on='LopNr', how='inner')
+        .set_index(['Alias', 'diagnosis_date', 'sos_index'])
+        .sort_index()
+    )
+
+    # log.info('Stacking diagnoses')
+    icd = (
+        sos
+        .loc[:, diagnosis_cols]
+        .stack()
+        .rename('icd10')
+        .reset_index(level=3, drop=True)
+    )
+
+    op = (
+        sos
+        .loc[:, 'OP']
+        .str.split(' ')
+        .explode()
+        .rename('OP')
+        .dropna()
+    )
+
+    def pivot(s):
+        name = s.name
+        log.info(f'Pivoting {name}')
+        df = s.reset_index(level=[2, 1]).drop_duplicates()
+        col_order = (
+            df[name]
+            .value_counts()
+            .reset_index()
+            .sort_values(by=[name, 'index'], ascending=[False, True])
+            .loc[:, 'index']
+            .values
+        )
+
+        df['temp'] = True
+        df = df.pivot_table(
+            index=['Alias', 'diagnosis_date', 'sos_index'],
+            columns=name,
+            values='temp'
+        )
+        return df.fillna(0).astype(bool).loc[:, col_order]
+
+    icd = pivot(icd)
+    op = pivot(op)
+
+    log.info('Concatenating results')
+    return (
+        pd.concat([icd, op], axis=1, keys=['ICD', 'OP'])
+        .fillna(False)
+        .sort_index()
+    )
+
+
+def make_multihot_diagnoses(index):
+    """
+    :param index: DataFrame with columns LopNr and Alias.
+    :return: DataFrame with Alias, diagnosis_date as multi-index, and
+    around 1500 columns, one for each possible ICD10 diagnosis in the sos-
+    material. Each row corresponds to a multi-hot encoding of a hospital
+    visit. The columns are sorted by frequency, so that the first column is
+    the most common diagnosis, and the last column is the least common.
+    """
+    # output: df with columns Alias, date, <icd1>, <icd2>, ...
+
+    # assert any([sv, ov])
+    sv = _multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', index)
+    ov = _multihot('SOS_T_T_T_R_PAR_OV_24129_2020.csv', index)
+
+    sv.columns += '_sv'
+    ov.columns += '_ov'
+
+    log.info('Concatenating diagnoses')
+    svov = pd.concat([sv, ov], join='outer').fillna(False)
+    return svov
+
+
+def make_multihot_staggered(multihot, brsm):
+    """
+
+    :param multihot: Multihot encoded diagnoses, one row for each "SV" or
+    "OV" event, corresponding to the diagnoses set at that event. Index
+    should be (Alias, diagnosis_date, index)-triplet.
+    :param brsm: Dataframe containing one row for each chest-pain visit.
+    Required columns are Alias, admission_date and admission_index.
+    :return: New version of the multihot-encoded diagnosis matrix, but
+    staggered such that each row corresponds to a single event-index pair.
+    Thus, if a patient is represented twice in the index (brsm), each
+    diagnosis event preceding the index date will be included twice: once for
+    each index-visit. Diagnosis events occuring after the index-visits are
+    removed.
+    """
+    log.info("Staggering diagnosis history")
+    mh = multihot.reset_index().join(brsm.set_index('Alias'), on='Alias')
+    mh = (
+        mh[mh.diagnosis_date < mh.admission_date]
+        .sort_values(
+            by=['Alias', 'admission_index', 'diagnosis_date', 'sos_index'])
+        .reset_index(drop=True)
+    )
+    # mh['data_index'] = range(len(mh))
+    return mh
+
+
+def sum_events_in_interval(mh, brsm, **interval_kwargs):
+    """
+    :param mh: Multihot-encoded matrix, with index (Alias, diagnosis_date,
+    sos_index). Each column correspond to some binary outcome (diagnosis,
+    KVÅ-code, etc).
+    :param brsm: Dataframe containing one row for each chest-pain visit.
+    Required columns are Alias, admission_date and admission_index.
+    :param interval_kwargs: keyword-arguments for the interval_range function,
+    specifying either the 'periods' -- the number of periods to generate, or
+    'freq' -- the length of each interval. Optionally also specify 'closed' --
+    whether the intervals are closed on the left, right, both or neither side.
+    See pandas.interval_range for more details.
+
+    :return: dataframe with brsm.admission_index as index. One column for each
+    input column and interval. The values of the columns is the sum of
+    True elements in the interval (admission_date - diagnosis_date) for each
+    column in the input table. The columns are a multi-index, with the top
+    level specifying the interval, as I#, where # is the number of the
+    interval.
+    """
+    cols = list(mh.columns)
+    mhs = make_multihot_staggered(mh, brsm)
+
+    intervals = pd.interval_range(
+        start=pd.Timedelta(0),
+        end=pd.Timedelta('1825D'),
+        **interval_kwargs
+    )
+    event_age = mhs.admission_date - mhs.diagnosis_date
+
+    sums = []
+    for interval in intervals:
+        sums.append(
+            mhs.loc[
+                event_age.between(
+                    interval.left,
+                    interval.right,
+                    inclusive=interval.closed
+                ),
+                ['admission_index'] + cols
+            ]
+            .groupby('admission_index')
+            .sum()
+        )
+
+    res = pd.concat(
+        sums,
+        axis=1,
+        keys=[f"I{x}" for x in range(len(intervals))]
+    ).reindex(brsm.index).fillna(0)
+
+    return res
+
+
+def save_staggered_multihot_diagnoses():
+    # Load the brsm-U index from Anders,
+    # create the multihot diagnosis history from sos sv+ov
+    # stagger the result in preparation for time-series analysis
+    # save the whole thing as a pickle for future use.
+    brsm = load_outcomes_from_ab_brsm()
+    brsm = brsm[['Alias', 'LopNr', 'admission_date', 'admission_index']]
+    svov = make_multihot_diagnoses(brsm).astype(pd.SparseDtype(bool, False))
+    mh = make_multihot_staggered(svov, brsm).drop(columns=['index', 'LopNr'])
+    save(mh, '/mnt/air-crypt/air-crypt-esc-trop/axel/'
+             'sk1718_brsm_staggered_diagnoses.pickle')
+    log.info('Staggered diagnoses saved!')
+
+
+def save_multihot_sos_data():
+    # Load brsm-U index
+    # Create multihot-encoded table of ICD and KVÅ-codes for both
+    # SV and OV. Save these to disk as separate tables.
+    folder_dir = '/mnt/air-crypt/air-crypt-esc-trop/axel/'
+    brsm = load_outcomes_from_ab_brsm()
+    brsm = brsm[['Alias', 'LopNr', 'admission_date', 'admission_index']]
+
+    sv = _multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', brsm)
+    save(
+        sv.astype(pd.SparseDtype(bool, False)),
+        join(folder_dir, 'sk1718_brsm_multihot_sv.pickle')
+    )
+
+    ov = _multihot('SOS_T_T_T_R_PAR_OV_24129_2020.csv', brsm)
+    save(
+        ov.astype(pd.SparseDtype(bool, False)),
+        join(folder_dir, 'sk1718_brsm_multihot_ov.pickle')
+    )
