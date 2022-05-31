@@ -3,6 +3,7 @@ import itertools
 import math
 import random
 
+import numpy as np
 import pandas as pd
 
 from mim.experiments import hyper_parameter as hp
@@ -151,7 +152,7 @@ class SuccessiveHalving(Searcher):
                     log.info(f"Experiment {experiment.name} with kwargs\n"
                              f"{s}\n\n")
                     experiment.run()
-                score = experiment.validation_scores.mean()
+                score = np.mean(experiment.validation_scores)
                 scores[name] = score
 
             experiments = self.top_k(experiments, scores, i)

@@ -7,7 +7,7 @@ from mim.models.util import ffnn_helper
 
 
 def simple_ffnn(train, validation=None, **ffnn_kwargs):
-    shapes = train['x'].shape
+    shapes = train.feature_tensor_shape
     inp = {
         features: Input(shape=shapes[features])
         for features in shapes

@@ -23,7 +23,9 @@ log = get_logger('simple_nn')
 
 
 def logistic_regression_ab(train, validation=None):
-    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    inp = {
+        key: Input(shape=value)
+        for key, value in train.feature_tensor_shape.items()}
     # ['log_dt', 'age', 'male', 'tnt_1']
     normalization = Normalization(axis=1)
     normalization.adapt(train['x']['flat_features'].as_numpy())
@@ -62,13 +64,13 @@ def ptbxl_cnn(
     if final_ffnn_kwargs is None:
         final_ffnn_kwargs = {}
 
-    inp = Input(shape=train['x'].shape)
+    inp = Input(shape=train.feature_tensor_shape)
     x = cnn_helper(inp, **cnn_kwargs)
     x = ffnn_helper(x, **ffnn_kwargs)
 
     output_layers = []
 
-    for name in train['y'].columns:
+    for name in train.target_columns:
         y = x
         if name in final_ffnn_kwargs:
             y = ffnn_helper(x, **final_ffnn_kwargs[name])
@@ -99,7 +101,10 @@ def ecg_cnn(
         ecg_comb_ffnn_kwargs=None,
         flat_ffnn_kwargs=None,
         final_ffnn_kwargs=None):
-    inp = {key: Input(shape=value) for key, value in train['x'].shape.items()}
+    inp = {
+        key: Input(shape=value)
+        for key, value in train.feature_tensor_shape.items()
+    }
     ecg_layers = []
     if 'ecg_0' in inp:
         ecg_layers.append(cnn_helper(inp['ecg_0'], **cnn_kwargs))
@@ -114,7 +119,7 @@ def ecg_cnn(
         ecg_combiner=ecg_combiner,
         flat_ffnn_kwargs=flat_ffnn_kwargs,
         final_ffnn_kwargs=final_ffnn_kwargs,
-        output_size=len(train['y'].columns)
+        output_size=train.output_size
     )
 
 
@@ -155,7 +160,7 @@ def basic_ff():
     inp = Input(shape=(128, ))
     x = Flatten()(inp)
     x = Dense(32, activation='relu')(x)
-    output = Dense(10, activation='softmax')(x)
+    output = Dense(1, activation='sigmoid')(x)
     model = keras.Model(inp, output)
     return model
 
@@ -200,17 +205,17 @@ def pretrained_resnet(
     Load a pre-trained ResNet model for each input ECG, and plug this into
     the serial-ecg architecture with additional, optional ffnns.
     """
-    data_shape = train['x'].shape
+    feature_shape = train.feature_tensor_shape
     inp = {}
     ecg_layers = []
-    for ecg in [key for key in data_shape if key.startswith('ecg')]:
+    for ecg in [key for key in feature_shape if key.startswith('ecg')]:
         resnet_input, resnet_output = load_ribeiro_model(
             freeze_resnet, suffix=f"_{ecg}")
         inp[ecg] = resnet_input
         ecg_layers.append(resnet_output)
 
-    if 'flat_features' in data_shape:
-        inp['flat_features'] = Input(shape=data_shape['flat_features'])
+    if 'flat_features' in feature_shape:
+        inp['flat_features'] = Input(shape=feature_shape['flat_features'])
 
     return _ecg_and_flat_feature_combiner(
         inp=inp,
@@ -220,7 +225,7 @@ def pretrained_resnet(
         ecg_combiner=ecg_combiner,
         flat_ffnn_kwargs=flat_ffnn_kwargs,
         final_ffnn_kwargs=final_ffnn_kwargs,
-        output_size=len(train['y'].columns)
+        output_size=train.output_size
     )
 
 
@@ -233,7 +238,7 @@ def ffnn(
         flat_ffnn_kwargs=None,
         final_ffnn_kwargs=None,
 ):
-    inp = _make_input(train['x'].shape)
+    inp = _make_input(train.feature_tensor_shape)
     ecg_layers = []
     if 'ecg_0' in inp:
         ecg_layers.append(inp['ecg_0'])
@@ -254,7 +259,7 @@ def ffnn(
         ecg_combiner=ecg_combiner,
         flat_ffnn_kwargs=flat_ffnn_kwargs,
         final_ffnn_kwargs=final_ffnn_kwargs,
-        output_size=len(train['y'].columns)
+        output_size=train.output_size
     )
 
 

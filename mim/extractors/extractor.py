@@ -1,13 +1,14 @@
 import random
+import itertools
 from copy import copy
+from typing import Dict
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 import h5py
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-
-from typing import Dict
 
 from mim.util.util import infer_categorical
 
@@ -23,8 +24,9 @@ class Data:
             groups=None,
             predefined_splits=None):
         self.data = data
-        if columns is None:
-            self._columns = [0]
+        if columns is None and not isinstance(data, dict):
+            num_features = np.shape(data)[-1]
+            self._columns = list(range(num_features))
         else:
             self._columns = columns
         self.dtype = dtype
@@ -205,6 +207,134 @@ class Container(Data):
             return {key: value[item] for key, value in self.data.items()}
 
 
+class DataWrapper:
+    def __init__(self, features, labels, index, groups=None,
+                 predefined_splits=None, fits_in_memory=True):
+        """
+        Features and labels should either be tuples of data, columns, where
+        data is array-like and columns is a list of column-names corresponding
+        to the data, OR features and labels are potentially nested dicts of
+        such tuples.
+
+        index should be a tuple of data, columns, where data is array-like
+        and columns is a list of column-names.
+
+        :param features:
+        :param labels:
+        :param index:
+        :param groups:
+        :param predefined_splits:
+        :param fits_in_memory:
+        """
+
+        def wrap_as_data(x):
+            if isinstance(x, dict):
+                return Container({k: wrap_as_data(v) for k, v in x.items()})
+            else:
+                return Data(x[0], columns=list(x[1]))
+
+        n = len(index[0])
+        self.data = Container(
+            {
+                'x': wrap_as_data(features),
+                'y': wrap_as_data(labels),
+                'index': wrap_as_data(index),
+            },
+            index=range(n),
+            groups=groups,
+            predefined_splits=predefined_splits,
+            fits_in_memory=fits_in_memory
+        )
+
+    @property
+    def feature_names(self):
+        return self.data['x'].columns
+
+    @property
+    def target_columns(self):
+        return self.data['y'].columns
+
+    @property
+    def output_size(self):
+        return len(self.data['y'].columns)
+
+    @property
+    def index(self):
+        return self.data.index
+
+    @property
+    def groups(self):
+        return self.data.groups
+
+    @property
+    def predefined_splits(self):
+        return self.data.predefined_splits
+
+    @property
+    def feature_tensor_shape(self):
+        return self.data['x'].shape
+
+    @property
+    def y(self):
+        return self.to_dataframe(self.data['y'].as_flat_numpy())
+
+    def x(self, can_use_tf_dataset=True):
+        if can_use_tf_dataset:
+            return self.data['x'].as_dataset()
+        else:
+            return self.data['x'].as_flat_numpy()
+
+    def to_dataframe(self, y):
+        """
+        Turn the input array-like into a pandas DataFrame, where the index
+        and columns matches those of the underlying data labels. In other
+        words, the output will be a DataFrame with column names corresponding
+        to the data output columns (e.g. "mace30"), and the index will match
+        the index of the data set (e.g. patient-id).
+        :param y:
+        :return:
+        """
+        index = pd.Index(
+            self.data['index'].as_numpy(),
+            name=self.data['index'].columns[0]
+        )
+        columns = self.data['y'].columns
+        if isinstance(columns, dict):
+            columns = list(itertools.chain(*columns.values()))
+        return pd.DataFrame(y, index=index, columns=columns)
+
+    def as_dataset(self, batch_size=1, prefetch=3, **kwargs):
+        x = self.data['x'].as_dataset(shuffle=True)
+        y = self.data['y'].as_dataset(shuffle=True)
+        fixed_data = tf.data.Dataset.zip((x, y))
+
+        # If the data _does_ fit in memory, we can use the tf shuffling
+        # instead. This would be bad if data doesn't fit in memory though,
+        # because tf will load the entire dataset in memory before shuffling.
+        if self.data.fits_in_memory:
+            fixed_data = fixed_data.shuffle(len(self.data))
+
+        fixed_data = fixed_data.batch(batch_size)
+
+        if prefetch:
+            fixed_data = fixed_data.prefetch(prefetch)
+
+        return fixed_data
+
+    def as_numpy(self):
+        x = self.data['x'].as_flat_numpy()
+        y = self.data['y'].as_numpy().ravel()
+        return x, y
+
+    def split(self, index_a, index_b):
+        return self.lazy_slice(index_a), self.lazy_slice(index_b)
+
+    def lazy_slice(self, index):
+        new_data = copy(self)
+        new_data.data = new_data.data.lazy_slice(index)
+        return new_data
+
+
 def infer_shape(data):
     shape = np.shape(data)
     n = len(shape)
@@ -242,7 +372,10 @@ def sklearn_process(split_number=0, **processors):
     sets of features, I might avoid having to automatically infer which
     features or groups of features are categorical.
     """
-    def process_and_wrap(train, val):
+    def process_and_wrap(train_dw, val_dw):
+        train = train_dw.data
+        val = val_dw.data
+
         x_train, x_val = process_container(
             train['x'], val['x'], processors)
 
@@ -271,7 +404,13 @@ def sklearn_process(split_number=0, **processors):
             groups=val.groups,
             fits_in_memory=val.fits_in_memory
         )
-        return new_train, new_val
+        # return new_train, new_val
+        new_train_dw = copy(train_dw)
+        new_val_dw = copy(val_dw)
+        new_train_dw.data = new_train
+        new_val_dw.data = new_val
+
+        return new_train_dw, new_val_dw
 
     return process_and_wrap
 
@@ -462,5 +601,5 @@ class Extractor:
         self.fits_in_memory = fits_in_memory
         self.cv_kwargs = cv_kwargs
 
-    def get_data(self) -> Container:
+    def get_data(self) -> DataWrapper:
         raise NotImplementedError

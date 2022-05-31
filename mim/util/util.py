@@ -131,9 +131,9 @@ def infer_categorical(data):
     cat, num = [], []
     for col in df.columns:
         if is_categorical(df.loc[:, col]):
-            num.append(col)
-        else:
             cat.append(col)
+        else:
+            num.append(col)
 
     return cat, num
 

@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import itertools
 from copy import copy
 from time import time
 from pathlib import Path
@@ -16,13 +15,14 @@ from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import PredefinedSplit, KFold
 
-from mim.extractors.extractor import Extractor, Container
+from mim.extractors.extractor import Extractor, DataWrapper
 from mim.cross_validation import CrossValidationWrapper
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
 from mim.util.metadata import Metadata
 from mim.util.util import callable_to_string
+from mim.experiments.results import ExperimentResult, TrainingResult
 import mim.experiments.hyper_parameter as hp
 
 log = get_logger("Experiment")
@@ -43,6 +43,7 @@ class Experiment(NamedTuple):
     model: Any = RandomForestClassifier
     model_kwargs: dict = {}
     save_model: bool = True
+    save_results: bool = True
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
@@ -77,51 +78,41 @@ class Experiment(NamedTuple):
 
             os.makedirs(self.base_path, exist_ok=True)
             results = self._run()
-            pd.to_pickle(results, self.result_path)
-            log.debug(f'Saved results in {self.result_path}')
+            if self.save_results:
+                pd.to_pickle(results, self.result_path)
+                log.debug(f'Saved results in {self.result_path}')
             return results
         except Exception as e:
             log.error('Something went wrong!')
             raise e
 
-    def _run(self):
+    def _run(self) -> ExperimentResult:
         log.info(f'Running experiment {self.name}: {self.description}')
         t = time()
 
         data = self.get_data()
-
-        feature_names = data.columns
-        results = {
-            'fit_time': [],
-            'score_time': [],
-            'train_score': [],
-            'test_score': [],
-            'targets': [],
-            'predictions': [],
-            'feature_names': feature_names,
-            'feature_importance': [],
-            'model_summary': [],
-            'history': [],
-        }
-
+        results = ExperimentResult(
+            feature_names=data.feature_names,
+            metadata=Metadata().report(conda=self.log_conda_env),
+            experiment_summary=self.asdict(),
+            path=self.base_path
+        )
         cv = self.get_cross_validation(data.predefined_splits)
 
         for i, (train, validation) in enumerate(cv.split(data)):
             pre_process = self.get_pre_processor(i)
             train, validation = pre_process(train, validation)
-            result = _validate(
-                train,
-                validation,
-                self.get_model(train, validation, split_number=i),
-                self.scoring,
-                split_number=i,
-                save_model=self.save_model
+            results.add(
+                train_model(
+                    train,
+                    validation,
+                    self.get_model(train, validation, split_number=i),
+                    self.scoring,
+                    split_number=i,
+                    save_model=self.save_model
+                )
             )
-            _update_results(results, result)
 
-        _finish_results(results)
-        results['metadata'] = Metadata().report(conda=self.log_conda_env)
-        results['experiment_summary'] = self.asdict()
         log.info(f'Finished computing scores for {self.name} in '
                  f'{time() - t}s. ')
         return results
@@ -133,12 +124,12 @@ class Experiment(NamedTuple):
         return self.pre_processor(
             split_number=split, **self.pre_processor_kwargs)
 
-    def get_data(self) -> Container:
+    def get_data(self) -> DataWrapper:
         """
         Uses the extractor and specifications to create the X and y data
         set.
 
-        :return: Container object
+        :return: DataWrapper object
         """
         return self.extractor(**self.extractor_kwargs).get_data()
 
@@ -211,8 +202,11 @@ class Experiment(NamedTuple):
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
             )
         else:
-            model.random_state = self.random_state
-            return Model(model)
+            return Model(
+                model,
+                checkpoint_path=self.base_path,
+                random_state=self.random_state
+            )
 
     def asdict(self):
         return callable_to_string(self._asdict())
@@ -230,10 +224,7 @@ class Experiment(NamedTuple):
 
     @property
     def result_path(self):
-        return os.path.join(
-            self.base_path,
-            'results.pickle'
-        )
+        return os.path.join(self.base_path, 'results.pickle')
 
     @property
     def base_path(self):
@@ -255,90 +246,41 @@ class Experiment(NamedTuple):
     def validation_scores(self):
         if self.is_done:
             results = pd.read_pickle(self.result_path)
-            return results['test_score']
+            return results.test_scores
         else:
             return None
 
 
-def _validate(train, val, model, scoring, split_number=None, save_model=True):
+def train_model(training_data, validation_data, model, scoring,
+                split_number=None, save_model=True) -> TrainingResult:
+    result = TrainingResult(model_summary=model.summary)
     t0 = time()
     log.info(f'\n\nFitting classifier, split {split_number}')
 
-    history = model.fit(train, validation_data=val, split_number=split_number)
-    fit_time = time() - t0
+    result.history = model.fit(
+        training_data,
+        validation_data=validation_data,
+        split_number=split_number
+    )
+    result.fit_time = time() - t0
 
     if save_model:
         model.save(split_number=split_number)
 
-    prediction = model.predict(val['x'])
-    score_time = time() - fit_time - t0
+    result.targets = validation_data.y
+    result.predictions = model.predict(validation_data)
+    result.score_time = time() - result.fit_time - t0
 
-    if scoring is None:
-        train_score = None
-    else:
-        train_score = scoring(
-            train['y'].as_flat_numpy().ravel(),
-            model.predict(train['x'])['prediction'],
+    if scoring:
+        result.train_score = scoring(
+            training_data.y,
+            model.predict(training_data),
         )
+        result.test_score = scoring(result.targets, result.predictions)
+        log.debug(f'test score: {result.test_score}, '
+                  f'train score: {result.train_score}')
 
-    y_val = val['y'].as_flat_numpy()
-    cols = val['y'].columns
-    if isinstance(cols, dict):
-        cols = itertools.chain(*cols.values())
-
-    targets = pd.DataFrame(
-        y_val,
-        index=pd.Index(val['index'].as_numpy(), name=val['index'].columns[0]),
-        columns=cols
-    )
-    if scoring is None:
-        test_score = None
-    else:
-        test_score = scoring(
-            y_val.ravel(),
-            prediction['prediction'],
-        )
-
-    log.debug(f'test score: {test_score}, train score: {train_score}')
-
-    try:
-        feature_importance = model.model.feature_importances_
-    except AttributeError:
-        feature_importance = None
-
-    return {
-        'predictions': prediction,
-        'train_score': train_score,
-        'test_score': test_score,
-        'feature_importance': feature_importance,
-        'fit_time': fit_time,
-        'score_time': score_time,
-        'targets': targets,
-        'history': history,
-        'model_summary': model.summary
-    }
-
-
-def _update_results(results, result):
-    for key, value in result.items():
-        results[key].append(value)
-
-
-def _finish_results(results):
-    predictions = results['predictions']
-    new_predictions = {}
-    for prediction in predictions:
-        for key, value in prediction.items():
-            if key not in new_predictions:
-                new_predictions[key] = []
-            new_predictions[key].append(value)
-
-    results['predictions'] = new_predictions
-
-    results['fit_time'] = np.array(results['fit_time'])
-    results['score_time'] = np.array(results['score_time'])
-    results['test_score'] = np.array(results['test_score'])
-    results['feature_importance'] = np.array(results['feature_importance'])
+    return result
 
 
 def fix_metrics(m):

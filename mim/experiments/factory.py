@@ -11,9 +11,7 @@ def experiment_from_name(name):
     be easily loaded using only their names.
     """
     name = name.lower()
-    if name == 'myocardialinfarction':
-        return import_class('mim.experiments.troponin', 'MyocardialInfarction')
-    elif name == 'esct':
+    if name == 'esct':
         return import_class('mim.experiments.serial_ecg', 'ESCT')
     elif name == 'ab':
         return import_class('mim.experiments.ab_glucose', 'ABGlucose')

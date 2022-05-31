@@ -10,4 +10,6 @@
 .idea/
 data/
 .ipynb_checkpoints
+notebooks/
+docker/
 __pycache__/

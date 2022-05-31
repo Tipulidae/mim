@@ -7,7 +7,7 @@ import wfdb
 from tqdm import tqdm
 
 from mim.config import PATH_TO_DATA
-from mim.extractors.extractor import Extractor, Data, Container
+from mim.extractors.extractor import Extractor, DataWrapper
 
 
 PTBXL_PATH = os.path.join(PATH_TO_DATA, 'ptbxl')
@@ -20,11 +20,10 @@ def make_labels(info, **selected):
     assert selected_labels
 
     label_dict = {
-        label: Data(info[[label]].values, columns=[label])
+        label: (info[[label]].values, [label])
         for label in selected_labels
     }
-
-    return Container(label_dict)
+    return label_dict
 
 
 def make_features(info, resolution='high', leads=12):
@@ -44,7 +43,7 @@ def make_features(info, resolution='high', leads=12):
         for f in tqdm(info[filename])
     ])
 
-    return Data(x, columns=columns)
+    return x, columns
 
 
 def make_index(size=-1):
@@ -67,22 +66,11 @@ def make_index(size=-1):
 
 
 class PTBXL(Extractor):
-    def get_data(self) -> Container:
+    def get_data(self) -> DataWrapper:
         index = make_index(**self.index)
-        n = len(index)
 
-        data = Container(
-            {
-                'x': make_features(index, **self.features),
-                'y': make_labels(index, **self.labels),
-                'index': Data(
-                    index.patient_id.values,
-                    columns=['patient_id'],
-                )
-            },
-            index=range(n),
-            groups=list(range(n)),
-            fits_in_memory=True,
+        return DataWrapper(
+            features=make_features(index, **self.features),
+            labels=make_labels(index, **self.labels),
+            index=(index.patient_id.values, ['patient_id']),
         )
-
-        return data

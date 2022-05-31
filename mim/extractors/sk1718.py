@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 
-from mim.extractors.extractor import Data, Container, Extractor
+from mim.extractors.extractor import DataWrapper, Extractor
 from mim.cross_validation import CrossValidationWrapper
 from mim.util.logs import get_logger
 from mim.massage.sk1718 import lab_value_to_float
@@ -43,10 +43,7 @@ def make_medicine_features(data, use_180d=True, use_1825d=True):
         pattern.append('(med-1825d)')
 
     med = data.filter(regex='|'.join(pattern))
-    return Data(
-        med.values,
-        columns=[remove_prefix(col) for col in med.columns]
-    )
+    return med.values, [remove_prefix(col) for col in med.columns]
 
 
 def make_acs_labels(data, time_span='30d', use_sv=True, use_ov=False,
@@ -62,10 +59,7 @@ def make_acs_labels(data, time_span='30d', use_sv=True, use_ov=False,
 
     assert time_span in ['30d']  # I guess we only have 30d outcome for now
     columns = [f'outcome-{time_span}-{x}' for x in columns]
-    return Data(
-        data[columns].any(axis=1).values,
-        columns=[f'{time_span}_acs'],
-    )
+    return data[columns].any(axis=1).values, [f'{time_span}_acs']
 
 
 def make_comorbidity_features(data, combine_sv_ov=True):
@@ -81,15 +75,12 @@ def make_comorbidity_features(data, combine_sv_ov=True):
     ov = data.filter(regex='prev.*OV').values
 
     if combine_sv_ov:
-        return Data(
-            data=(sv | ov),
-            columns=icd_codes,
-        )
+        return (sv | ov), icd_codes
 
     else:
-        return Data(
-            data=np.concatenate([sv, ov], axis=1),
-            columns=(
+        return (
+            np.concatenate([sv, ov], axis=1),
+            (
                 [f"{x}_SV" for x in icd_codes] +
                 [f"{x}_OV" for x in icd_codes]
             )
@@ -103,12 +94,12 @@ def make_basic_features(data):
     data['male'] = (data.Patient_Kon == 'M').astype(int)
     data['female'] = (data.Patient_Kon == 'F').astype(int)
 
-    return Data(
-        data=data[[
+    return (
+        data[[
             'Vardkontakt_PatientAlderVidInskrivning',
             'male', 'female',
         ]].values,
-        columns=['age', 'male', 'female']
+        ['age', 'male', 'female']
     )
 
 
@@ -132,40 +123,33 @@ class Sk1718(Extractor):
 
         return dev
 
-    def get_data(self) -> Container:
+    def get_data(self) -> DataWrapper:
         brsm, lab_values = load_and_clean_ab_brsm()
 
         # Always include age and sex
-        x_dict = {'basic': make_basic_features(brsm)}
+        feature_dict = {'basic': make_basic_features(brsm)}
 
         if 'lab_values' in self.features:
-            x_dict['lab_values'] = Data(
+            feature_dict['lab_values'] = (
                 lab_values.values,
-                columns=list(lab_values.columns)
+                lab_values.columns
             )
 
         if 'medicine' in self.features:
-            x_dict['medicine'] = make_medicine_features(
+            feature_dict['medicine'] = make_medicine_features(
                 brsm, **self.features['medicine']
             )
 
         if 'comorbidities' in self.features:
-            x_dict['comorbidities'] = make_comorbidity_features(
+            feature_dict['comorbidities'] = make_comorbidity_features(
                 brsm, **self.features['comorbidities']
             )
 
-        data = Container(
-            {
-                'x': Container(x_dict),
-                'y': make_acs_labels(brsm, **self.labels),
-                'index': Data(
-                    brsm.KontaktId.values,
-                    columns=['KontaktId']
-                )
-            },
-            index=range(len(brsm)),
-            groups=brsm.Alias.values,
-            fits_in_memory=True
+        data = DataWrapper(
+            features=feature_dict,
+            labels=make_acs_labels(brsm, **self.labels),
+            index=(brsm.KontaktId.values, ['KontaktId']),
+            groups=brsm.Alias.values
         )
 
         return self.hold_out(data)
