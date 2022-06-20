@@ -1,6 +1,6 @@
 import glob
 
-from mim.massage.ecg import to_hdf5
+from massage.ecg import to_hdf5
 
 
 PATH_TO_EXPECT_ECG_HDF5 = '/mnt/air-crypt/air-crypt-expect/axel/ecg.hdf5'

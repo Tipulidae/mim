@@ -1,12 +1,19 @@
 import argparse
 import re
+from importlib import import_module
 
 import silence_tensorflow.auto  # noqa: F401
 
-from .factory import experiment_from_name
 from mim.util.logs import get_logger
 
 log = get_logger("Run")
+
+
+def experiment_from_name(name):
+    parts = name.split('.')
+    class_name = parts[-1]
+    module_name = 'projects.' + '.'.join(parts[:-1])
+    return getattr(import_module(module_name), class_name)
 
 
 def run_experiments(experiments, continue_on_error=False):
@@ -32,7 +39,15 @@ def run_experiments(experiments, continue_on_error=False):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Run (or re-run) experiments from enum specified in base "
+                    "argument. Experiment is expected to be in the projects "
+                    "module. Example: \n "
+                    "'python -m mim.run ddsa.experiment.DDSA -p CNN1_1L' \n "
+                    "will run all experiments that starts with CNN1_1L in the "
+                    "DDSA experiment enum in the projects.ddsa.experiment "
+                    "module."
+    )
     parser.add_argument(
         '-r', '--rerun',
         help='rerun experiments that already have a result',
@@ -51,7 +66,8 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         'base',
-        help='name of the base experiment to run'
+        help='name of the base experiment to run. Example: '
+             'serial_ecgs.experiments.ESCT'
     )
     parser.add_argument(
         '-x', '--xps',
@@ -60,7 +76,8 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '-p', '--pattern',
-        help='run experiments that matches the given pattern',
+        help='run experiments that matches the given pattern '
+             '(regular expression)',
     )
 
     args = parser.parse_args()
@@ -69,18 +86,19 @@ if __name__ == '__main__':
     xps_todo = []
     xps_to_rerun = []
 
+    base_xp_enum = experiment_from_name(args.base)
+
     if args.xps:
-        base = experiment_from_name(args.base)
-        xps_to_consider = [base[xp_name.strip()] for xp_name in
+        xps_to_consider = [base_xp_enum[xp_name.strip()] for xp_name in
                            args.xps.split(',')]
     elif args.pattern:
         p = re.compile(args.pattern)
         xps_to_consider = list(filter(
             lambda xp: p.match(xp.name),
-            list(experiment_from_name(args.base))
+            list(base_xp_enum)
         ))
     else:
-        xps_to_consider = list(experiment_from_name(args.base))
+        xps_to_consider = list(base_xp_enum)
 
     for xp in xps_to_consider:
         if xp.is_done:

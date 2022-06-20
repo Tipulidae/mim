@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from mim.extractors.extractor import Data, Container, Extractor
-from mim.massage.ecg import ECG
+from massage.ecg import ECG
 import mim.util.ab_util
 from mim.util.ab_util import parse_iso8601_datetime
 

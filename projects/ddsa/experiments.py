@@ -8,11 +8,13 @@ from mim.experiments.experiments import Experiment
 from mim.experiments.hyper_experiments import HyperExperiment
 from mim.experiments import hyper_parameter as hp
 from mim.experiments.search_strategies import RandomSearch
-from mim.extractors.ptbxl import PTBXL
-from mim.models.simple_nn import ptbxl_cnn
+from projects.ddsa.models import ptbxl_cnn
+from projects.ddsa.extractor import PTBXL
 
 
-class ptbxl(Experiment, Enum):
+class DDSA(Experiment, Enum):
+    # Danish Data Science Academy challenge, in which our group tried to
+    # predict age, sex, height and weight using ECGs.
     CNN1_12L_SEX = Experiment(
         description="First attempt to train model predicting sex, using all "
                     "12 leads.",
@@ -562,9 +564,9 @@ class ptbxl(Experiment, Enum):
     )
 
 
-class HyperPTBXL(HyperExperiment, Enum):
+class Tuning(HyperExperiment, Enum):
     RS_1L_ALL = HyperExperiment(
-        template=ptbxl.CNN1_1L_SEX_AGE_HEIGHT_WEIGHT._replace(
+        template=DDSA.CNN1_1L_SEX_AGE_HEIGHT_WEIGHT._replace(
             description="",
             model_kwargs={
                 'cnn_kwargs': {
@@ -635,7 +637,7 @@ class HyperPTBXL(HyperExperiment, Enum):
     )
 
     RS_1L_SEX = HyperExperiment(
-        template=ptbxl.CNN1_1L_SEX._replace(
+        template=DDSA.CNN1_1L_SEX._replace(
             description="",
             model_kwargs={
                 'cnn_kwargs': {
@@ -676,7 +678,7 @@ class HyperPTBXL(HyperExperiment, Enum):
     )
 
     RS_1L_AGE = HyperExperiment(
-        template=ptbxl.CNN1_1L_AGE._replace(
+        template=DDSA.CNN1_1L_AGE._replace(
             description="",
             model_kwargs={
                 'cnn_kwargs': {
@@ -717,7 +719,7 @@ class HyperPTBXL(HyperExperiment, Enum):
     )
 
     RS_1L_HEIGHT = HyperExperiment(
-        template=ptbxl.CNN1_1L_HEIGHT._replace(
+        template=DDSA.CNN1_1L_HEIGHT._replace(
             description="",
             model_kwargs={
                 'cnn_kwargs': {
@@ -758,7 +760,7 @@ class HyperPTBXL(HyperExperiment, Enum):
     )
 
     RS_1L_WEIGHT = HyperExperiment(
-        template=ptbxl.CNN1_1L_WEIGHT._replace(
+        template=DDSA.CNN1_1L_WEIGHT._replace(
             description="",
             model_kwargs={
                 'cnn_kwargs': {

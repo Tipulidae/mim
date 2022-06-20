@@ -5,7 +5,7 @@ import pandas as pd
 import h5py
 from tqdm import tqdm
 
-from mim.massage.carlson_ecg import (
+from massage.carlson_ecg import (
     ECGStatus,
     expected_lead_names,
     glasgow_vector_names,
@@ -1033,55 +1033,127 @@ def make_lindow_dataframe():
         .drop_duplicates(subset=['Alias'], keep='first')
     )
     index_visits.ecg = index_visits.ecg.astype(int)
+    ecgs = index_visits.set_index('Alias').ecg.sort_values()
 
-    qrs_durations = []
     qrs_overall = []
     diagnoses = []
-    paths = []
+    glasgow_strings = []
+
+    def combine_diagnoses_to_one_string(ds):
+        return ' --- '.join(
+            [glasgow_diagnoses[i] for i, x in enumerate(ds) if x])
 
     ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
     with h5py.File(ecg_path, 'r') as ecg:
         OVERALL_QRS = glasgow_scalar_names.index('OverallQRSdur')
-        QRS = glasgow_vector_names.index('QRSduration')
         ILBBB = glasgow_diagnoses.index('Incomplete LBBB')
         LBBB = glasgow_diagnoses.index('Left bundle branch block')
-        for ecg_id in tqdm(index_visits.ecg.sort_values()):
+        for ecg_id in tqdm(ecgs):
             qrs_overall.append(ecg['glasgow']['scalars'][ecg_id, OVERALL_QRS])
-            qrs_durations.append(ecg['glasgow']['vectors'][ecg_id, QRS, :])
             diagnoses.append(
                 ecg['glasgow']['diagnoses'][ecg_id, [ILBBB, LBBB]]
             )
-            paths.append(ecg['meta']['path'][ecg_id])
+            glasgow_strings.append(
+                combine_diagnoses_to_one_string(
+                    ecg['glasgow']['diagnoses'][ecg_id, :]
+                )
+            )
 
-    durations = pd.DataFrame(
-        np.stack(qrs_durations),
-        columns=[f'QRSdur_{lead}' for lead in expected_lead_names],
-        index=index_visits.sort_values(by='ecg').Alias
-    )
-    durations['QRS_above_120'] = durations.any(axis=1)
+    durations = _extract_glasgow_vector('QRSduration', ecgs)
     overall_duration = pd.DataFrame(
         qrs_overall,
         columns=['OverallQRSdur'],
-        index=index_visits.sort_values(by='ecg').Alias
+        index=ecgs.index
     )
+    durations['QRS_above_120'] = (overall_duration > 120).any(axis=1)
+
     lbbb = pd.DataFrame(
         np.stack(diagnoses),
         columns=['Incomplete_LBBB', 'LBBB'],
-        index=index_visits.sort_values(by='ecg').Alias
+        index=ecgs.index
     )
-    paths = pd.DataFrame(
-        paths,
-        columns=['path'],
-        index=index_visits.sort_values(by='ecg').Alias
+    glasgow_strings = pd.DataFrame(
+        glasgow_strings,
+        columns=['Glasgow diagnoses (combined)'],
+        index=ecgs.index
     )
+
+    glasgow_vectors = [
+        "ST_amp",
+        "Qamplitude",
+        "Ramplitude",
+        "Rnotch",
+        "Rprim_amp",
+        "Rbis_dur",
+        "Samplitude",
+        "Sprim_amp",
+    ]
+    glasgow_vector_dfs = [
+        _extract_glasgow_vector(name, ecgs) for name in glasgow_vectors
+    ]
+
     index_visits = (
         index_visits
         .set_index('Alias')
-        .join([lbbb, overall_duration, durations, paths])
+        .join(
+            [glasgow_strings, lbbb, overall_duration, durations] +
+            glasgow_vector_dfs)
         .drop(columns=['dt'])
     )
 
-    return index_visits
+    angio = _load_angio()
+    df = _add_angio_to_lindow_df(index_visits, angio)
+
+    # df = df.drop(columns=['ecg'])
+    return df
+
+
+def _add_angio_to_lindow_df(lindow, angio):
+    angio = angio.join(lindow['ecg_date'])
+    dt = (angio['angio_date'] - angio['ecg_date']).dt.total_seconds() / 3600
+    angio['abs_dt'] = dt.abs()
+    angio = (
+        angio.loc[(dt >= -24) & (dt < 24*7), :]
+        .sort_values(by='abs_dt')
+        .reset_index()
+        .drop_duplicates(subset=['Alias'], keep='first')
+        .set_index('Alias')
+        .drop(columns=['ecg_date', 'abs_dt'])
+    )
+    angio['had_recent_angio'] = True
+    df = lindow.join(angio)
+    df['had_recent_angio'] = df['had_recent_angio'].fillna(False)
+    return df
+
+
+def _load_angio():
+    cols = [
+        'Alias', 'INTERDAT', 'SEGMENTDIAGNOSTICS', 'FYND', 'FYND_OJUSTERAD',
+        'STENOS', 'INDIKATION', 'TIDPCI', 'TIDCABG'
+    ] + [f'SEGMENT{i}' for i in range(1, 21)]
+
+    data = read_csv(
+        'ESC_TROP_SWEDEHEART_DAT221_sc_angiopci_pop1.csv',
+        usecols=cols,
+        parse_dates=['INTERDAT']
+    )
+    data = data.rename(columns={'INTERDAT': 'angio_date'})
+    return data.set_index('Alias')
+
+
+def _extract_glasgow_vector(name, ecgs):
+    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    name_index = glasgow_vector_names.index(name)
+    result = []
+    with h5py.File(ecg_path, 'r') as ecg:
+        for ecg_id in tqdm(ecgs, desc=f"Extracting {name}"):
+            result.append(ecg['glasgow']['vectors'][ecg_id, name_index, :])
+
+    return pd.DataFrame(
+        np.stack(result),
+        columns=[f'{name}_{lead}' for lead in expected_lead_names],
+        index=ecgs.index
+    )
 
 
 def _make_ecg_paths(index):

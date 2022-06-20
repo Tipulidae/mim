@@ -12,16 +12,16 @@ from mim.experiments import hyper_parameter as hp
 from mim.experiments.experiments import Experiment
 from mim.experiments.hyper_experiments import HyperExperiment
 from mim.experiments.search_strategies import RandomSearch, Hyperband
-from mim.extractors.esc_trop import EscTrop
 from mim.extractors.extractor import sklearn_process
-from mim.models.simple_nn import (
+from mim.cross_validation import ChronologicalSplit
+from projects.serial_ecgs.extractor import EscTrop
+from projects.serial_ecgs.models import (
     ecg_cnn,
     ffnn,
     logistic_regression,
     logistic_regression_ab,
     pretrained_resnet
 )
-from mim.cross_validation import ChronologicalSplit
 
 
 class ESCT(Experiment, Enum):

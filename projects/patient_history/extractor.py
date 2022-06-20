@@ -6,8 +6,8 @@ from mim.extractors.extractor import Data, RaggedData, Container, Extractor
 from mim.cross_validation import CrossValidationWrapper
 from mim.util.logs import get_logger
 from mim.util.metadata import load
-from mim.massage import sk1718 as massage
-from mim.massage.sk1718 import lab_value_to_float, load_outcomes_from_ab_brsm
+from massage import sk1718 as massage
+from massage.sk1718 import lab_value_to_float, load_outcomes_from_ab_brsm
 
 
 log = get_logger("Skåne-1718 extractor")

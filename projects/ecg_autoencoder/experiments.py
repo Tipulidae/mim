@@ -6,9 +6,9 @@ from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 
 from mim.experiments.experiments import Experiment
-from mim.extractors.esc_trop import EscTropECG
 from mim.models.ab_nn import dyn_cnn
 from mim.cross_validation import ChronologicalSplit
+from projects.ecg_autoencoder.extractor import EscTropECG
 
 
 class GenderPredict(Experiment, Enum):

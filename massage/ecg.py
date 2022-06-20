@@ -7,7 +7,7 @@ import h5py
 from tqdm import tqdm
 
 from mim.util.metadata import Metadata
-from mim.massage.carlson_ecg import (
+from massage.carlson_ecg import (
     ECGStatus,
     ecg_status,
     expected_lead_names,
@@ -356,3 +356,19 @@ def create_ecg_dataframe_from_hdf5(path):
         ).T
         meta.date = pd.to_datetime(meta.date, format="%Y-%m-%d %H:%M:%S")
         return pd.concat([meta, status], axis='columns')
+
+
+def calculate_four_last_leads(data):
+    data = np.pad(data, pad_width=[[0, 0], [0, 4]])
+    i = data[:, 6]
+    ii = data[:, 7]
+    iii = ii - i
+    avr = -(i+ii)/2
+    avl = (i-iii)/2
+    avf = (ii+iii)/2
+
+    data[:, 8] = iii
+    data[:, 9] = avr
+    data[:, 10] = avl
+    data[:, 11] = avf
+    return data

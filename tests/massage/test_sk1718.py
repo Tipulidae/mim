@@ -1,4 +1,4 @@
-from mim.massage.sk1718 import last_in_clusters
+from massage.sk1718 import last_in_clusters
 
 
 class TestLastInClusters:

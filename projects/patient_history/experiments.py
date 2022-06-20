@@ -8,12 +8,12 @@ from sklearn.preprocessing import StandardScaler, PowerTransformer
 from sklearn.decomposition import PCA
 
 from mim.experiments.experiments import Experiment
-from mim.extractors import sk1718
 from mim.extractors.extractor import sklearn_process
-from mim.models.article2 import simple_ffnn, simple_lstm
+from projects.patient_history.extractor import Flat
+from projects.patient_history.models import simple_ffnn, simple_lstm
 
 
-class SK1718(Experiment, Enum):
+class PatientHistory(Experiment, Enum):
     LR_LAB_ATC_ICD = Experiment(
         description='Baseline logistic regresion, using lab-values, atc '
                     'and icd-codes.',
@@ -22,7 +22,7 @@ class SK1718(Experiment, Enum):
             'class_weight': 'balanced',
             'max_iter': 300
         },
-        extractor=sk1718.Flat,
+        extractor=Flat,
         extractor_kwargs={
             'features': {
                 'lab_values': {},
@@ -199,7 +199,7 @@ class SK1718(Experiment, Enum):
             'kernel_regularizer': 0.01,
             'bias_regularizer': 0.01,
         },
-        extractor=sk1718.Flat,
+        extractor=Flat,
         extractor_kwargs={
             'features': ['medicine', 'comorbidities']
         },
@@ -233,7 +233,7 @@ class SK1718(Experiment, Enum):
             'kernel_regularizer': 0.01,
             'bias_regularizer': 0.01,
         },
-        extractor=sk1718.Flat,
+        extractor=Flat,
         extractor_kwargs={
             'features': {
                 'medicine': True,
@@ -274,7 +274,7 @@ class SK1718(Experiment, Enum):
     LSTM_TEST = Experiment(
         description='Simple test with LSTM',
         model=simple_lstm,
-        extractor=sk1718.Flat,
+        extractor=Flat,
         extractor_kwargs={},
         cv=GroupShuffleSplit,
         cv_kwargs={

@@ -1,6 +1,6 @@
 import numpy as np
 
-from mim.massage.carlson_ecg import (
+from massage.carlson_ecg import (
     extract_field,
     flatten_nested,
     empty_row_count,
