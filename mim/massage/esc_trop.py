@@ -609,7 +609,9 @@ def make_index_visits(
         exclude_missing_tnt=True,
         exclude_missing_ecg=True,
         exclude_missing_old_ecg=True,
-        exclude_missing_chest_pain=True):
+        exclude_missing_chest_pain=True,
+        exclude_non_swedish_patients=True,
+):
     """
     Creates a DataFrame with Alias as index and columns, admission_date and
     id, which corresponds to KontaktId in the original CSV-file.
@@ -642,6 +644,17 @@ def make_index_visits(
     )
     n = len(index_visits)
     log.debug(f'{n} unique patients.')
+
+    if exclude_non_swedish_patients:
+        non_swedish_patients = [
+            '{5D0F827F-BA44-45D1-A769-B025967BD156}',
+            '{3C6AE413-FE02-49D9-8EBF-6807EA20D156}'
+        ]
+        index_visits = index_visits.loc[
+            index_visits.index.difference(non_swedish_patients)
+        ]
+        n = len(index_visits)
+        log.debug(f"{n} patients after excluding non-swedish patients")
 
     if exclude_stemi:
         stemi = index_visits.join(_make_index_stemi())

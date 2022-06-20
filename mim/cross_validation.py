@@ -1,3 +1,5 @@
+from math import ceil
+
 from sklearn.model_selection import PredefinedSplit
 
 from mim.extractors.extractor import Container
@@ -25,7 +27,7 @@ class ChronologicalSplit:
 
     def split(self, x, y=None, groups=None):
         n = len(x)
-        k = int((1 - self.test_size) * n)
+        k = ceil((1 - self.test_size) * n)
         train = list(range(k))
         test = list(range(k, n))
         yield train, test
