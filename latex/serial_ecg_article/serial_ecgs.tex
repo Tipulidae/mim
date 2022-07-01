@@ -10,6 +10,7 @@
 \usepackage{multirow}
 \usepackage{adjustbox}
 \usepackage{float}
+\usepackage{url}
 
 \journal{Artificial Intelligence in Medicine}
 
@@ -56,8 +57,8 @@
 \author[inst2,inst3]{Pontus Olsson de Capretz}
 \author[inst4]{Anders Bj\"{o}rkelund}
 \author[inst3,inst5]{Jakob Lundager Forberg}
-\author[inst4]{Mattias Ohlsson}
-\author[inst1,inst6]{Jonas Bj\"{o}rk}
+\author[inst4,inst6]{Mattias Ohlsson}
+\author[inst1,inst7]{Jonas Bj\"{o}rk}
 \author[inst2,inst3]{Ulf Ekelund}
 
 \affiliation[inst1]{
@@ -91,6 +92,12 @@
 }
 
 \affiliation[inst6]{
+    organization={Halmstad University, Center for Applied Intelligent Systems Research (CAISR)},
+    city={Halmstad},
+    country={Sweden}
+}
+
+\affiliation[inst7]{
     organization={Clinical Studies Sweden, Forum South, Skåne University Hospital},
     city={Lund},
     country={Sweden}
@@ -139,6 +146,7 @@ The target outcome for the models was acute myocardial ischemia (AMI) or related
 The ESC-TROP database contains 536135 ECGs recorded in the included patients between 1970 and 2019 at health care institutions in region Sk\aa{}ne. Each ECG contains 12 leads and is 10 seconds long, sampled at \SI{500}{\hertz}. In each patient, the ECG recorded closest to the ED arrival was considered the index ECG. The previous ECG was chosen as the newest ECG recorded at least one week prior to ED arrival. This interval was chosen to minimize the risk of including ECGs recorded during the same acute episode.
 
 \subsubsection{Glasgow features}
+\label{sec:glasgow}
 In order to compare models that use the raw input ECG signal directly with standard statistical methods such as linear regression, we also extracted from each ECG a subset of 228 features derived from the Glasgow algorithm \citep{macfarlane2005}. Specifically, for each of the 12 leads we used the $Q$, $R$, $S$, $T+$, $T-$, $ST$, $ST_{2/8}$, and $ST_{3/8}$ amplitudes as well as the $Q$, $R$, $S$, and $QRS$ durations, the $QRS$ area and $ST$ slope. The $ST$ amplitudes, $QRS$ area and $ST$ slopes were further divided into positive and negative parts, so that the total number of features was $12 \cdot 19=228$. This set of features has previously been useful for predicting AMI \citep{forberg2009}.
 
 \subsubsection{Additional clinical variables}
@@ -150,27 +158,39 @@ The hs-cTnT blood samples were those used in the care of the patient and collect
 \subsection{Machine learning methods}
 Four types of models of increasing complexity were evaluated with four different sets of inputs: the index ECG with and without the previous ECG, and with and without the additional clinical variables. Each of the four model types were trained for each of the four sets of inputs, resulting in a total of 16 different models. The four models were, in order of complexity: logistic regression (LR), multilayer perceptron (MLP), convolutional neural networks (CNN), and a residual neural network model (RN) pre-trained by \citet{ribeiro2020} on two million ECGs.
 
+The basic structure of the models and our strategy for combining different inputs is illustrated in Figure~\ref{fig:model:overview}. The ECGs were first passed through a feature extraction function, which is the same for the index and prior ECGs, but can differ between the different models. The output from the feature extraction is combined in a combiner function, which is followed by a classification function that makes the final prediction. The hyper-parameter tuning and the final models are described in further detail in the supplement.
+
+\begin{figure}[h!]
+\includegraphics[width=\linewidth]{figures/overview.pdf}
+\centering
+\caption{Model architecture}
+\medskip
+\small
+Abstract overview of the basic structure of the machine learning models. Each ECG is passed through a feature extractor function before being combined with additional clinical variables. The feature extractor is the same within a model, but can differ between models. All models make use of the index ECG (middle column), but the prior ECG (left column) and additional clinical variables (right column) are only used for some of the models.  $\Delta t$ is the time between index and prior ECG. 
+\label{fig:model:overview}
+\end{figure}
+
 \subsubsection{Logistic regression}
-The LR models used as input the 228 features per ECG derived from the Glasgow algorithm, pre-processed with principal component analysis (PCA) dimensionality reduction. The optimal target dimension for the PCA was determined through grid-search using the validation set. For the models using two ECGs, the features from the first ECG were concatenated with the difference between the features from the index and historic ECGs. The dimensionality reduction was applied on the Glasgow features before being concatenated with the additional clinical variables. The model architecture is described in ???.
+The LR models used as input the 228 features per ECG derived from the Glasgow algorithm as described in Section~\ref{sec:glasgow}, pre-processed with principal component analysis (PCA) dimensionality reduction. The optimal target dimension for the PCA was determined through grid-search using the validation set. For the models using two ECGs, the features from the first ECG were concatenated with the difference between the features from the index and prior ECGs. The dimensionality reduction was applied on the Glasgow features before being concatenated with the additional clinical variables.
 
 \subsubsection{Multilayer perceptron}
-The MLPs were also trained using the Glasgow-features, but without dimensionality reduction. The architecture and hyper-parameters of the models were determined using random search over a space of potential models and hyper-parameters described in ???. The general architecture of the MLPs is shown in ???. For each of the four sets of inputs (one or two ECGs, with or without additional clinical variables), 400 iterations of random search were performed, and the model with the best AUC on the validation set was chosen. 
+The MLPs were trained using the 228 Glasgow-features described in Section~\ref{sec:glasgow}, but without dimensionality reduction. The hyper-parameters for each of the four sets of inputs (one or two ECGs, with or without additional clinical variables) were determined through random search using the validation set.
 
 \subsubsection{Convolutional neural networks}
-The CNNs used the full ECG signals as input. Similarly to the MLPs, the hyper-parameters were determined using random search, with parameters described in ??? The architecture of the CNNs is illustrated in ???. For each of the four sets of inputs, 400 iterations of random search were performed, and the model with the best AUC on the validation set was chosen. 
+The CNNs used the full ECG signals, rather than Glasgow-features as inputs. Similarly to the MLPs, the hyper-parameters were determined through random search using the validation set.
 
 \subsubsection{Residual neural networks}
-The RN models were based on a pre-trained model developed by \citet{ribeiro2020}, where approximately two million Brazilian ECGs were used to train the network to classify 6 types of ECG abnormalities. In order to use the RN model, each input ECG was resampled and rescaled, and the leads were reordered to match the format expected by the network. The convolutional part of the RN model was kept fixed (but all weights remained trainable), the final dense output layer was removed and replaced by a small MLP. The final network, together with other hyper-parameters, were determined by random search. For each set of inputs, 200 iterations of random search were performed, and the model with the best AUC was chosen. The architecture of the models is illustrated in ???., and the hyper-parameter search space is described in ???.
+The RN models were based on a pre-trained model developed by \citet{ribeiro2020}, where approximately two million Brazilian ECGs were used to train the network to classify 6 types of ECG abnormalities. In order to use the RN model, each input ECG was resampled and rescaled, and the leads were reordered to match the format expected by the network. The convolutional part of the RN model was kept fixed (but all weights remained trainable), the final dense output layer was removed and replaced by a small MLP. The final network, together with other hyper-parameters, were determined by random search using the validation set. 
 
 \subsubsection{Ensembles}
-Due to the stochastic nature of the training process, there was a small variance in the performance of the neural network models, depending on its initialization. We reduced this variance by forming ensembles of 10 identical models, each initialized with different random seeds. The output of the ensemble was taken as the arithmetic mean of each constituent model output.
+Due to the stochastic nature of the training process, there was a small variance in the performance of the neural network models, depending on their initialization. We reduced this variance by forming ensembles of 10 identical models, each initialized with different random seeds. The output of the ensemble was taken as the arithmetic mean of each constituent model output.
 
 \subsection{Methods for analyzing the results}
 \subsubsection{Comparing models}
 In this study, we aimed to quantify the added value of a previous ECG in terms of AUC  when predicting MACE within 30 days. There were two primary comparisons: Models using the index ECG versus the index and the old ECG, and models with versus without additional clinical variables. For each model, an approximate 95\% confidence interval for the AUC score on the test set was constructed using the percentile bootstrap method with $B=10000$ bootstrap samples \citep{efron1981}.
 
 \subsubsection{Subgroup analyses}
-In clinical practice, previous ECGs are typically only reviewed if there are pathological changes in the index ECG, since changes also present in previous ECGs are believed to be less concerning. The added value of a previous ECG might thus be higher in patients with a pathological index ECG. To test this hypothesis, we used the Glasgow diagnoses that indicate myocardial ischemia or AMI, and classified all ECGs labeled with one or more of these as ``pathological''. We then examined the performance of the algorithms on pathological and non-pathological ECGs separately. The list of glasgow diagnoses that were selected to indicate pathological ECGs can be obtained upon request. 
+In clinical practice, previous ECGs are typically only reviewed if there are pathological changes in the index ECG, since changes also present in previous ECGs are believed to be less concerning. The added value of a previous ECG might thus be higher in patients with a pathological index ECG. To test this hypothesis, we used the Glasgow diagnoses that indicate myocardial ischemia or AMI, and classified all ECGs labeled with one or more of these as ``pathological''. We then examined the performance of the algorithms on pathological and non-pathological ECGs separately.
 
 It is also possible that the added value of a previous ECG for detecting MACE is higher in older patients because of a higher prevalence of comorbidities, and we therefore divided the patients in the test set into age quartiles; 18 - 50 years, 51 - 64 years, 65 - 75 years, and over 76 years.
 
@@ -183,7 +203,7 @@ Finally, we analyzed the individual components of MACE. Since some diagnoses wer
 \label{sec:patient_characteristics}
 As illustrated in Figure~\ref{fig:inclusion}, the original ESC-TROP database contains 26545 distinct chest pain patients, of which 7046 were excluded because of a diagnosis of STEMI during the index visit, missing hs-cTnT lab value, or missing or low-quality ECGs. The remaining 19499 patients were split chronologically into a training set ($n=9750$; 50\%), a validation set ($n=4875$; 25\%) and a test set ($n=4874$, 25\%).
 
-Table~\ref{table:characteristics} shows the characteristics of the included patients. While the frequency of MACE in the training, validation and test sets is similar, we note that the disease history differs substantially, to the effect that patients in the training set are much more prone to have a history of AMI, congestive heart failure, and pulmonary disease, among others. The age of the prior ECG is also higher for patients in the validation and test sets than for the patients in the training set. For characteristics of excluded patients, see \ref{sec:appendix:characteristics}, Table~\ref{table:appendix:characteristics}. 
+Table~\ref{table:characteristics} shows the characteristics of the included patients. While the frequency of MACE in the training, validation and test sets is similar, we note that the disease history differs substantially, to the effect that patients in the training set are much more prone to have a history of AMI, congestive heart failure, and pulmonary disease, among others. The age of the prior ECG is also higher for patients in the validation and test sets than for the patients in the training set.
 
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{inclusioncriteria-crop.pdf}
@@ -265,9 +285,12 @@ As can be seen in Figure~\ref{fig:mainresults}, all models improved considerably
 Figure \ref{fig:pathresults} shows the results stratified by the presence or absence of a pathological index ECG, for the models including additional variables. In general, all models performed slightly better in patients with non-pathological index ECGs, but there was no improvement by the addition of a prior ECG. Models based on only the ECG performed slightly better with an added prior ECG, but the best performing model (MLP) did not improve. 
 
 \begin{figure}[h!]
-    \includegraphics[width=\linewidth]{path_results.pdf}
-    \caption{Results using additional clinical variables, stratified on pathological index ECG}
-    \label{fig:pathresults}
+\includegraphics[width=\linewidth]{path_results.pdf}
+\caption{Results using additional clinical variables, stratified on pathological index ECG}
+\medskip
+\small
+Barplot of the test-set AUC of the predictions stratified on pathological index ECGs. The 95\% confidence intervals were approximated with bootstrapping on each strata separately. The blue bars correspond to models not using prior ECGs, and the orange bars correspond to models using both the index ECG and the prior ECG. Note that this figure only shows the results for the models inlucing additional clinical variables.
+\label{fig:pathresults}
 \end{figure}
 
 \subsection{Patients in different age groups}
@@ -303,24 +326,11 @@ Third, our study does not include STEMI patients, so it is plausible, if not lik
 \subsection{Conclusion}
 In this study, we found no improvement by adding a prior ECG to ML models predicting MACE within 30 days in ED chest pain patients. Our results were consistent across model types, patient groups, and additional model inputs. These findings suggest that ML models predicting MACE will perform equally well for patients without prior ECGs, and in the many health care settings lacking a digital ECG database.
 
+\section*{Data availability}
+The data used in this study is considered sensitive in accordance with GDPR and can therefore not be made publicly available. However, all the code used in the analysis, as well as the final, trained models are available at \url{https://github.com/Tipulidae/mim}. 
+
 \section*{Declaration of competing interest}
 The are no conflicts of interest to declare.
-%% AB: Move appendix to separate file.
-
-%% %% The Appendices part is started with the command \appendix;
-%% %% appendix sections are then done as normal sections
-%% \appendix
-
-%% \section{Results with confidence intervals}
-%% \label{sec:appendix:results}
-
-%% \section{Definition of MACE}
-%% \label{sec:appendix:mace}
-
-%% \section{Excluded patients}
-%% \label{sec:appendix:excluded}
-
-%\section*{References}
 
 \bibliography{serial_ecg_paper}
 
@@ -335,31 +345,31 @@ The are no conflicts of interest to declare.
 \begin{adjustbox}{center}
 \begin{tabular}{@{}p{3.1cm}lrr@{}}
 \toprule
-& \multicolumn{1}{l}{\textbf{Description}} & \multicolumn{1}{c}{\textbf{30-day incidence}} & \multicolumn{1}{c}{\textbf{Percent of all MACE}} \\
+& \multicolumn{1}{l}{\textbf{Description}} & \multicolumn{1}{c}{\textbf{30-day incidence (\%)}} & \multicolumn{1}{c}{\textbf{Proportion of MACE (\%)}} \\
 \midrule
 \textbf{Diagnoses (ICD-10)} & & & \\
 \midrule
-I200                                          & Unstable angina                                        &  2.69\%       &   25.5\%   \\
-I21, I22                                      & Acute myocardial infarction                            &  6.14\%       &   58.1\%   \\
-I441, I442                                    & Atrioventricular block                                 &  0.62\%       &    5.9\%   \\
-I46                                           & Cardiac arrest                                         &  0.26\%       &    2.5\%   \\
-I470, I472, I490                              & Ventricular arrhythmia                                 &  0.33\%       &    3.2\%   \\
-J819                                          & Pulmonary edema                                        &  0.19\%       &    1.8\%   \\
-R570                                          & Cardiogenic shock                                      &  0.02\%       &    0.1\%   \\
+I200                                          & Unstable angina                                        &  2.69       &   25.5   \\
+I21, I22                                      & Acute myocardial infarction                            &  6.14       &   58.1   \\
+I441, I442                                    & Atrioventricular block                                 &  0.62       &    5.9   \\
+I46                                           & Cardiac arrest                                         &  0.26       &    2.5   \\
+I470, I472, I490                              & Ventricular arrhythmia                                 &  0.33       &    3.2   \\
+J819                                          & Pulmonary edema                                        &  0.19       &    1.8   \\
+R570                                          & Cardiogenic shock                                      &  0.02       &    0.1   \\
 \midrule
 \textbf{Interventions (KV\AA{})} & & & \\
 \midrule
 
-DF005                                         & Placement of aortic balloon pump                       &  0.02\%       &    0.1\%   \\
-DF017, DF028                                  & Cardiopulmonary resuscitation                          &  0.04\%       &    0.3\%   \\
-FNA00, FNA10, FNC10, FNC20, FNC30, FNF96      & Coronary artery graft                                  &  0.89\%       &    8.4\%   \\
-FNG00, FNG02, FNG05                           & Percutaneous coronary intervention                     &  4.28\%       &   40.4\%   \\
-FPE00, FPE10, FPE20, FPE26                    & Transvenous pacemaker insertion                        &  0.49\%       &    4.7\%   \\
-TFP00                                         & Temporary cardiac pacing                               &  0.01\%       &    0.0\%   \\
+DF005                                         & Placement of aortic balloon pump                       &  0.02       &    0.1   \\
+DF017, DF028                                  & Cardiopulmonary resuscitation                          &  0.04       &    0.3   \\
+FNA00, FNA10, FNC10, FNC20, FNC30, FNF96      & Coronary artery graft                                  &  0.89       &    8.4   \\
+FNG00, FNG02, FNG05                           & Percutaneous coronary intervention                     &  4.28       &   40.4   \\
+FPE00, FPE10, FPE20, FPE26                    & Transvenous pacemaker insertion                        &  0.49       &    4.7   \\
+TFP00                                         & Temporary cardiac pacing                               &  0.01       &    0.0   \\
 \midrule
 \textbf{Other} & & & \\
 \midrule
-Death                                         & All causes                                             &  1.25\%       &   11.8\%   \\
+Death                                         & All causes                                             &  1.25       &   11.8   \\
 
 \bottomrule
 \end{tabular}
@@ -373,96 +383,8 @@ MACE was defined as any of the events occuring within 30 days of the ED visit. M
 \renewcommand{\arraystretch}{1}
 
 
-\section{Characteristics of excluded patients}
-\label{sec:appendix:characteristics}
-
-\renewcommand{\arraystretch}{1.2}
-\begin{table}[H]
-  \centering
-  \begin{footnotesize}
-\begin{tabular}{@{}lr@{}}
-  \toprule
-
-  \textbf{Patient characteristics} & \textbf{Excluded patients} \\
-  \midrule
-n                                                & 7046         \\
-Male                                             & 56.4         \\
-Age, mean (std)                                  & 50.3 (18.8)  \\
-%MACE within 30 days, \%                          & -            \\
-\midrule
-\textbf{Disease history} & \\
-\midrule
-Acute Myocardial Infarction, \%                  & 2.0   \\
-Congestive Heart Failure, \%                     & 2.6   \\
-Peripheral Vascular Disease, \%                  & 0.6   \\
-Cerebral Vascular Accident, \%                   & 1.7   \\
-Dementia, \%                                     & 0.1   \\
-Pulmonary Disease, \%                            & 2.2   \\
-Connective Tissue Disorder, \%                   & 0.4   \\
-Liver Disease, \%                                & 0.1   \\
-Severe Liver Disease, \%                         & 0.1   \\
-Diabetes, \%                                     & 3.0   \\
-Diabetes Complications, \%                       & 0.3   \\
-Renal Disease, \%                                & 1.1   \\
-Cancer, \%                                       & 1.9   \\
-Metastatic Cancer, \%                            & 0.3   \\
-%\midrule
-%\textbf{Additional Clinical Variables} & \\
-%\midrule
-%hs-cTnT, median (IQR)                            & -     \\
-%Minutes to hs-cTnT, median (IQR)                 & -     \\
-%Days between ECGs, median (IQR)                  & -     \\
-%\midrule
-%\textbf{ECG} & \\
-%\midrule
-%Pathological diagnosis on ECG, \%                & -     \\
-\bottomrule
-\end{tabular}
-\caption{Characteristics of excluded patients}
-\medskip
-\small
-%n, number; MACE, Major Adverse Cardiovascular Event; std, standard deviation; IQR, inter quartile range; ED, Emergency Department; hs-cTnT, high sensitivity cardiac troponin T; pathological diagnosis according to Glasgow on index ECG; Disease history recorded up to 5 years prior to the study event.
-n, number; std, standard deviation; Disease history recorded up to 5 years prior to the study event.
-\label{table:appendix:characteristics}
-  \end{footnotesize}
-\end{table}
-\renewcommand{\arraystretch}{1}
-
-
-
 \section{Additional results}
 \label{sec:appendix:results}
-
-\renewcommand{\arraystretch}{1.2}
-\begin{table}[H]
-  \centering
-  \scriptsize
-\begin{adjustbox}{center}
-\begin{tabular}{@{}lcccc@{}}
-  \toprule
-  & \multicolumn{4}{c}{\textbf{AUC (95\% Confidence interval)}} \\
-  \cmidrule(lr){2-5}
-  & \multicolumn{2}{l}{\textbf{Without additional clinical variables}} & \multicolumn{2}{l}{\textbf{With additional clinical variables}} \\
-  \cmidrule(lr){2-3}\cmidrule(lr){4-5}
-\textbf{Model} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} \\
-  \midrule
-
-\textbf{LR} & 0.751 (0.730 - 0.774) & 0.756 (0.734 - 0.778) & 0.861 (0.845 - 0.878) & 0.864 (0.849 - 0.881) \\
-\textbf{NN} & 0.774 (0.754 - 0.796) & 0.772 (0.752 - 0.794) & 0.878 (0.864 - 0.893) & 0.877 (0.862 - 0.892) \\
-\textbf{CNN} & 0.728 (0.707 - 0.752) & 0.735 (0.714 - 0.757) & 0.873 (0.858 - 0.888) & 0.875 (0.860 - 0.890) \\
-\textbf{RN} & 0.758 (0.737 - 0.779) & 0.766 (0.745 - 0.787) & 0.874 (0.859 - 0.889) & 0.876 (0.861 - 0.891) \\
-
-\bottomrule
-\end{tabular}
-\end{adjustbox}
-\caption{Main results}
-\medskip
-\small
-Blablabla
-\label{table:appendix:mainresults}
-\end{table}
-\renewcommand{\arraystretch}{1}
-
 
 \renewcommand{\arraystretch}{1.2}
 \begin{table}[H]
@@ -496,7 +418,7 @@ Blablabla
 \caption{Results stratified on pathological index ECGs}
 \medskip
 \small
-Blablabla
+AUC of all the models on the test set, stratified on pathological index ECGs, with 95\% confidence interval approximated with bootstrapping. The models were evaluated separately on patients with and without pathological index ECGs, as determined by the Glasgow algorithm. 
 \label{table:appendix:pathological}
 \end{table}
 \renewcommand{\arraystretch}{1}
@@ -547,7 +469,7 @@ Blablabla
 \caption{Results stratified on age quartiles}
 \medskip
 \small
-Blablabla
+AUC of all the models on the test set, stratified on age quartiles, with 95\% confidence interval approximated with bootstrapping. The models were evaluated separately on patients in different age groups. 
 \label{table:appendix:age}
 \end{table}
 \renewcommand{\arraystretch}{1}
@@ -586,7 +508,7 @@ Blablabla
 \caption{Results stratified on previous AMI}
 \medskip
 \small
-Blablabla
+AUC of all the models on the test set, stratified on previous AMI, with 95\% confidence interval approximated with bootstrapping. The models were evaluated separately on patients with and without a previous AMI in the past five years. 
 \label{table:appendix:ami}
 \end{table}
 \renewcommand{\arraystretch}{1}
@@ -620,7 +542,7 @@ Blablabla
 & \textbf{CNN} & 0.660 (0.615 - 0.704) & 0.695 (0.652 - 0.739) & 0.761 (0.728 - 0.795) & 0.768 (0.735 - 0.802) \\
 & \textbf{RN} & 0.686 (0.642 - 0.731) & 0.690 (0.647 - 0.736) & 0.765 (0.732 - 0.798) & 0.765 (0.733 - 0.798) \\
   \cmidrule(lr){1-2}
-\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{AMI}\end{minipage}} %
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Acute \linebreak Myocardial \linebreak Infarction}\end{minipage}} %
 & \textbf{LR} & 0.778 (0.752 - 0.804) & 0.788 (0.764 - 0.814) & 0.911 (0.897 - 0.925) & 0.914 (0.901 - 0.929) \\
 & \textbf{MLP} & 0.800 (0.776 - 0.826) & 0.804 (0.780 - 0.828) & 0.922 (0.909 - 0.936) & 0.920 (0.906 - 0.934) \\
 & \textbf{CNN} & 0.738 (0.711 - 0.765) & 0.748 (0.722 - 0.775) & 0.916 (0.902 - 0.931) & 0.917 (0.903 - 0.932) \\
@@ -638,10 +560,23 @@ Blablabla
 \caption{Results evaluated on different outcomes}
 \medskip
 \small
-Blablabla
+AUC of all the models on the test set, evaluated on different outcomes, with 95\% confidence interval approximated with bootstrapping. The models were evaluated against subsets of the MACE outcome, although they were optimized to predict MACE. 
 \label{table:appendix:outcomes}
 \end{table}
 \renewcommand{\arraystretch}{1}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,58 @@
+\def\nnboxminwidth{11em}
+\def\nnboxtextwidth{10em}
+
+\def\densecolor{cyan!20}
+\def\dropoutcolor{green!30}
+\def\maxpoolingcolor{blue!30}
+\def\cnncolor{red!20}
+\def\bncolor{brown!40}
+\def\actcolor{blue!50}
+\def\classifiercolor{gray!20}
+\def\fxcolor{purple!40}
+\def\combocolor{orange!40}
+\def\glasgowcolor{lime!80}
+\def\subtractcolor{orange!10}
+\def\pcacolor{orange!20}
+\def\resnetcolor{yellow!40}
+
+\newcommand{\indexecgtext}{\textbf{Index ECG}\\12 leads, 10 seconds}
+\newcommand{\priorecgtext}{\textbf{Prior ECG}\\12 leads, 10 seconds}
+\newcommand{\clinicaltext}{\textbf{Additional clinical variables}\\Age, sex, hs-cTnT, $\Delta$t}
+\newcommand{\glasgowtext}{\textbf{Glasgow Algorithm}\\228 features}
+\newcommand{\predictiontext}{\textbf{Prediction}\\MACE within 30 days}
+\newcommand{\difftext}{\textbf{Subtract}}
+\newcommand{\resnettext}{\textbf{Residual Network}\\5120 features}
+
+\def\concatsize{3pt}
+
+\tikzstyle{input} = [draw, rectangle, very thick, align=center, minimum width=\nnboxminwidth]
+\tikzstyle{convblock} = [rectangle split, rectangle split parts=5, rectangle split part fill={\cnncolor,\bncolor, \actcolor, \maxpoolingcolor, \dropoutcolor}, rounded corners, draw, very thick, minimum width=\nnboxminwidth, text width=\nnboxtextwidth]
+\tikzstyle{dense} = [rectangle, rounded corners, fill=\densecolor, draw, very thick,  minimum width=\nnboxminwidth, text width=\nnboxtextwidth]
+\tikzstyle{dense_dropout} = [rectangle, rounded corners, draw, very thick, minimum width=\nnboxminwidth, rectangle split, rectangle split parts=2, rectangle split part fill={\densecolor,\dropoutcolor}, text width=\nnboxtextwidth]
+%\tikzstyle{dense_simple_dropout} = [rectangle, rounded corners, draw, very thick, minimum width=\nnboxminwidth, rectangle split, rectangle split parts=2, rectangle split part fill={\densecolor,\dropoutcolor}, text width=\nnboxtextwidth]
+\tikzstyle{dense_sigmoid} = [rectangle, rounded corners, draw, very thick, minimum width=\nnboxminwidth, rectangle split, rectangle split parts=2, rectangle split part fill={\densecolor,\actcolor}, text width=\nnboxtextwidth]
+\tikzstyle{dense_bn_dropout} = [rectangle, rounded corners, draw, very thick, minimum width=\nnboxminwidth, rectangle split, rectangle split parts=3, rectangle split part fill={\densecolor,\bncolor,\dropoutcolor}, text width=\nnboxtextwidth]
+\tikzstyle{subtract} = [rectangle, rounded corners, draw, very thick, minimum width=\nnboxminwidth, fill=\subtractcolor]
+\tikzstyle{pca} = [rectangle, rounded corners, draw, very thick, minimum width=\nnboxminwidth, fill=\pcacolor, text width=\nnboxtextwidth]
+\tikzstyle{classifier} = [rectangle, rounded corners, draw, very thick, minimum width=\nnboxminwidth, fill=\classifiercolor]
+\tikzstyle{arrow} = [->, very thick]
+
+\tikzstyle{fx} = [rectangle, rounded corners, fill=\fxcolor, draw, very thick, minimum width=\nnboxminwidth, text width=\nnboxtextwidth, align=center, minimum height=3em]
+\tikzstyle{combo} = [rectangle, rounded corners, fill=\combocolor, draw, very thick, minimum width=\nnboxminwidth, text width=\nnboxtextwidth]
+\tikzstyle{glasgow} = [rectangle, rounded corners, fill=\glasgowcolor, draw, very thick, minimum width=\nnboxminwidth, text width=\nnboxtextwidth, align=center, minimum height=3em]
+\tikzstyle{resnet} = [rectangle, rounded corners, fill=\resnetcolor, draw, very thick, minimum width=\nnboxminwidth, text width=\nnboxtextwidth, align=center, minimum height=3em]
+
+
+% inputs:
+% {index,prior}_ecg
+% acv
+% 
+% nodes:
+% {index,prior}_conv{num}
+% {index,prior,comb,clf}_dense{num}
+% 
+% output
+
+
+
+

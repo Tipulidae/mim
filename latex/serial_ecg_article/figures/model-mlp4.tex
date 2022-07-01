@@ -1,0 +1,119 @@
+\documentclass[a3paper,10pt]{article}
+\pagestyle{empty}
+
+\usepackage[top=1cm,bottom=1cm,right=1cm,left=1cm]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
+\usetikzlibrary{shapes.multipart}
+\include{nn_styles}
+
+%Default beamer font
+\usepackage{lmodern}
+\renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+\usetikzlibrary{calc}
+\begin{document}
+
+\begin{tikzpicture}[auto,>=stealth']
+  \node[input] (prior_ecg) {\priorecgtext{}};
+  \node[input, right=1 of prior_ecg] (index_ecg) {\indexecgtext{}};
+  \node[input, right=1 of index_ecg] (acv) {\clinicaltext{}};
+
+    \node[glasgow, below=1 of index_ecg] (index_glasgow) {
+      \glasgowtext{}
+    };
+    
+    \node[dense_bn_dropout, below=1 of index_glasgow] (index_dense1) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 200\\
+      \texttt{activity reg.:} 1e-5\\
+      \texttt{kernel reg.:} 1e-3\\
+      \texttt{bias reg.:} 1e-1\\
+      \nodepart{two}
+      \textbf{Batch Normalization}\\
+      \texttt{active:} false\\
+      \nodepart{three}
+      \textbf{Dropout}\\
+      \texttt{dropout rate:} 0.3
+    };
+
+    \node[glasgow, below=1 of prior_ecg] (prior_glasgow) {
+      \glasgowtext{}
+    };
+
+    \node[dense_bn_dropout, below=1 of prior_glasgow] (prior_dense1) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 200\\
+      \texttt{activity reg.:} 1e-5\\
+      \texttt{kernel reg.:} 1e-3\\
+      \texttt{bias reg.:} 1e-1\\
+      \nodepart{two}
+      \textbf{Batch Normalization}\\
+      \texttt{active:} false\\
+      \nodepart{three}
+      \textbf{Dropout}\\
+      \texttt{dropout rate:} 0.3
+    };
+
+    \node[dense_bn_dropout, below=1 of index_dense1] (comb_dense1) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 10\\
+      \texttt{activity reg.:} 1e-5\\
+      \texttt{kernel reg.:} 1e-1\\
+      \texttt{bias reg.:} 1e-1\\
+      \nodepart{two}
+      \textbf{Batch Normalization}\\
+      \texttt{active:} true\\
+      \nodepart{three}
+      \textbf{Dropout}\\
+      \texttt{dropout rate:} 0.4
+    };
+
+    \node[dense_bn_dropout, below=1 of comb_dense1] (clf_dense1) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 10\\
+      \texttt{activity reg.:} 0\\
+      \texttt{kernel reg.:} 0\\
+      \texttt{bias reg.:} 1e-4\\
+      \nodepart{two}
+      \textbf{Batch Normalization}\\
+      \texttt{active:} true\\
+      \nodepart{three}
+      \textbf{Dropout}\\
+      \texttt{dropout rate:} 0.1
+    };
+   
+    \node[dense_sigmoid, below=1 of clf_dense1] (clf) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 1\\
+      \nodepart{two}
+      \textbf{Activation}\\
+      \texttt{function:} Sigmoid
+    };
+
+    \node[input, below=1 of clf] (output) {\predictiontext{}};
+
+  \coordinate (cat1) at ($(index_dense1.south)!0.5!(comb_dense1.north)$);
+  \coordinate (cat2) at ($(comb_dense1.south)!0.5!(clf_dense1.north)$);
+
+  \filldraw (cat1) circle (\concatsize);
+  \filldraw (cat2) circle (\concatsize);
+
+  \draw[arrow] (index_ecg.south) -- (index_glasgow.north);
+  \draw[arrow] (index_glasgow.south) -- (index_dense1.north);
+  \draw[arrow] (index_dense1.south) -- (comb_dense1.north); 
+  \draw[arrow] (comb_dense1.south) -- (clf_dense1.north);
+  \draw[arrow] (clf_dense1.south) -- (clf.north);
+  \draw[arrow] (clf.south) -- (output.north);
+  
+  \draw[arrow] (prior_ecg.south) -- (prior_glasgow.north);
+  \draw[arrow] (prior_glasgow.south) -- (prior_dense1.north);
+  \draw[arrow,-] (prior_dense1.south) |- (cat1);
+  
+  \draw[arrow,-] (acv.south) |- (cat2);
+
+
+\end{tikzpicture}
+
+\end{document}

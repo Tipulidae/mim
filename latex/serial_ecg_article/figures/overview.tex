@@ -1,0 +1,40 @@
+\documentclass[a4paper,10pt]{article}
+\pagestyle{empty}
+
+\usepackage[top=1cm,bottom=1cm,right=1cm,left=1cm]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
+\usetikzlibrary{shapes.multipart}
+\include{nn_styles}
+
+%Default beamer font
+\usepackage{lmodern}
+\renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+\usetikzlibrary{calc}
+\begin{document}
+
+\begin{tikzpicture}[auto,>=stealth']
+  \node[input] (prior_ecg) {\priorecgtext{}};
+  \node[input, right=1 of prior_ecg] (index_ecg) {\indexecgtext{}};
+  \node[input, right=1 of index_ecg] (acv) {\clinicaltext{}};
+
+  \node[fx, below=1 of prior_ecg] (prior_fx) {Feature extractor};
+  \node[fx, below=1 of index_ecg] (index_fx) {Feature extractor};
+  
+  \node[combo, minimum height=4em, below=1 of index_fx, align=center] (combiner) {Combiner};
+  \node[classifier, below=1 of combiner, align=center, minimum height=3em] (clf) {Classifier};
+  \node[input, below=1 of clf] (output) {\predictiontext{}};
+
+  \draw[arrow] (index_ecg.south) -- (index_fx.north);
+  \draw[arrow] (prior_ecg.south) -- (prior_fx.north);
+  \draw[arrow] (index_fx.south) -- (combiner.north);
+  \draw[arrow] (prior_fx.south) |- (combiner.west);
+  \draw[arrow] (acv) |- (combiner.east);
+  \draw[arrow] (combiner.south) -- (clf.north);
+  \draw[arrow] (clf.south) -- (output.north);
+
+  
+\end{tikzpicture}
+\end{document}

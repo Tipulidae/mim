@@ -88,13 +88,20 @@ class Presenter:
                 name=name))
         return pd.DataFrame(results)
 
-    def summary(self):
-        flat_results = [
-            pd.Series(flatten(xp['experiment_summary']), name=name)
-            for name, xp in self.results.items() if 'experiment_summary' in xp
-        ]
-        df = pd.concat(flat_results, axis=1)
-        return df.T.join(self.scores())
+    def summary(self, like='.*', include_scores=True):
+        xps = self._results_that_match_pattern(like)
+
+        flat_results = []
+        for name, xp in xps:
+            if 'experiment_summary' in xp:
+                flat = flatten(xp['experiment_summary'])
+                flat_results.append(pd.Series(flat, name=name))
+
+        df = pd.concat(flat_results, axis=1).T
+        if include_scores:
+            return df.join(self.scores()).T
+        else:
+            return df.T
 
     def train_test_scores(self, name):
         xp = self.results[name]

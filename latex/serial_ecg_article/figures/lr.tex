@@ -1,0 +1,36 @@
+\documentclass[a3paper,10pt]{article}
+\pagestyle{empty}
+
+\usepackage[top=1cm,bottom=1cm,right=1cm,left=1cm]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
+\usetikzlibrary{shapes.multipart}
+\include{nn_styles}
+
+%Default beamer font
+\usepackage{lmodern}
+\renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+\usetikzlibrary{calc}
+\begin{document}
+
+\begin{tikzpicture}[auto,>=stealth']
+  \node[input] (indexecg) {\indexecgtext{}};
+  \node[input, right=1 of indexecg] (priorecg) {\priorecgtext{}};
+  \node[input, right=1 of priorecg] (inputbasic) {\clinicaltext{}};
+
+  \node[glasgow, below=1 of indexecg] (indexglasgow) {\glasgowtext{}};
+  \node[glasgow, below=1 of priorecg] (priorglasgow) {\glasgowtext{}};
+
+  \node[below=1 of priorglasgow, rectangle, rounded corners, very thick, draw] (diff) {Subtraction};
+
+  \node[below=1 of diff, rectangle, rounded corners, very thick, draw] (pca) {PCA};
+
+  \node[below=1 of pca] (fv) {Feature vector};
+  
+  \node[output, below=1 of fv] (output) {Output Prediction};
+
+\end{tikzpicture}
+
+\end{document}
