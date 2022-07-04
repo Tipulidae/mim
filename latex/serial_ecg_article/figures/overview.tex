@@ -23,8 +23,8 @@
   \node[fx, below=1 of prior_ecg] (prior_fx) {Feature extractor};
   \node[fx, below=1 of index_ecg] (index_fx) {Feature extractor};
   
-  \node[combo, minimum height=4em, below=1 of index_fx, align=center] (combiner) {Combiner};
-  \node[classifier, below=1 of combiner, align=center, minimum height=3em] (clf) {Classifier};
+  \node[combo, below=1 of index_fx] (combiner) {Combiner};
+  \node[classifier, below=1 of combiner] (clf) {Classifier};
   \node[input, below=1 of clf] (output) {\predictiontext{}};
 
   \draw[arrow] (index_ecg.south) -- (index_fx.north);
