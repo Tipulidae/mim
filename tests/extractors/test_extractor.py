@@ -1,10 +1,11 @@
 import pytest
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 
 import mim.config
-from mim.extractors.extractor import Data, Container, infer_shape
+from mim.extractors.extractor import Data, Container, infer_shape, DataWrapper
 from mim.extractors.ab_json import LazyECGsFromFiles
 from mim.fakes.generate_fake_carlsson_ecg import (
     filename_generator as fake_carlsson_ecg_filename_generator,
@@ -298,6 +299,25 @@ class TestContainer:
                       [2, 3, 4, 5, 3, 4, 2],
                       [3, 4, 5, 6, 4, 5, 3]])
         )
+
+
+class TestDataWrapper:
+    def test_label_dataframe(self):
+        data = DataWrapper(
+            features={
+                'foo': ([[1, 2, 3], [2, 3, 4]], ['a', 'b', 'c']),
+                'bar': ([3, 4], ['d'])
+            },
+            labels=([0, 1], ['some_outcome']),
+            index=(['auhwef', 'jio213'], ['patient_id']),
+        )
+
+        expected = pd.DataFrame(
+            [0, 1],
+            columns=['some_outcome'],
+            index=pd.Index(['auhwef', 'jio213'], name='patient_id')
+        )
+        assert data.y.equals(expected)
 
 
 class TestECGMatLabData:

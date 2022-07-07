@@ -1,0 +1,73 @@
+\documentclass[a3paper,10pt]{article}
+\pagestyle{empty}
+
+\usepackage[top=1cm,bottom=1cm,right=1cm,left=1cm]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
+\usetikzlibrary{shapes.multipart}
+\include{nn_styles}
+
+%Default beamer font
+\usepackage{lmodern}
+\renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+\usetikzlibrary{calc}
+\begin{document}
+
+\begin{tikzpicture}[auto,>=stealth']
+  \node[input] (index_ecg) {\indexecgtext{}};
+
+    \node[glasgow, below=1 of index_ecg] (index_glasgow) {
+      \glasgowtext{}
+    };
+    
+    \node[dense_bn_dropout, below=1 of index_glasgow] (index_dense1) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 50\\
+      \texttt{activity reg.:} 1e-5\\
+      \texttt{kernel reg.:} 1e-3\\
+      \texttt{bias reg.:} 1e-1\\
+      \nodepart{two}
+      \textbf{Batch Normalization}\\
+      \texttt{active:} false\\
+      \nodepart{three}
+      \textbf{Dropout}\\
+      \texttt{dropout rate:} 0.4
+    };
+
+    \node[dense_bn_dropout, below=1 of index_dense1] (clf_dense1) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 10\\
+      \texttt{activity reg.:} 1e-4\\
+      \texttt{kernel reg.:} 1e-2\\
+      \texttt{bias reg.:} 1e-3\\
+      \nodepart{two}
+      \textbf{Batch Normalization}\\
+      \texttt{active:} false\\
+      \nodepart{three}
+      \textbf{Dropout}\\
+      \texttt{dropout rate:} 0.0
+    };
+   
+    \node[dense_sigmoid, below=1 of clf_dense1] (clf) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 1\\
+      \nodepart{two}
+      \textbf{Activation}\\
+      \texttt{function:} Sigmoid
+    };
+
+    \node[input, below=1 of clf] (output) {\predictiontext{}};
+
+
+  \draw[arrow] (index_ecg.south) -- (index_glasgow.north);
+  \draw[arrow] (index_glasgow.south) -- (index_dense1.north);
+  \draw[arrow] (index_dense1.south) -- (clf_dense1.north); 
+  \draw[arrow] (clf_dense1.south) -- (clf.north);
+  \draw[arrow] (clf.south) -- (output.north);
+
+
+\end{tikzpicture}
+
+\end{document}

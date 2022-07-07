@@ -1,0 +1,47 @@
+\documentclass[a3paper,10pt]{article}
+\pagestyle{empty}
+
+\usepackage[top=1cm,bottom=1cm,right=1cm,left=1cm]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
+\usetikzlibrary{shapes.multipart}
+\include{nn_styles}
+
+%Default beamer font
+\usepackage{lmodern}
+\renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+\usetikzlibrary{calc}
+\begin{document}
+
+\begin{tikzpicture}[auto,>=stealth']
+  \node[input] (index_ecg) {\indexecgtext{}};
+
+    \node[glasgow, below=1 of index_ecg] (index_glasgow) {\glasgowtext{}};
+    
+    \node[pca, below=1 of index_glasgow] (pca) {
+      \textbf{PCA}\\
+      \texttt{dimension:} 100\\
+    };
+   
+    \node[dense_sigmoid, below=1 of pca] (clf) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 1\\
+      \nodepart{two}
+      \textbf{Activation}\\
+      \texttt{function:} Sigmoid
+    };
+
+    \node[input, below=1 of clf] (output) {\predictiontext{}};
+
+
+  \draw[arrow] (index_ecg.south) -- (index_glasgow.north);
+  \draw[arrow] (index_glasgow.south) -- (pca.north);
+  \draw[arrow] (pca.south) -- (clf.north); 
+  \draw[arrow] (clf.south) -- (output.north);
+
+
+\end{tikzpicture}
+
+\end{document}

@@ -1,9 +1,12 @@
 from enum import Enum
 
+import numpy as np
+
 from mim.fakes.fake_extractors import FakeExtractor
 from mim.models.simple_nn import basic_ff
 from mim.metric_wrapper import sparse_categorical_accuracy
 from mim.experiments.experiments import Experiment
+from mim.experiments.results import ExperimentResult
 
 
 class SmallTestExperiment(Experiment, Enum):
@@ -11,6 +14,8 @@ class SmallTestExperiment(Experiment, Enum):
         description='Test of validate, with fake data',
         extractor=FakeExtractor,
         model_kwargs={'n_estimators': 10},
+        save_model=False,
+        save_results=False,
         log_conda_env=False  # True (which is default) is a little slow
     )
 
@@ -22,7 +27,7 @@ class SmallTestExperiment(Experiment, Enum):
                 'n_samples': 512,
                 'n_features': 128,
                 'n_informative': 100,
-                'n_classes': 10,
+                'n_classes': 2,
                 'random_state': 1111
             },
         },
@@ -32,26 +37,22 @@ class SmallTestExperiment(Experiment, Enum):
         ignore_callbacks=True,
         epochs=2,
         optimizer='rmsprop',
-        loss='sparse_categorical_crossentropy',
+        loss='binary_crossentropy',
         metrics=['accuracy'],
         scoring=sparse_categorical_accuracy,
-        log_conda_env=False
+        log_conda_env=False,
+        save_model=False,
+        save_results=False
     )
 
 
 class TestRunOneExperiment:
     def test_fake_experiment(self):
-        res = SmallTestExperiment.test_fake_data.run()
-
-        assert 'predictions' in res
-        assert 'train_score' in res
-        assert 'test_score' in res
-        assert 'feature_importance' in res
-        assert 'fit_time' in res
-        assert 'score_time' in res
-        assert 'targets' in res
-        assert 'history' in res
+        result = SmallTestExperiment.test_fake_data.run()
+        assert isinstance(result, ExperimentResult)
+        assert result.num_splits == 5
+        assert np.mean(result.test_scores) > 0.8
 
     def test_keras(self):
-        res = SmallTestExperiment.test_keras.run()
-        assert res['test_score'].mean() > 0
+        result = SmallTestExperiment.test_keras.run()
+        assert np.mean(result.test_scores) > 0

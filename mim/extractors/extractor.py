@@ -1,13 +1,16 @@
 import random
+import itertools
 from copy import copy
+from typing import Dict
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import h5py
 from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
 
-from typing import Dict
+from mim.util.util import infer_categorical
 
 
 class Data:
@@ -19,10 +22,13 @@ class Data:
             dtype=tf.int64,
             fits_in_memory=True,
             groups=None,
-            predefined_splits=None):
+            predefined_splits=None,
+            shape=None,
+    ):
         self.data = data
-        if columns is None:
-            self._columns = [0]
+        if columns is None and not isinstance(data, dict):
+            num_features = np.shape(data)[-1]
+            self._columns = list(range(num_features))
         else:
             self._columns = columns
         self.dtype = dtype
@@ -34,7 +40,10 @@ class Data:
         else:
             self._index = index
 
-        self._shape = infer_shape(data)
+        if shape is None:
+            self._shape = infer_shape(data)
+        else:
+            self._shape = shape
 
     def split(self, index_a, index_b):
         return self.lazy_slice(index_a), self.lazy_slice(index_b)
@@ -126,6 +135,29 @@ class Data:
             yield self[i]
 
 
+class RaggedData(Data):
+    def __init__(self, *args, slices=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if len(slices) != len(self.index):
+            raise ValueError("Ragged slices must be a list of same length as "
+                             "the index.")
+        self.slices = slices
+        self._shape = [None] + self._shape
+
+    def as_numpy(self):
+        ind = []
+        row_lengths = []
+        for i in self._index:
+            start, stop = self.slices[i]
+            ind += list(range(start, stop))
+            row_lengths.append(stop - start)
+
+        return tf.RaggedTensor.from_row_lengths(self.data[ind], row_lengths)
+
+    def __getitem__(self, item):
+        return self.data[range(*self.slices[self._index[item]])]
+
+
 class Container(Data):
     def __init__(self, data: Dict[str, Data], index=None, fits_in_memory=None,
                  **kwargs):
@@ -203,6 +235,134 @@ class Container(Data):
             return {key: value[item] for key, value in self.data.items()}
 
 
+class DataWrapper:
+    def __init__(self, features, labels, index, groups=None,
+                 predefined_splits=None, fits_in_memory=True):
+        """
+        Features and labels should either be tuples of data, columns, where
+        data is array-like and columns is a list of column-names corresponding
+        to the data, OR features and labels are potentially nested dicts of
+        such tuples.
+
+        index should be a tuple of data, columns, where data is array-like
+        and columns is a list of column-names.
+
+        :param features:
+        :param labels:
+        :param index:
+        :param groups:
+        :param predefined_splits:
+        :param fits_in_memory:
+        """
+
+        def wrap_as_data(x):
+            if isinstance(x, dict):
+                return Container({k: wrap_as_data(v) for k, v in x.items()})
+            else:
+                return Data(x[0], columns=list(x[1]))
+
+        n = len(index[0])
+        self.data = Container(
+            {
+                'x': wrap_as_data(features),
+                'y': wrap_as_data(labels),
+                'index': wrap_as_data(index),
+            },
+            index=range(n),
+            groups=groups,
+            predefined_splits=predefined_splits,
+            fits_in_memory=fits_in_memory
+        )
+
+    @property
+    def feature_names(self):
+        return self.data['x'].columns
+
+    @property
+    def target_columns(self):
+        return self.data['y'].columns
+
+    @property
+    def output_size(self):
+        return len(self.data['y'].columns)
+
+    @property
+    def index(self):
+        return self.data.index
+
+    @property
+    def groups(self):
+        return self.data.groups
+
+    @property
+    def predefined_splits(self):
+        return self.data.predefined_splits
+
+    @property
+    def feature_tensor_shape(self):
+        return self.data['x'].shape
+
+    @property
+    def y(self):
+        return self.to_dataframe(self.data['y'].as_flat_numpy())
+
+    def x(self, can_use_tf_dataset=True):
+        if can_use_tf_dataset:
+            return self.data['x'].as_dataset()
+        else:
+            return self.data['x'].as_flat_numpy()
+
+    def to_dataframe(self, y):
+        """
+        Turn the input array-like into a pandas DataFrame, where the index
+        and columns matches those of the underlying data labels. In other
+        words, the output will be a DataFrame with column names corresponding
+        to the data output columns (e.g. "mace30"), and the index will match
+        the index of the data set (e.g. patient-id).
+        :param y:
+        :return:
+        """
+        index = pd.Index(
+            self.data['index'].as_numpy(),
+            name=self.data['index'].columns[0]
+        )
+        columns = self.data['y'].columns
+        if isinstance(columns, dict):
+            columns = list(itertools.chain(*columns.values()))
+        return pd.DataFrame(y, index=index, columns=columns)
+
+    def as_dataset(self, batch_size=1, prefetch=3, **kwargs):
+        x = self.data['x'].as_dataset(shuffle=True)
+        y = self.data['y'].as_dataset(shuffle=True)
+        fixed_data = tf.data.Dataset.zip((x, y))
+
+        # If the data _does_ fit in memory, we can use the tf shuffling
+        # instead. This would be bad if data doesn't fit in memory though,
+        # because tf will load the entire dataset in memory before shuffling.
+        if self.data.fits_in_memory:
+            fixed_data = fixed_data.shuffle(len(self.data))
+
+        fixed_data = fixed_data.batch(batch_size)
+
+        if prefetch:
+            fixed_data = fixed_data.prefetch(prefetch)
+
+        return fixed_data
+
+    def as_numpy(self):
+        x = self.data['x'].as_flat_numpy()
+        y = self.data['y'].as_numpy().ravel()
+        return x, y
+
+    def split(self, index_a, index_b):
+        return self.lazy_slice(index_a), self.lazy_slice(index_b)
+
+    def lazy_slice(self, index):
+        new_data = copy(self)
+        new_data.data = new_data.data.lazy_slice(index)
+        return new_data
+
+
 def infer_shape(data):
     shape = np.shape(data)
     n = len(shape)
@@ -220,6 +380,11 @@ def sklearn_process(split_number=0, **processors):
     processes all of the underlying data with the specified processor,
     returning new Data (or Container) objects.
 
+    The training data is used to learn parameters, for scaling etc., and
+    applied to the validation data. Categorical columns are identified
+    automatically, but the returned Data may change the ordering of the
+    columns.
+
     The processor can be a sklearn Pipeline, or a Transformer like the
     StandardScaler.
 
@@ -235,7 +400,10 @@ def sklearn_process(split_number=0, **processors):
     sets of features, I might avoid having to automatically infer which
     features or groups of features are categorical.
     """
-    def process_and_wrap(train, val):
+    def process_and_wrap(train_dw, val_dw):
+        train = train_dw.data
+        val = val_dw.data
+
         x_train, x_val = process_container(
             train['x'], val['x'], processors)
 
@@ -249,6 +417,7 @@ def sklearn_process(split_number=0, **processors):
             },
             columns=train.columns,
             index=train.index,
+            groups=train.groups,
             fits_in_memory=train.fits_in_memory
         )
 
@@ -260,9 +429,16 @@ def sklearn_process(split_number=0, **processors):
             },
             columns=val.columns,
             index=val.index,
+            groups=val.groups,
             fits_in_memory=val.fits_in_memory
         )
-        return new_train, new_val
+        # return new_train, new_val
+        new_train_dw = copy(train_dw)
+        new_val_dw = copy(val_dw)
+        new_train_dw.data = new_train
+        new_val_dw.data = new_val
+
+        return new_train_dw, new_val_dw
 
     return process_and_wrap
 
@@ -298,44 +474,50 @@ def process_container(train, val, processors):
     )
     return new_train, new_val
 
-# def process_container(train, val, processor, **processor_kwargs):
-#     train_dict = {}
-#     val_dict = {}
-#     for key, value in train.columns.items():
-#         if isinstance(value, dict):
-#             train_dict[key], val_dict[key] = process_container(
-#                 train, val, processor, **processor_kwargs)
-#         else:
-#             train_dict[key], val_dict[key] = process_data(
-#                 train[key], val[key], processor, **processor_kwargs)
-#
-#     new_train = Container(
-#         train_dict,
-#         columns=train.columns,
-#         index=train.index,
-#         fits_in_memory=train.fits_in_memory
-#     )
-#     new_val = Container(
-#         val_dict,
-#         columns=val.columns,
-#         index=val.index,
-#         fits_in_memory=val.fits_in_memory
-#     )
-#     return new_train, new_val
 
-
-def process_data(train, val, processor, **kwargs):
-    train_data = train.as_numpy()
-    cat, num = _infer_categorical(train_data)
-
+def build_processor(processor, **kwargs):
+    # TODO:
+    # While I think this works, the column transformer will end up shuffling
+    # the order of the columns - very annoying. Could be that the easiest
+    # solution is to make my own column-transformer wrapper, which shuffles
+    # the columns back again. Or something else. It's todo, anyway.
     if processor == 'Pipeline':
-        p = Pipeline(steps=[
-            (label, transform(**transform_kwargs))
-            for label, transform, transform_kwargs in kwargs['steps']
-        ])
+        p = Pipeline(
+            steps=[
+                (label, build_processor(transform, **transform_kwargs))
+                for label, transform, transform_kwargs in kwargs['steps']
+            ])
+    elif processor == 'ColumnTransformer':
+        if 'remainder' in kwargs:
+            if isinstance(kwargs['remainder'], dict):
+                remainder = build_processor(**kwargs['remainder'])
+            else:
+                remainder = kwargs['remainder']
+        else:
+            remainder = 'drop'
+
+        p = ColumnTransformer(
+            transformers=[
+                (label, build_processor(transform, **transform_kwargs), cols)
+                for label, transform, transform_kwargs, cols
+                in kwargs['transformers']
+            ],
+            remainder=remainder
+        )
     else:
         p = processor(**kwargs)
 
+    return p
+
+
+def process_data(train, val, processor, allow_categorical=False, **kwargs):
+    train_data = train.as_numpy()
+    cat, num = infer_categorical(train_data)
+    if allow_categorical:
+        cat = []
+        num = list(range(train_data.shape[1]))
+
+    p = build_processor(processor, **kwargs)
     p.fit(train_data[:, num])
 
     new_train_data = np.concatenate(
@@ -371,18 +553,6 @@ def process_data(train, val, processor, **kwargs):
         predefined_splits=val.predefined_splits
     )
     return new_train, new_val
-
-
-def _infer_categorical(data):
-    df = pd.DataFrame(data)
-    cat, num = [], []
-    for col in df.columns:
-        if len(df.loc[:, col].value_counts()) > 10:
-            num.append(col)
-        else:
-            cat.append(col)
-
-    return cat, num
 
 
 def pre_process_bootstrap_validation(split_number=0, random_state=42):
@@ -434,5 +604,5 @@ class Extractor:
         self.fits_in_memory = fits_in_memory
         self.cv_kwargs = cv_kwargs
 
-    def get_data(self) -> Container:
+    def get_data(self) -> DataWrapper:
         raise NotImplementedError

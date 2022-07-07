@@ -1,0 +1,96 @@
+\documentclass[a3paper,10pt]{article}
+\pagestyle{empty}
+
+\usepackage[top=1cm,bottom=1cm,right=1cm,left=1cm]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
+\usetikzlibrary{shapes.multipart}
+\include{nn_styles}
+
+%Default beamer font
+\usepackage{lmodern}
+\renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+\usetikzlibrary{calc}
+\begin{document}
+
+\begin{tikzpicture}[auto,>=stealth']
+  \node[input] (index_ecg) {\indexecgtext{}};
+
+    \node[convblock, below=1 of index_ecg] (index_conv1) {
+    \textbf{Conv1D}\\
+    \texttt{kernel size:} 61\\
+    \texttt{filters:} 28\\
+    \texttt{weight decay:} 0\\
+    \nodepart{two}
+    \textbf{Batch Normalization}\\
+    \texttt{active:} false\\
+    \nodepart{three}
+    \textbf{Activation}\\
+    \texttt{function:} ReLU
+    \nodepart{four}
+    \textbf{MaxPooling}\\
+    \texttt{pool size:} 15
+    \nodepart{five}
+    \textbf{Dropout}\\
+    \texttt{dropout rate:} 0.5
+    };
+
+    \node[convblock, below=1 of index_conv1] (index_conv2) {
+    \textbf{Conv1D}\\
+    \texttt{kernel size:} 17\\
+    \texttt{filters:} 8\\
+    \texttt{weight decay:} 0.01\\
+    \nodepart{two}
+    \textbf{Batch Normalization}\\
+    \texttt{active:} false\\
+    \nodepart{three}
+    \textbf{Activation}\\
+    \texttt{function:} ReLU
+    \nodepart{four}
+    \textbf{MaxPooling}\\
+    \texttt{pool size:} 15
+    \nodepart{five}
+    \textbf{Dropout}\\
+    \texttt{dropout rate:} 0.4
+    };
+
+    \node[dense_dropout, below=1 of index_conv2] (index_dense1) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 10\\
+      \nodepart{two}
+      \textbf{Dropout}\\
+      \texttt{dropout rate:} 0.4
+    };
+
+    \node[dense_dropout, below=1 of index_dense1] (clf_dense1) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 100\\
+      \nodepart{two}
+      \textbf{Dropout}\\
+      \texttt{dropout rate:} 0.3
+    };
+    
+    \node[dense_sigmoid, below=1 of clf_dense1] (clf) {
+      \textbf{Dense}\\
+      \texttt{neurons:} 1\\
+      \nodepart{two}
+      \textbf{Activation}\\
+      \texttt{function:} Sigmoid
+    };
+
+    \node[input, below=1 of clf] (output) {\predictiontext{}};
+
+
+  \draw[arrow] (index_ecg.south) -- (index_conv1.north);
+  \draw[arrow] (index_conv1.south) -- (index_conv2.north);
+  \draw[arrow] (index_conv2.south) -- (index_dense1.north);
+  \draw[arrow] (index_dense1.south) -- (clf_dense1.north); 
+  \draw[arrow] (clf_dense1.south) -- (clf.north);
+  \draw[arrow] (clf.south) -- (output.north);
+
+
+\end{tikzpicture}
+
+\end{document}

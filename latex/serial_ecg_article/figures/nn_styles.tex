@@ -1,0 +1,153 @@
+\def\nnboxminwidth{13em}
+\def\nnboxtextwidth{10em}
+\def\nnboxminheight{3em}
+
+% vintage 10 colors
+\definecolor{c1}{RGB}{121,125,98}
+\definecolor{c2}{RGB}{155,155,122}
+\definecolor{c3}{RGB}{217,174,148}
+\definecolor{c4}{RGB}{241,220,167}
+\definecolor{c5}{RGB}{255,203,105}
+\definecolor{c6}{RGB}{232,172,101}
+\definecolor{c7}{RGB}{208,140,96}
+\definecolor{c8}{RGB}{181,132,99}
+\definecolor{c9}{RGB}{142,202,230}
+%\definecolor{c10}{RGB}{}
+
+%\definecolor{c1}{RGB}{}
+%\definecolor{c2}{RGB}{}
+%\definecolor{c3}{RGB}{}
+%\definecolor{c4}{RGB}{}
+%\definecolor{c5}{RGB}{}
+%\definecolor{c6}{RGB}{}
+%\definecolor{c7}{RGB}{}
+%\definecolor{c8}{RGB}{}
+%\definecolor{c9}{RGB}{}
+%\definecolor{c10}{RGB}{}
+
+\def\cnncolor{c2!50}
+\def\densecolor{c2!30}
+
+\def\batchnormcolor{c4!50}
+\def\actcolor{c5!50}
+\def\maxpoolcolor{c6!50}
+\def\dropoutcolor{c7!50}
+
+\def\glasgowcolor{c9!20}
+\def\resnetcolor{c9!20}
+
+\def\subtractcolor{c4!50}
+\def\pcacolor{c6!50}
+
+\def\fxcolor{c2!50}
+\def\combocolor{c5!50}
+\def\classifiercolor{c7!50}
+
+
+
+\newcommand{\indexecgtext}{\textbf{Index ECG}\\12 leads, 10 seconds}
+\newcommand{\priorecgtext}{\textbf{Prior ECG}\\12 leads, 10 seconds}
+\newcommand{\clinicaltext}{\textbf{Additional clinical variables}\\Age, sex, hs-cTnT, $\Delta$t}
+\newcommand{\glasgowtext}{\textbf{Glasgow Algorithm}\\228 features}
+\newcommand{\predictiontext}{\textbf{Prediction}\\MACE within 30 days}
+\newcommand{\difftext}{\textbf{Subtract}}
+\newcommand{\resnettext}{\textbf{Residual Network}\\5120 features}
+
+\def\concatsize{3pt}
+
+\tikzstyle{input} = [draw, rectangle, very thick, align=center, minimum width=\nnboxminwidth]
+
+\tikzstyle{convblock} = [
+	rounded corners, draw, very thick, rectangle split, 
+	minimum width=\nnboxminwidth, 
+	text width=\nnboxtextwidth,
+	rectangle split parts=5, 
+	rectangle split part fill={\cnncolor,\batchnormcolor,\actcolor,\maxpoolcolor,\dropoutcolor}
+]
+
+\tikzstyle{dense} = [
+	rounded corners, draw, very thick, rectangle,
+	minimum width=\nnboxminwidth, 
+	text width=\nnboxtextwidth,
+	fill=\densecolor
+]
+
+\tikzstyle{dense_dropout} = [
+	rounded corners, draw, very thick, rectangle split,  
+	minimum width=\nnboxminwidth, 
+	text width=\nnboxtextwidth,
+	rectangle split parts=2, 
+	rectangle split part fill={\densecolor,\dropoutcolor}
+]
+
+\tikzstyle{dense_sigmoid} = [
+	rounded corners, draw, very thick, rectangle split,
+	minimum width=\nnboxminwidth, 
+	text width=\nnboxtextwidth,
+	rectangle split parts=2, 
+	rectangle split part fill={\densecolor,\actcolor}
+]
+\tikzstyle{dense_bn_dropout} = [
+	rounded corners, draw, very thick, rectangle split,
+	minimum width=\nnboxminwidth,
+	text width=\nnboxtextwidth,
+	rectangle split parts=3, 
+	rectangle split part fill={\densecolor,\batchnormcolor,\dropoutcolor}
+]
+\tikzstyle{subtract} = [
+	rounded corners, draw, very thick, rectangle, 
+	minimum width=\nnboxminwidth,
+	minimum height=\nnboxminheight,
+	text width=\nnboxtextwidth,
+	fill=\subtractcolor,
+	align=center
+]
+\tikzstyle{pca} = [
+	rounded corners, draw, very thick, rectangle, 
+	minimum width=\nnboxminwidth, 
+	text width=\nnboxtextwidth,
+	fill=\pcacolor
+]
+\tikzstyle{classifier} = [
+	rounded corners, draw, very thick, rectangle,
+	minimum width=\nnboxminwidth, 
+	minimum height=\nnboxminheight,
+	text width=\nnboxtextwidth,
+	fill=\classifiercolor,
+	align=center
+]
+
+\tikzstyle{fx} = [
+	rounded corners, draw, very thick, rectangle,
+	minimum width=\nnboxminwidth, 
+	minimum height=\nnboxminheight,
+	text width=\nnboxtextwidth,
+	fill=\fxcolor, 
+	align=center
+]
+\tikzstyle{combo} = [
+	rounded corners, draw, very thick, rectangle,
+	minimum width=\nnboxminwidth, 
+	minimum height=\nnboxminheight,
+	text width=\nnboxtextwidth,
+	fill=\combocolor,
+	align=center
+]
+\tikzstyle{glasgow} = [
+	rounded corners, draw, very thick, rectangle,
+	minimum width=\nnboxminwidth, 
+	minimum height=\nnboxminheight,
+	text width=\nnboxtextwidth, 
+	fill=\glasgowcolor,
+	align=center
+]
+\tikzstyle{resnet} = [
+	rounded corners, draw, very thick, rectangle, 
+	minimum width=\nnboxminwidth, 
+	minimum height=\nnboxminheight,
+	text width=\nnboxtextwidth, 
+	fill=\resnetcolor,
+	align=center
+]
+\tikzstyle{arrow} = [->, very thick]
+

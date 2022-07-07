@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.signal import iirnotch, filtfilt, resample
 
 from tqdm import tqdm
+import h5py
 
 from mim.massage.esc_trop import (
     make_mace_table,
@@ -10,18 +11,18 @@ from mim.massage.esc_trop import (
     make_ed_features,
     make_lab_features,
     make_double_ecg_features,
-    make_ecg_table,
     make_mace30_dataframe,
     make_ami30_dataframe,
     make_mace_chapters_dataframe,
     make_forberg_features,
-    _read_esc_trop_csv
 )
-from mim.extractors.extractor import Data, Container, ECGData, Extractor
+from mim.extractors.extractor import Extractor, DataWrapper
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
 from mim.util.logs import get_logger
 
 log = get_logger("ESC-Trop extractor")
+ECG_PATH = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+ECG_COLUMNS = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'I', 'II']
 
 
 class EscTrop(Extractor):
@@ -41,7 +42,7 @@ class EscTrop(Extractor):
 
         assert index.index.equals(df.index)
 
-        return Data(df.values, columns=list(df))
+        return df.values, df.columns
 
     def make_features(self, index):
         ed_features = make_ed_features(index)
@@ -62,14 +63,14 @@ class EscTrop(Extractor):
         if 'ecgs' in self.features:
             for ecg in [f'ecg_{x}' for x in range(2)]:
                 if ecg in self.features['ecgs']:
-                    x_dict[ecg] = self.make_ecg_data(ecg_features[ecg])
+                    x_dict[ecg] = (
+                        self.make_ecg_data(ecg_features[ecg]),
+                        ECG_COLUMNS
+                    )
 
         if 'flat_features' in self.features:
-            data = features[self.features['flat_features']].values
-            x_dict['flat_features'] = Data(
-                data,
-                columns=self.features['flat_features'],
-            )
+            data = features[self.features['flat_features']]
+            x_dict['flat_features'] = data.values, data.columns
 
         if 'forberg' in self.features:
             f0 = make_forberg_features(ecg_features.ecg_0)
@@ -98,40 +99,28 @@ class EscTrop(Extractor):
                     values.append(diff.values)
                     columns += [f"{name}_diff" for name in diff.columns]
 
-                x_dict['forberg_features'] = Data(
+                x_dict['forberg_features'] = (
                     np.concatenate(values, axis=1),
-                    columns=columns
+                    columns
                 )
             else:
                 if 'ecg_0' in self.features['forberg']:
-                    x_dict['forberg_ecg_0'] = Data(
-                        f0.values,
-                        columns=list(f0.columns)
-                    )
+                    x_dict['forberg_ecg_0'] = (f0.values, f0.columns)
                 if 'ecg_1' in self.features['forberg']:
-                    x_dict['forberg_ecg_1'] = Data(
-                        f1.values,
-                        columns=list(f1.columns)
-                    )
+                    x_dict['forberg_ecg_1'] = (f1.values, f1.columns)
                 if 'diff' in self.features['forberg']:
-                    x_dict['forberg_diff'] = Data(
-                        diff.values,
-                        columns=list(diff.columns)
-                    )
+                    x_dict['forberg_diff'] = (diff.values, diff.columns)
 
         return x_dict
 
-    def make_ecg_data(self, ecg):
-        return preprocess_ecg(
-            ECGData(
-                '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5',
-                mode=self.features['ecg_mode'],
-                index=ecg,
-            ),
-            self.processing
-        )
+    def make_ecg_data(self, ecgs):
+        mode = self.features['ecg_mode']
+        with h5py.File(ECG_PATH, 'r') as f:
+            data = np.array([f[mode][ecg] for ecg in ecgs])
 
-    def get_data(self) -> Container:
+        return preprocess_ecg(data, self.processing)
+
+    def get_data(self) -> DataWrapper:
         log.debug('Making index')
         index = self.make_index()
         log.debug('Making labels')
@@ -139,15 +128,13 @@ class EscTrop(Extractor):
         log.debug('Making features')
         feature_dict = self.make_features(index)
 
-        data = Container(
-            {
-                'x': Container(feature_dict),
-                'y': labels,
-                'index': Data(index.index, columns=['Alias'])
-            },
-            index=index.reset_index().index,
+        data = DataWrapper(
+            features=feature_dict,
+            labels=labels,
+            index=(index.index, ['Alias']),
             fits_in_memory=self.fits_in_memory
         )
+
         if self.cv_kwargs is not None and 'test_size' in self.cv_kwargs:
             test_size = self.cv_kwargs['test_size']
         else:
@@ -160,73 +147,73 @@ class EscTrop(Extractor):
         return dev
 
 
-class EscTropECG(Extractor):
-    def make_index(self, exclude_new_ecgs=True, exclude_test_patients=True,
-                   exclude_index_ecgs=True, **index_kwargs):
-        index = make_index_visits(**index_kwargs)
-        index_ecgs = make_double_ecg_features(index)
-        ecgs = make_ecg_table()
+# TODO: This requires a bit more thought with the new DataWrapper class.
+# But I don't need it right now, so I postpone fixing it.
+# class EscTropECG(Extractor):
+#     def make_index(self, exclude_new_ecgs=True, exclude_test_patients=True,
+#                    exclude_index_ecgs=True, **index_kwargs):
+#         index = make_index_visits(**index_kwargs)
+#         index_ecgs = make_double_ecg_features(index)
+#         ecgs = make_ecg_table()
+#
+#         log.debug(f"{len(ecgs)} usable ECGs")
+#         if exclude_new_ecgs:
+#             ecgs = ecgs[ecgs.ecg_date < '2017-02-01']
+#             log.debug(f"{len(ecgs)} ECGs after excluding 'new' ECGs")
+#         if exclude_test_patients:
+#             first_test_patient_index = -(len(index) // 4)
+#             ecgs = ecgs[~(ecgs.Alias.isin(
+#                 index.iloc[first_test_patient_index:].index))]
+#             log.debug(f"{len(ecgs)} ECGs after excluding ECGs from test "
+#                       f"patients")
+#         if exclude_index_ecgs:
+#             ecgs = ecgs[
+#                 ~(ecgs.index.isin(index_ecgs.ecg_0)) &
+#                 ~(ecgs.index.isin(index_ecgs.ecg_1))
+#             ]
+#             log.debug(f"{len(ecgs)} ECGs after excluding index "
+#                       f"and 'previous' ECGs")
+#
+#         ed = read_csv(
+#             "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv"
+#         ).set_index('Alias')
+#
+#         ecgs = ecgs.join(ed["Kön"], on="Alias").dropna()
+#         ecgs['male'] = ecgs["Kön"].map({"M": 1, "F": 0})
+#
+#         return np.array(ecgs.index), ecgs['male']
+#
+#     def get_data(self) -> DataWrapper:
+#         log.debug('Making index')
+#         index, male = self.make_index()
+#
+#         if 'ecg_mode' in self.features:
+#             mode = self.features['ecg_mode']
+#         else:
+#             mode = 'raw'
+#
+#         x = ECGData(
+#             ECG_PATH,
+#             mode=mode,
+#             index=index,
+#             fits_in_memory=self.fits_in_memory
+#         )
+#         x = Container({"ecg": x})
+#
+#         y = Data(male.values, columns=["male"])
+#
+#         data = Container(
+#             {'x': x,
+#              'y': y},
+#             index=range(len(y))
+#         )
+#
+#         # No need for a hold-out set if we exclude the test-patients.
+#         log.debug('Finished extracting esc-trop ECGs')
+#         return data
 
-        log.debug(f"{len(ecgs)} usable ECGs")
-        if exclude_new_ecgs:
-            ecgs = ecgs[ecgs.ecg_date < '2017-02-01']
-            log.debug(f"{len(ecgs)} ECGs after excluding 'new' ECGs")
-        if exclude_test_patients:
-            first_test_patient_index = -(len(index) // 4)
-            ecgs = ecgs[~(ecgs.Alias.isin(
-                index.iloc[first_test_patient_index:].index))]
-            log.debug(f"{len(ecgs)} ECGs after excluding ECGs from test "
-                      f"patients")
-        if exclude_index_ecgs:
-            ecgs = ecgs[
-                ~(ecgs.index.isin(index_ecgs.ecg_0)) &
-                ~(ecgs.index.isin(index_ecgs.ecg_1))
-            ]
-            log.debug(f"{len(ecgs)} ECGs after excluding index and 'previous'"
-                      f" ECGs")
 
-        ed = _read_esc_trop_csv(
-            "ESC_TROP_Vårdkontakt_InkluderadeIndexBesök_2017_2018.csv"
-        ).set_index('Alias')
-
-        ecgs = ecgs.join(ed["Kön"], on="Alias").dropna()
-        ecgs['male'] = ecgs["Kön"].map({"M": 1, "F": 0})
-
-        return np.array(ecgs.index), ecgs['male']
-
-    def get_data(self) -> Container:
-        log.debug('Making index')
-        index, male = self.make_index()
-
-        if 'ecg_mode' in self.features:
-            mode = self.features['ecg_mode']
-        else:
-            mode = 'raw'
-
-        x = ECGData(
-            '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5',
-            mode=mode,
-            index=index,
-            fits_in_memory=self.fits_in_memory
-        )
-        x = Container({"ecg": x})
-
-        y = Data(male.values, columns=["male"])
-
-        data = Container(
-            {'x': x,
-             'y': y},
-            index=range(len(y))
-        )
-
-        # No need for a hold-out set if we exclude the test-patients.
-        log.debug('Finished extracting esc-trop ECGs')
-        return data
-
-
-def preprocess_ecg(ecg_data, processing, scale=5000):
-    data = ecg_data.as_numpy()
-
+def preprocess_ecg(data, processing, scale=5000):
     if processing is not None:
         if 'scale' in processing:
             scale = processing['scale']
@@ -251,7 +238,7 @@ def preprocess_ecg(ecg_data, processing, scale=5000):
 
     # I will scale regardless, as not doing so will lead to problems.
     data *= scale
-    return Data(data, columns=ecg_data.columns)
+    return data
 
 
 def notch_ecg(data):

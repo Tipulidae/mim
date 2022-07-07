@@ -1,6 +1,7 @@
 import glob
 
 import numpy as np
+import pandas as pd
 
 
 def ranksort(unsorted, ascending=True):
@@ -123,3 +124,24 @@ def insensitive_iglob(pattern, recursive=True):
         return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
 
     return glob.iglob(''.join(map(either, pattern)), recursive=recursive)
+
+
+def infer_categorical(data):
+    df = pd.DataFrame(data)
+    cat, num = [], []
+    for col in df.columns:
+        if is_categorical(df.loc[:, col]):
+            cat.append(col)
+        else:
+            num.append(col)
+
+    return cat, num
+
+
+def is_categorical(s):
+    return len(s.value_counts()) <= 10
+
+
+def interpolate(first, last, length):
+    """Integer interpolation, rounds all numbers to nearest integer."""
+    return list(map(round, np.linspace(first, last, length)))
