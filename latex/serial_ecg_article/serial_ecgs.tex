@@ -11,6 +11,7 @@
 \usepackage{adjustbox}
 \usepackage{float}
 \usepackage{url}
+%\usepackage[pdftex]{hyperref}
 
 \journal{Artificial Intelligence in Medicine}
 
@@ -50,10 +51,11 @@
 
 \begin{frontmatter}
 
-\title{Prior electrocardiograms not useful for predicting major adverse cardiac events with machine learning}
+\title{Prior Electrocardiograms not Useful for Predicting Major Adverse Cardiac Events with Machine Learning}
 
 
-\author[inst1]{Axel Nystr\"{o}m}
+\author[inst1]{Axel Nystr\"{o}m\corref{cor1}}
+\ead{axel.nystrom@med.lu.se}
 \author[inst2,inst3]{Pontus Olsson de Capretz}
 \author[inst4]{Anders Bj\"{o}rkelund}
 \author[inst3,inst5]{Jakob Lundager Forberg}
@@ -103,13 +105,15 @@
     country={Sweden}
 }
 
+\cortext[cor1]{Corresponding author}
+
 
 \begin{abstract}
 At the emergency department (ED), it is important to quickly and accurately determine which patients are likely to have a major adverse cardiac event (MACE). Machine learning (ML) models can be used to aid physicians in detecting MACE, and improving the performance of such models is an active area of research. In this study, we sought to determine if ML models can be improved by including a prior electrocardiogram (ECG) from each patient. To that end, we trained several models to predict MACE both with and without prior ECGs, using data collected from 19499 consecutive patients with chest pain from five EDs in southern Sweden, between the years 2017 and 2018. Our results indicate no improvement in AUC from prior ECGs. This was consistent across models, both with and without additional clinical input variables, for different patient subgroups, and for different subsets of the outcome. While contradicting current best practices for manual ECG analysis, the results are positive in the sense that ML models with fewer inputs are more easily and widely applicable in practice.
 \end{abstract}
 
 \begin{keyword}
-Machine learning\sep Neural networks\sep Emergency department\sep Chest pain\sep Major adverse cardiac event\sep Electrocardiograms
+Machine~learning\sep Neural~networks\sep Emergency~department\sep Chest~pain\sep Major~adverse~cardiac~event\sep Electrocardiograms
 \end{keyword}
 
 \end{frontmatter}
@@ -119,7 +123,7 @@ Machine learning\sep Neural networks\sep Emergency department\sep Chest pain\sep
 
 \section{Introduction}
 \label{sec:introduction}
-Chest pain is the second most common complaint at the emergency department (ED), and cardiovascular disease is the most common cause of death in Europe \citep{timmis2022}. However, only one out of ten ED chest pain patients suffer from major adverse cardiac events (MACE) within 30 days, including acute myocardial infarction (AMI) and cardiac arrest \citep{mokhtari2016}. It is therefore important to quickly and accurately identify the patients who require immediate care, and those who can wait or be sent home. With current diagnostic methods however, many patients undergo lengthy assessments in the ED and less than one in four of those admitted to in-hospital care prove to have MACE \citep{????}. Many admissions and investigations are thereby ``unnecessary,'' and cause a substantial health care burden \citep{cullen2015}.
+Chest pain is the second most common complaint at the emergency department (ED), and cardiovascular disease is the most common cause of death in Europe \citep{timmis2022}. However, only one out of ten ED chest pain patients suffer from major adverse cardiac events (MACE) within 30 days, including acute myocardial infarction (AMI) and cardiac arrest \citep{mokhtari2016}. It is therefore important to quickly and accurately identify the patients who require immediate care, and those who can wait or be sent home. With current diagnostic methods however, the majority of patients who are admitted or undergo lengthy assessments in the ED do not have adverse events \citep{christenson2004,pollack2006}. Many admissions and investigations are thereby ``unnecessary,'' and cause a substantial health care burden \citep{cullen2015}.
 
 To identify or rule out MACE, the ED physician evaluates the patient history, current symptoms, blood markers of myocardial necrosis such as high-sensitivity troponin T (hs-cTnT), and the electrocardiogram (ECG). If available, a previous ECG is often also assessed since acute myocardial ischemia or infarction induces new ECG changes and since guidelines state that diagnostic accuracy can be improved by comparison with a prior ECG \citep{anderson2013,lee1990}.
 
@@ -189,7 +193,7 @@ In this study, we aimed to quantify the added value of a previous ECG in terms o
 \subsubsection{Subgroup analyses}
 In clinical practice, previous ECGs are typically only reviewed if there are pathological changes in the index ECG, since changes also present in previous ECGs are believed to be less concerning. In light of this, we suspected that the benefit of a previous ECG would be higher in patients with a pathological index ECG. To test this hypothesis, we used the Glasgow diagnoses that indicate myocardial ischemia or AMI, and classified all ECGs labeled with one or more of these as pathological. We then examined the performance of the algorithms on pathological and non-pathological ECGs separately.
 
-It is also possible that the added value of a previous ECG for detecting MACE is higher in older patients because of a higher prevalence of comorbidities, and we therefore divided the patients in the test set into age quartiles; 18 - 50 years, 51 - 64 years, 65 - 75 years, and over 76 years.
+It is also possible that the added value of a previous ECG for detecting MACE is higher in older patients because of a higher prevalence of comorbidities, and we therefore divided the patients in the test set into age quartiles; 18 -- 50 years, 51 -- 64 years, 65 -- 75 years, and over 76 years.
 
 Further, since AMI can result in persistent ECG changes and is associated with an increased risk of future cardiovascular events, it is possible that the benefit of a previous ECG differs in patients with or without a prior AMI \citep{strom2007,sawai2017}. We evaluated the models separately on patients with and without AMI in the previous 5 years.
 
@@ -241,9 +245,9 @@ Metastatic Cancer, \%                            & 1.0            & 1.2         
 \midrule
 \textbf{Additional Clinical Variables} & & & & \\
 \midrule
-hs-cTnT, median (IQR)                            & 8 (4-17)       & 7 (4-16)            & 8 (4-17)      & 8 (4-17)       \\
-Minutes to hs-cTnT, median (IQR) & 34 (20-60)     & 35 (20-62)          & 31 (18-54)    & 34 (19-59)     \\
-Days between ECGs, median (IQR)                  & 285 (88-807)   & 372 (95-1006)       & 372 (122-984) & 326 (97-909)   \\
+hs-cTnT, median (IQR)                            & 8 (4--17)       & 7 (4--16)            & 8 (4--17)      & 8 (4--17)       \\
+Minutes to hs-cTnT, median (IQR) & 34 (20--60)     & 35 (20--62)          & 31 (18--54)    & 34 (19--59)     \\
+Days between ECGs, median (IQR)                  & 285 (88--807)   & 372 (95--1006)       & 372 (122--984) & 326 (97--909)   \\
 \midrule
 \textbf{ECG} & & & & \\
 \midrule
@@ -267,7 +271,7 @@ Figure~\ref{fig:mainresults} shows the AUC with confidence intervals for the dif
 \end{figure}
 
 \subsection{Models with versus without additional clinical variables}
-As can be seen in Figure~\ref{fig:mainresults}, all models improved considerably with the inclusion of additional clinical variables. Models using only the ECG had an AUC around 0.77 (95\% CI for the best model: 0.754-0.796), while those including the additional variables had an AUC around 0.87 (95\% CI for the best model: 0.864-0.893). The differences between models with and without a prior ECG were small in comparison. Of the four models, the MLP model performed the best, both with and without additional variables.
+As can be seen in Figure~\ref{fig:mainresults}, all models improved considerably with the inclusion of additional clinical variables. Models using only the ECG had an AUC around 0.77 (95\% CI for the best model: 0.754--0.796), while those including the additional variables had an AUC around 0.87 (95\% CI for the best model: 0.864--0.893). The differences between models with and without a prior ECG were small in comparison. Of the four models, the MLP model performed the best, both with and without additional variables.
 
 \subsection{Patients with versus without pathological index ECGs}
 Figure \ref{fig:pathresults} shows the results stratified by the presence or absence of a pathological index ECG, for the models including additional variables. In general, all models performed slightly better in patients with non-pathological index ECGs, but there was no improvement by the addition of a prior ECG. Models based on only the ECG performed slightly better with an added prior ECG, but the best performing model (MLP) did not improve. 
@@ -279,7 +283,7 @@ Figure \ref{fig:pathresults} shows the results stratified by the presence or abs
 \end{figure}
 
 \subsection{Patients in different age groups}
-The performance of the models in the different age groups is shown in \ref{sec:appendix:results}, Table~\ref{table:appendix:age}. Among the models using ECGs only, the best model (MLP) in the age bracket 51-64 years improved by the addition of a previous ECG (0.706 to 0.733 average AUC), but the performance declined in those aged 65-75 years (0.710 to 0.682 average AUC), suggesting that a previous ECG does not make a big difference. Overall, the RN model was the best ECG-only model for young patients, while the MLP performed better for older patients. Models using additional clinical variables performed substantially better in younger patients, with e.g. a mean AUC of 0.92 with the MLP model in those 18-50 years and 0.82 in those over 76 years. This pattern was much less pronounced in the models using ECGs only.
+The performance of the models in the different age groups is shown in \ref{sec:appendix:results}, Table~\ref{table:appendix:age}. Among the models using ECGs only, the best model (MLP) in the age bracket 51--64 years improved by the addition of a previous ECG (0.706 to 0.733 average AUC), but the performance declined in those aged 65--75 years (0.710 to 0.682 average AUC), suggesting that a previous ECG does not make a big difference. Overall, the RN model was the best ECG-only model for young patients, while the MLP performed better for older patients. Models using additional clinical variables performed substantially better in younger patients, with e.g. a mean AUC of 0.92 with the MLP model in those 18--50 years and 0.82 in those over 76 years. This pattern was much less pronounced in the models using ECGs only.
 
 \subsection{Patients with versus without previous AMI}
 The model performances stratified on previous AMI is shown in \ref{sec:appendix:results}, Table~\ref{table:appendix:ami}. In patients with or without a previous AMI, adding a prior ECG generally did not improve the predictive ability of the models. The exception was the RN models using only ECG and the LR models with additional clinical variables, but both these models were outperformed by the corresponding MLPs. The AUC of all models, both with and without additional clinical variables, were substantially lower in patients with versus without a previous AMI. 
@@ -298,7 +302,7 @@ Our models consistently performed better for several subgroups (though not with 
 
 Interestingly, the best models in our comparisons were not the most advanced – the MLP outperformed both the CNN and RN models despite markedly fewer trainable parameters. We speculate that this is because the MLP model used the Glasgow features, which are expert features known to be useful for ECG analysis, while the CNN and RN models learned everything from the raw signal. In this sense, the MLP models were ``pre-trained'' with human knowledge and the CNN models were not. Given enough data and computing power, we expect that the CNN and RN models can perform at least similar to the MLP models.
 
-The MLP models used in this study are similar to that employed by \citet{ohlsson2001} who combined Glasgow features from serial ECGs in a small neural network. When adding a previous ECG, the AUC improved by three percentage points (0.85 to 0.88). In our study, we had almost three times more training data but were still unable to achieve a similar AUC, and we found no clinically significant improvement from a previous ECG. A possible explanation is that the patient populations were different; Ohlsson's data were collected in 1990-1997 and ours in 2017-18. Indeed, our AMI incidence was 7.4\% compared to over 20\% in the Ohlsson study. In addition, the characteristics of the AMI patients and the ECG findings are likely different due to new AMI definitions and highly sensitive troponin assays. 
+The MLP models used in this study are similar to that employed by \citet{ohlsson2001} who combined Glasgow features from serial ECGs in a small neural network. When adding a previous ECG, the AUC improved by three percentage points (0.85 to 0.88). In our study, we had almost three times more training data but were still unable to achieve a similar AUC, and we found no clinically significant improvement from a previous ECG. A possible explanation is that the patient populations were different; Ohlsson's data were collected in 1990--1997 and ours in 2017--18. Indeed, our AMI incidence was 7.4\% compared to over 20\% in the Ohlsson study. In addition, the characteristics of the AMI patients and the ECG findings are likely different due to new AMI definitions and highly sensitive troponin assays. 
 
 Although we only tested four different ML models, our results suggest that ML models predicting MACE in ED chest pain patients do not improve significantly by the addition of a prior ECG, and that adding other information is likely more beneficial. However, it should be noted that ED physicians may still make better decisions by comparing new and old ECGs. Humans do not assess the ECG in the same way as ML models, and ED physicians are often interested in additional outcomes other than MACE within 30 days.
 
@@ -312,12 +316,15 @@ Third, our study does not include STEMI patients, so it is plausible, if not lik
 In this study, we found no improvement by adding a prior ECG to ML models predicting MACE within 30 days in ED chest pain patients. Our results were consistent across model types, patient groups, and additional model inputs. These findings suggest that ML models predicting MACE will perform equally well for patients without prior ECGs, and in the many health care settings lacking a digital ECG database.
 
 \section*{Data availability}
-The data used in this study is considered sensitive in accordance with GDPR and can therefore not be made publicly available. However, all the code used in the analysis, as well as the final, trained models are available at \url{https://github.com/Tipulidae/mim}. 
+The data used in this study is sensitive and can not be made publicly available. However, all the code used in the analysis, as well as the final, trained models are available at \url{https://github.com/Tipulidae/mim}. 
 
 \section*{Declaration of competing interest}
 The are no conflicts of interest to declare.
 
-\bibliography{serial_ecg_paper}
+\section*{Acknowledgements}
+This study was part of the AIR Lund (Artificially Intelligent use of Registers at Lund University) research environment, and received funding from the Swedish Research Council (VR; grant no. 2019-00198). The study also received funding from the Swedish Heart-Lung Foundation (2018-0173) and Sweden's innovation agency (Vinnova; DNR 2018-0192). 
+
+\bibliography{serial_ecgs}
 
 \appendix
 \section{Definition of MACE}
@@ -381,10 +388,10 @@ Death                                         & All causes                      
 \textbf{Model} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} \\
   \midrule
 
-\textbf{LR} & 0.751 (0.730 - 0.774) & 0.756 (0.734 - 0.778) & 0.861 (0.845 - 0.878) & 0.864 (0.849 - 0.881) \\
-\textbf{MLP} & 0.774 (0.754 - 0.796) & 0.772 (0.752 - 0.794) & 0.878 (0.864 - 0.893) & 0.877 (0.862 - 0.892) \\
-\textbf{CNN} & 0.728 (0.707 - 0.752) & 0.735 (0.714 - 0.757) & 0.873 (0.858 - 0.888) & 0.875 (0.860 - 0.890) \\
-\textbf{RN} & 0.758 (0.737 - 0.779) & 0.766 (0.745 - 0.787) & 0.874 (0.859 - 0.889) & 0.876 (0.861 - 0.891) \\
+\textbf{LR} & 0.751 (0.730 -- 0.774) & 0.756 (0.734 -- 0.778) & 0.861 (0.845 -- 0.878) & 0.864 (0.849 -- 0.881) \\
+\textbf{MLP} & 0.774 (0.754 -- 0.796) & 0.772 (0.752 -- 0.794) & 0.878 (0.864 -- 0.893) & 0.877 (0.862 -- 0.892) \\
+\textbf{CNN} & 0.728 (0.707 -- 0.752) & 0.735 (0.714 -- 0.757) & 0.873 (0.858 -- 0.888) & 0.875 (0.860 -- 0.890) \\
+\textbf{RN} & 0.758 (0.737 -- 0.779) & 0.766 (0.745 -- 0.787) & 0.874 (0.859 -- 0.889) & 0.876 (0.861 -- 0.891) \\
 
 \bottomrule
 \end{tabular}
@@ -409,16 +416,16 @@ Death                                         & All causes                      
   \midrule
 
 \multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Non-pathological index visit ECG}\end{minipage}} %
-& \textbf{LR}  & 0.703 (0.664 - 0.744) & 0.694 (0.654 - 0.735) & 0.854 (0.828 - 0.883) & 0.856 (0.830 - 0.884) \\
-& \textbf{MLP} & 0.733 (0.696 - 0.770) & 0.731 (0.694 - 0.768) & 0.876 (0.852 - 0.901) & 0.876 (0.852 - 0.900) \\
-& \textbf{CNN} & 0.702 (0.664 - 0.742) & 0.697 (0.660 - 0.736) & 0.873 (0.849 - 0.899) & 0.874 (0.851 - 0.900) \\
-& \textbf{RN}  & 0.721 (0.684 - 0.760) & 0.730 (0.693 - 0.770) & 0.875 (0.852 - 0.901) & 0.876 (0.852 - 0.900) \\
+& \textbf{LR}  & 0.703 (0.664 -- 0.744) & 0.694 (0.654 -- 0.735) & 0.854 (0.828 -- 0.883) & 0.856 (0.830 -- 0.884) \\
+& \textbf{MLP} & 0.733 (0.696 -- 0.770) & 0.731 (0.694 -- 0.768) & 0.876 (0.852 -- 0.901) & 0.876 (0.852 -- 0.900) \\
+& \textbf{CNN} & 0.702 (0.664 -- 0.742) & 0.697 (0.660 -- 0.736) & 0.873 (0.849 -- 0.899) & 0.874 (0.851 -- 0.900) \\
+& \textbf{RN}  & 0.721 (0.684 -- 0.760) & 0.730 (0.693 -- 0.770) & 0.875 (0.852 -- 0.901) & 0.876 (0.852 -- 0.900) \\
   \cmidrule(lr){1-2}
 \multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Pathological index visit ECG}\end{minipage}} %
-& \textbf{LR}  & 0.704 (0.675 - 0.735) & 0.720 (0.692 - 0.749) & 0.826 (0.804 - 0.850) & 0.833 (0.810 - 0.856) \\
-& \textbf{MLP} & 0.730 (0.702 - 0.759) & 0.732 (0.703 - 0.761) & 0.846 (0.825 - 0.868) & 0.844 (0.823 - 0.867) \\
-& \textbf{CNN} & 0.663 (0.632 - 0.694) & 0.686 (0.657 - 0.717) & 0.837 (0.815 - 0.860) & 0.840 (0.818 - 0.862) \\
-& \textbf{RN}  & 0.703 (0.674 - 0.732) & 0.714 (0.686 - 0.743) & 0.839 (0.817 - 0.862) & 0.842 (0.820 - 0.864) \\
+& \textbf{LR}  & 0.704 (0.675 -- 0.735) & 0.720 (0.692 -- 0.749) & 0.826 (0.804 -- 0.850) & 0.833 (0.810 -- 0.856) \\
+& \textbf{MLP} & 0.730 (0.702 -- 0.759) & 0.732 (0.703 -- 0.761) & 0.846 (0.825 -- 0.868) & 0.844 (0.823 -- 0.867) \\
+& \textbf{CNN} & 0.663 (0.632 -- 0.694) & 0.686 (0.657 -- 0.717) & 0.837 (0.815 -- 0.860) & 0.840 (0.818 -- 0.862) \\
+& \textbf{RN}  & 0.703 (0.674 -- 0.732) & 0.714 (0.686 -- 0.743) & 0.839 (0.817 -- 0.862) & 0.842 (0.820 -- 0.864) \\
 
 \bottomrule
 \end{tabular}
@@ -444,29 +451,29 @@ Death                                         & All causes                      
   & \multicolumn{1}{l}{\textbf{Model}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} \\
   \midrule
 
-\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{18-50 years}\end{minipage}} %
-& \textbf{LR} & 0.700 (0.582 - 0.828) & 0.753 (0.658 - 0.859) & 0.919 (0.883 - 0.962) & 0.924 (0.890 - 0.963) \\
-& \textbf{MLP} & 0.764 (0.666 - 0.876) & 0.814 (0.738 - 0.899) & 0.924 (0.886 - 0.969) & 0.933 (0.903 - 0.969) \\
-& \textbf{CNN} & 0.758 (0.664 - 0.864) & 0.802 (0.724 - 0.895) & 0.936 (0.907 - 0.972) & 0.939 (0.910 - 0.975) \\
-& \textbf{RN} & 0.825 (0.739 - 0.925) & 0.824 (0.742 - 0.918) & 0.937 (0.908 - 0.972) & 0.942 (0.916 - 0.974) \\
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{18--50 years}\end{minipage}} %
+& \textbf{LR} & 0.700 (0.582 -- 0.828) & 0.753 (0.658 -- 0.859) & 0.919 (0.883 -- 0.962) & 0.924 (0.890 -- 0.963) \\
+& \textbf{MLP} & 0.764 (0.666 -- 0.876) & 0.814 (0.738 -- 0.899) & 0.924 (0.886 -- 0.969) & 0.933 (0.903 -- 0.969) \\
+& \textbf{CNN} & 0.758 (0.664 -- 0.864) & 0.802 (0.724 -- 0.895) & 0.936 (0.907 -- 0.972) & 0.939 (0.910 -- 0.975) \\
+& \textbf{RN} & 0.825 (0.739 -- 0.925) & 0.824 (0.742 -- 0.918) & 0.937 (0.908 -- 0.972) & 0.942 (0.916 -- 0.974) \\
   \cmidrule(lr){1-2}
-\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{51-64 years}\end{minipage}} %
-& \textbf{LR} & 0.667 (0.612 - 0.723) & 0.707 (0.655 - 0.759) & 0.852 (0.815 - 0.892) & 0.858 (0.822 - 0.897) \\
-& \textbf{MLP} & 0.706 (0.653 - 0.758) & 0.733 (0.684 - 0.782) & 0.867 (0.834 - 0.904) & 0.866 (0.833 - 0.902) \\
-& \textbf{CNN} & 0.672 (0.620 - 0.726) & 0.676 (0.622 - 0.730) & 0.860 (0.826 - 0.897) & 0.861 (0.827 - 0.898) \\
-& \textbf{RN} & 0.695 (0.641 - 0.749) & 0.700 (0.645 - 0.755) & 0.863 (0.828 - 0.900) & 0.863 (0.829 - 0.900) \\
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{51--64 years}\end{minipage}} %
+& \textbf{LR} & 0.667 (0.612 -- 0.723) & 0.707 (0.655 -- 0.759) & 0.852 (0.815 -- 0.892) & 0.858 (0.822 -- 0.897) \\
+& \textbf{MLP} & 0.706 (0.653 -- 0.758) & 0.733 (0.684 -- 0.782) & 0.867 (0.834 -- 0.904) & 0.866 (0.833 -- 0.902) \\
+& \textbf{CNN} & 0.672 (0.620 -- 0.726) & 0.676 (0.622 -- 0.730) & 0.860 (0.826 -- 0.897) & 0.861 (0.827 -- 0.898) \\
+& \textbf{RN} & 0.695 (0.641 -- 0.749) & 0.700 (0.645 -- 0.755) & 0.863 (0.828 -- 0.900) & 0.863 (0.829 -- 0.900) \\
   \cmidrule(lr){1-2}  
-\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{65-75 years}\end{minipage}} %
-& \textbf{LR} & 0.686 (0.643 - 0.731) & 0.681 (0.638 - 0.728) & 0.831 (0.800 - 0.864) & 0.828 (0.797 - 0.861) \\
-& \textbf{MLP} & 0.710 (0.669 - 0.752) & 0.682 (0.639 - 0.725) & 0.846 (0.817 - 0.877) & 0.843 (0.813 - 0.874) \\
-& \textbf{CNN} & 0.650 (0.606 - 0.695) & 0.653 (0.608 - 0.698) & 0.844 (0.815 - 0.875) & 0.846 (0.816 - 0.876) \\
-& \textbf{RN} & 0.678 (0.636 - 0.724) & 0.697 (0.656 - 0.740) & 0.847 (0.818 - 0.879) & 0.851 (0.822 - 0.881) \\
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{65--75 years}\end{minipage}} %
+& \textbf{LR} & 0.686 (0.643 -- 0.731) & 0.681 (0.638 -- 0.728) & 0.831 (0.800 -- 0.864) & 0.828 (0.797 -- 0.861) \\
+& \textbf{MLP} & 0.710 (0.669 -- 0.752) & 0.682 (0.639 -- 0.725) & 0.846 (0.817 -- 0.877) & 0.843 (0.813 -- 0.874) \\
+& \textbf{CNN} & 0.650 (0.606 -- 0.695) & 0.653 (0.608 -- 0.698) & 0.844 (0.815 -- 0.875) & 0.846 (0.816 -- 0.876) \\
+& \textbf{RN} & 0.678 (0.636 -- 0.724) & 0.697 (0.656 -- 0.740) & 0.847 (0.818 -- 0.879) & 0.851 (0.822 -- 0.881) \\
   \cmidrule(lr){1-2}
 \multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Over \\76 years}\end{minipage}} %
-& \textbf{LR} & 0.709 (0.670 - 0.749) & 0.700 (0.659 - 0.741) & 0.808 (0.775 - 0.843) & 0.816 (0.783 - 0.850) \\
-& \textbf{MLP} & 0.726 (0.689 - 0.764) & 0.727 (0.687 - 0.768) & 0.823 (0.791 - 0.857) & 0.818 (0.784 - 0.853) \\
-& \textbf{CNN} & 0.661 (0.620 - 0.702) & 0.669 (0.627 - 0.710) & 0.807 (0.772 - 0.843) & 0.810 (0.775 - 0.846) \\
-& \textbf{RN} & 0.680 (0.640 - 0.720) & 0.692 (0.653 - 0.732) & 0.810 (0.776 - 0.845) & 0.813 (0.779 - 0.849) \\
+& \textbf{LR} & 0.709 (0.670 -- 0.749) & 0.700 (0.659 -- 0.741) & 0.808 (0.775 -- 0.843) & 0.816 (0.783 -- 0.850) \\
+& \textbf{MLP} & 0.726 (0.689 -- 0.764) & 0.727 (0.687 -- 0.768) & 0.823 (0.791 -- 0.857) & 0.818 (0.784 -- 0.853) \\
+& \textbf{CNN} & 0.661 (0.620 -- 0.702) & 0.669 (0.627 -- 0.710) & 0.807 (0.772 -- 0.843) & 0.810 (0.775 -- 0.846) \\
+& \textbf{RN} & 0.680 (0.640 -- 0.720) & 0.692 (0.653 -- 0.732) & 0.810 (0.776 -- 0.845) & 0.813 (0.779 -- 0.849) \\
 
 \bottomrule
 \end{tabular}
@@ -493,16 +500,16 @@ Death                                         & All causes                      
   \midrule
 
 \multirow{4}{*}{\begin{minipage}{0.65in}\textbf{No previous AMI}\end{minipage}} %
-& \textbf{LR} & 0.749 (0.724 - 0.774) & 0.759 (0.734 - 0.784) & 0.868 (0.852 - 0.886) & 0.871 (0.855 - 0.889) \\
-& \textbf{MLP} & 0.776 (0.753 - 0.799) & 0.777 (0.754 - 0.801) & 0.886 (0.871 - 0.902) & 0.885 (0.870 - 0.902) \\
-& \textbf{CNN} & 0.724 (0.700 - 0.750) & 0.732 (0.708 - 0.757) & 0.882 (0.866 - 0.899) & 0.883 (0.868 - 0.900) \\
-& \textbf{RN} & 0.760 (0.737 - 0.785) & 0.768 (0.744 - 0.792) & 0.883 (0.868 - 0.900) & 0.884 (0.869 - 0.901) \\
+& \textbf{LR} & 0.749 (0.724 -- 0.774) & 0.759 (0.734 -- 0.784) & 0.868 (0.852 -- 0.886) & 0.871 (0.855 -- 0.889) \\
+& \textbf{MLP} & 0.776 (0.753 -- 0.799) & 0.777 (0.754 -- 0.801) & 0.886 (0.871 -- 0.902) & 0.885 (0.870 -- 0.902) \\
+& \textbf{CNN} & 0.724 (0.700 -- 0.750) & 0.732 (0.708 -- 0.757) & 0.882 (0.866 -- 0.899) & 0.883 (0.868 -- 0.900) \\
+& \textbf{RN} & 0.760 (0.737 -- 0.785) & 0.768 (0.744 -- 0.792) & 0.883 (0.868 -- 0.900) & 0.884 (0.869 -- 0.901) \\
   \cmidrule(lr){1-2}
 \multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Previous AMI}\end{minipage}} %
-& \textbf{LR} & 0.672 (0.617 - 0.727) & 0.661 (0.604 - 0.720) & 0.752 (0.702 - 0.804) & 0.765 (0.716 - 0.816) \\
-& \textbf{MLP} & 0.676 (0.621 - 0.731) & 0.667 (0.611 - 0.724) & 0.771 (0.724 - 0.821) & 0.767 (0.718 - 0.817) \\
-& \textbf{CNN} & 0.658 (0.601 - 0.716) & 0.660 (0.604 - 0.717) & 0.755 (0.705 - 0.805) & 0.762 (0.713 - 0.813) \\
-& \textbf{RN} & 0.645 (0.587 - 0.702) & 0.660 (0.603 - 0.715) & 0.757 (0.708 - 0.809) & 0.766 (0.718 - 0.817) \\
+& \textbf{LR} & 0.672 (0.617 -- 0.727) & 0.661 (0.604 -- 0.720) & 0.752 (0.702 -- 0.804) & 0.765 (0.716 -- 0.816) \\
+& \textbf{MLP} & 0.676 (0.621 -- 0.731) & 0.667 (0.611 -- 0.724) & 0.771 (0.724 -- 0.821) & 0.767 (0.718 -- 0.817) \\
+& \textbf{CNN} & 0.658 (0.601 -- 0.716) & 0.660 (0.604 -- 0.717) & 0.755 (0.705 -- 0.805) & 0.762 (0.713 -- 0.813) \\
+& \textbf{RN} & 0.645 (0.587 -- 0.702) & 0.660 (0.603 -- 0.715) & 0.757 (0.708 -- 0.809) & 0.766 (0.718 -- 0.817) \\
 
 \bottomrule
 \end{tabular}
@@ -530,28 +537,28 @@ Death                                         & All causes                      
   \midrule
 
 \multirow{4}{*}{\begin{minipage}{0.65in}\textbf{MACE}\end{minipage}} %
-& \textbf{LR} & 0.751 (0.730 - 0.774) & 0.756 (0.734 - 0.778) & 0.861 (0.845 - 0.878) & 0.864 (0.849 - 0.881) \\
-& \textbf{MLP} & 0.774 (0.754 - 0.796) & 0.772 (0.752 - 0.794) & 0.878 (0.864 - 0.893) & 0.877 (0.862 - 0.892) \\
-& \textbf{CNN} & 0.728 (0.707 - 0.752) & 0.735 (0.714 - 0.757) & 0.873 (0.858 - 0.888) & 0.875 (0.860 - 0.890) \\
-& \textbf{RN} & 0.758 (0.737 - 0.779) & 0.766 (0.745 - 0.787) & 0.874 (0.859 - 0.889) & 0.876 (0.861 - 0.891) \\
+& \textbf{LR} & 0.751 (0.730 -- 0.774) & 0.756 (0.734 -- 0.778) & 0.861 (0.845 -- 0.878) & 0.864 (0.849 -- 0.881) \\
+& \textbf{MLP} & 0.774 (0.754 -- 0.796) & 0.772 (0.752 -- 0.794) & 0.878 (0.864 -- 0.893) & 0.877 (0.862 -- 0.892) \\
+& \textbf{CNN} & 0.728 (0.707 -- 0.752) & 0.735 (0.714 -- 0.757) & 0.873 (0.858 -- 0.888) & 0.875 (0.860 -- 0.890) \\
+& \textbf{RN} & 0.758 (0.737 -- 0.779) & 0.766 (0.745 -- 0.787) & 0.874 (0.859 -- 0.889) & 0.876 (0.861 -- 0.891) \\
   \cmidrule(lr){1-2}
 \multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Unstable Angina}\end{minipage}} %
-& \textbf{LR} & 0.668 (0.624 - 0.715) & 0.677 (0.633 - 0.721) & 0.730 (0.694 - 0.767) & 0.734 (0.699 - 0.770) \\
-& \textbf{MLP} & 0.701 (0.659 - 0.745) & 0.712 (0.670 - 0.754) & 0.765 (0.733 - 0.798) & 0.763 (0.730 - 0.796) \\
-& \textbf{CNN} & 0.660 (0.615 - 0.704) & 0.695 (0.652 - 0.739) & 0.761 (0.728 - 0.795) & 0.768 (0.735 - 0.802) \\
-& \textbf{RN} & 0.686 (0.642 - 0.731) & 0.690 (0.647 - 0.736) & 0.765 (0.732 - 0.798) & 0.765 (0.733 - 0.798) \\
+& \textbf{LR} & 0.668 (0.624 -- 0.715) & 0.677 (0.633 -- 0.721) & 0.730 (0.694 -- 0.767) & 0.734 (0.699 -- 0.770) \\
+& \textbf{MLP} & 0.701 (0.659 -- 0.745) & 0.712 (0.670 -- 0.754) & 0.765 (0.733 -- 0.798) & 0.763 (0.730 -- 0.796) \\
+& \textbf{CNN} & 0.660 (0.615 -- 0.704) & 0.695 (0.652 -- 0.739) & 0.761 (0.728 -- 0.795) & 0.768 (0.735 -- 0.802) \\
+& \textbf{RN} & 0.686 (0.642 -- 0.731) & 0.690 (0.647 -- 0.736) & 0.765 (0.732 -- 0.798) & 0.765 (0.733 -- 0.798) \\
   \cmidrule(lr){1-2}
 \multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Acute \linebreak Myocardial \linebreak Infarction}\end{minipage}} %
-& \textbf{LR} & 0.778 (0.752 - 0.804) & 0.788 (0.764 - 0.814) & 0.911 (0.897 - 0.925) & 0.914 (0.901 - 0.929) \\
-& \textbf{MLP} & 0.800 (0.776 - 0.826) & 0.804 (0.780 - 0.828) & 0.922 (0.909 - 0.936) & 0.920 (0.906 - 0.934) \\
-& \textbf{CNN} & 0.738 (0.711 - 0.765) & 0.748 (0.722 - 0.775) & 0.916 (0.902 - 0.931) & 0.917 (0.903 - 0.932) \\
-& \textbf{RN} & 0.768 (0.742 - 0.794) & 0.777 (0.752 - 0.804) & 0.917 (0.903 - 0.931) & 0.920 (0.907 - 0.935) \\
+& \textbf{LR} & 0.778 (0.752 -- 0.804) & 0.788 (0.764 -- 0.814) & 0.911 (0.897 -- 0.925) & 0.914 (0.901 -- 0.929) \\
+& \textbf{MLP} & 0.800 (0.776 -- 0.826) & 0.804 (0.780 -- 0.828) & 0.922 (0.909 -- 0.936) & 0.920 (0.906 -- 0.934) \\
+& \textbf{CNN} & 0.738 (0.711 -- 0.765) & 0.748 (0.722 -- 0.775) & 0.916 (0.902 -- 0.931) & 0.917 (0.903 -- 0.932) \\
+& \textbf{RN} & 0.768 (0.742 -- 0.794) & 0.777 (0.752 -- 0.804) & 0.917 (0.903 -- 0.931) & 0.920 (0.907 -- 0.935) \\
   \cmidrule(lr){1-2}
 \multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Death}\end{minipage}} %
-& \textbf{LR} & 0.828 (0.783 - 0.878) & 0.833 (0.792 - 0.877) & 0.885 (0.853 - 0.922) & 0.885 (0.855 - 0.922) \\
-& \textbf{MLP} & 0.821 (0.779 - 0.866) & 0.795 (0.741 - 0.853) & 0.873 (0.843 - 0.908) & 0.870 (0.840 - 0.904) \\
-& \textbf{CNN} & 0.821 (0.777 - 0.869) & 0.805 (0.757 - 0.856) & 0.868 (0.838 - 0.902) & 0.865 (0.834 - 0.901) \\
-& \textbf{RN} & 0.830 (0.785 - 0.881) & 0.827 (0.780 - 0.880) & 0.870 (0.841 - 0.904) & 0.871 (0.841 - 0.907) \\
+& \textbf{LR} & 0.828 (0.783 -- 0.878) & 0.833 (0.792 -- 0.877) & 0.885 (0.853 -- 0.922) & 0.885 (0.855 -- 0.922) \\
+& \textbf{MLP} & 0.821 (0.779 -- 0.866) & 0.795 (0.741 -- 0.853) & 0.873 (0.843 -- 0.908) & 0.870 (0.840 -- 0.904) \\
+& \textbf{CNN} & 0.821 (0.777 -- 0.869) & 0.805 (0.757 -- 0.856) & 0.868 (0.838 -- 0.902) & 0.865 (0.834 -- 0.901) \\
+& \textbf{RN} & 0.830 (0.785 -- 0.881) & 0.827 (0.780 -- 0.880) & 0.870 (0.841 -- 0.904) & 0.871 (0.841 -- 0.907) \\
 
 \bottomrule
 \end{tabular}
@@ -560,21 +567,4 @@ Death                                         & All causes                      
 \label{table:appendix:outcomes}
 \end{table}
 \renewcommand{\arraystretch}{1}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 \end{document}

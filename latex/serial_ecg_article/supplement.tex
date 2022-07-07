@@ -25,31 +25,31 @@ The hyper-parameters for the MLP, CNN and RN models were determined through rand
 \midrule
 {Number of dense layers}    & [1, 2] \\
 {Neurons}                   & [25, 50, 100, 200] \\
-{Dropouts}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Dropout rate}              & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
 {Batch normalization}       & [true, false] \\
-{Activity regularization}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
-{Kernel regularization}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
-{Bias regularization}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Activity L2 regularization weight}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
+{Kernel L2 regularization weight}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Bias L2 regularization weight}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
 \midrule
 \textbf{Combiner}           & \\
 \midrule
 {Number of dense layers}    & 1 \\
 {Neurons}                   & [6, 10, 20] \\
-{Dropouts}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Dropout rate}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
 {Batch normalization}       & [true, false] \\
-{Activity regularization}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
-{Kernel regularization}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
-{Bias regularization}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Activity L2 regularization weight}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
+{Kernel L2 regularization weight}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Bias L2 regularization weight}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
 \midrule
 \textbf{Classifier}         & \\
 \midrule
 {Number of dense layers}    & 1 \\
 {Neurons}                   & 10 \\
-{Dropouts}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Dropout rate}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
 {Batch normalization}       & [true, false] \\
-{Activity regularization}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
-{Kernel regularization}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
-{Bias regularization}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Activity L2 regularization weight}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
+{Kernel L2 regularization weight}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Bias L2 regularization weight}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
 \midrule
 \textbf{Additional settings} & \\
 \midrule
@@ -61,7 +61,7 @@ Batch-size                  & 64 \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}
-\caption{MLP hyper-parameter search space. The dense layer in the ``Classifier'' part was only included for models using additional clinical variables. All parameters were sampled uniformly at random from the options shown in the brackets.}
+\caption{MLP hyper-parameter search space. The dense layer in the ``Classifier'' part was only included for models using additional clinical variables. The regularization  All parameters were sampled uniformly at random from the options shown in the brackets.}
 \label{table:mlp}
 \end{table}
 \renewcommand{\arraystretch}{1}
@@ -76,32 +76,33 @@ Batch-size                  & 64 \\
   \scriptsize
 \begin{adjustbox}{center}
 \begin{tabular}{@{}lr@{}}
+\toprule
 \textbf{Feature extractor}  & \\
 \midrule
 {Number of conv layers}     & [2, 3, 4] \\
-{Pool-size}                 & [[7-30], [4-10], [3-6]] \\
-{Filters, first}            & [8-64] \\
-{Filters, last}             & [8-64] \\
-{Kernel size, first}        & [5-65] \\
-{Kernel size, last}         & [5-65] \\
+{Pool-size}                 & [[7--30], [4--10], [3--6]] \\
+{Filters, first}            & [8--64] \\
+{Filters, last}             & [8--64] \\
+{Kernel size, first}        & [5--65] \\
+{Kernel size, last}         & [5--65] \\
 {Batch normalization}       & [true, false] \\
-{Weight decay}              & [0.1, 0.01, 0.001, 0] \\
-{Dropouts}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
-{Number of dense layers}    & [0, 1] \\
-{Neurons}                   & [10, 50, 100] \\
-{Dense dropout}             & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Kernel L2 regularization weight}              & [0.1, 0.01, 0.001, 0] \\
+{Convolutional dropout rate}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Include final dense layer}    & [true, false] \\
+{Final dense layer neurons}                   & [10, 50, 100] \\
+{Final dense layer dropout rate}             & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
 \midrule
 \textbf{Combiner}           & \\
 \midrule
 {Number of dense layers}    & [0, 1] \\
 {Neurons}                   & [10, 20] \\
-{Dropouts}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Dropout rate}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
 \midrule
 \textbf{Classifier}         & \\
 \midrule
 {Number of dense layers}    & 1 \\
 {Neurons}                   & [10, 20, 50, 100] \\
-{Dropouts}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Dropout rate}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
 \midrule
 \textbf{Additional settings} & \\
 \midrule
@@ -113,7 +114,7 @@ Batch-size                  & 64 \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}
-\caption{CNN hyper-parameter search space. The ``Feature extractor'' part begins with 2, 3 or 4 convolutional blocks, and the pool-size in each case was sampled from the range [7-30], [4-10] or [3-6] respectively. The kernel size and number of filters for each convolutional block was linearly interpolated between the first and last values indicated in the table. Each convolutional block included a potential batch-normalization, followed by max-pooling and dropout. After all the convolutions there was a flatten layer, potentially followed by a dense-layer. The dense layer in the ``Combiner'' part was only used for the models that included additional clinical variables. All parameters were sampled uniformly at random from the options shown in the brackets.}
+\caption{CNN hyper-parameter search space. The ``Feature extractor'' part begins with 2, 3 or 4 convolutional blocks, and the pool-size in each case was sampled from the range [7--30], [4--10] or [3--6] respectively. The kernel size and number of filters for each convolutional block was linearly interpolated between the first and last values indicated in the table. Each convolutional block included a potential batch-normalization, followed by max-pooling and dropout. After the convolutional blocks there was a flatten layer, potentially followed by a dense-layer. The dense layer in the ``Combiner'' part was only used for the models that included additional clinical variables. All parameters were sampled uniformly at random from the options shown in the brackets.}
 \label{table:cnn}
 \end{table}
 
@@ -127,35 +128,36 @@ Batch-size                  & 64 \\
   \scriptsize
 \begin{adjustbox}{center}
 \begin{tabular}{@{}lr@{}}
+\toprule
 \textbf{Feature extractor}  & \\
 \midrule
 {Number of dense layers}    & [1, 2] \\
 {Neurons}                   & [25, 50, 100, 200] \\
-{Dropouts}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Dropout rate}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
 {Batch normalization}       & [true, false] \\
-{Activity regularization}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
-{Kernel regularization}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
-{Bias regularization}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Activity L2 regularization weight}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
+{Kernel L2 regularization weight}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Bias L2 regularization weight}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
 \midrule
 \textbf{Combiner}           & \\
 \midrule
 {Number of dense layers}    & 1 \\
 {Neurons}                   & [6, 10, 20] \\
-{Dropouts}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Dropout rate}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
 {Batch normalization}       & [true, false] \\
-{Activity regularization}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
-{Kernel regularization}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
-{Bias regularization}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Activity L2 regularization weight}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
+{Kernel L2 regularization weight}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Bias L2 regularization weight}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
 \midrule
 \textbf{Classifier}         & \\
 \midrule
 {Number of dense layers}    & 1 \\
 {Neurons}                   & 10 \\
-{Dropouts}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
+{Dropout rate}                  & [0.0, 0.1, 0.2, 0.3, 0.4, 0.5] \\
 {Batch normalization}       & [true, false] \\
-{Activity regularization}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
-{Kernel regularization}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
-{Bias regularization}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Activity L2 regularization weight}   & [1e-2, 1e-3, 1e-4, 1e-5, 0] \\
+{Kernel L2 regularization weight}     & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
+{Bias L2 regularization weight}       & [1e-1, 1e-2, 1e-3, 1e-4, 0] \\
 \midrule
 \textbf{Additional settings} & \\
 \midrule
@@ -167,7 +169,7 @@ Batch-size                  & 32 \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}
-\caption{RN hyper-parameter search space. The dense layer in the ``Classifier'' part was only included for models using additional clinical variables. Two learning-rates were sampled for each model, and the higher rate was used for the first epochs (a random number between 5 and 25), after which the lower learning rate was used. All parameters were sampled uniformly at random.}
+\caption{RN hyper-parameter search space. The dense layer in the ``Classifier'' part was only included for models using additional clinical variables. Two learning-rates were sampled for each model, and the higher rate was used for the first $n$ epochs (where $n$ was a random number between 5 and 25), after which the lower learning rate was used. All parameters were sampled uniformly at random.}
 \label{table:rn}
 \end{table}
 
