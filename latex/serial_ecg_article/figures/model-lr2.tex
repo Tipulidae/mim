@@ -1,0 +1,61 @@
+\documentclass[a3paper,10pt]{article}
+\pagestyle{empty}
+
+\usepackage[top=1cm,bottom=1cm,right=1cm,left=1cm]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
+\usetikzlibrary{shapes.multipart}
+\include{nn_styles}
+
+%Default beamer font
+\usepackage{lmodern}
+\renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+\usetikzlibrary{calc}
+\begin{document}
+
+\begin{tikzpicture}[auto,>=stealth']
+
+  \node[input] (prior_ecg) {\priorecgtext{}};
+  \node[input, right=1 of prior_ecg] (index_ecg) {\indexecgtext{}};
+
+  \node[glasgow, below=1 of index_ecg] (index_glasgow) {\glasgowtext{}};
+  \node[glasgow, below=1 of prior_ecg] (prior_glasgow) {\glasgowtext{}};
+    
+  \node[subtract, below=1 of index_glasgow] (diff) {\difftext{}};
+
+  \node[pca, below=1 of diff] (pca) {
+    \textbf{PCA}\\
+    \texttt{dimension:} 145\\
+  };
+   
+  \node[dense_sigmoid, below=1 of pca] (clf) {
+    \textbf{Dense}\\
+    \texttt{neurons:} 1\\
+    \nodepart{two}
+    \textbf{Activation}\\
+    \texttt{function:} Sigmoid
+  };
+
+  \node[input, below=1 of clf] (output) {\predictiontext{}};
+
+  \coordinate (cat1) at ($(diff.south)!0.5!(pca.north)$);
+  \filldraw (cat1) circle (\concatsize);
+
+
+  \draw[arrow] (index_ecg.south) -- (index_glasgow.north);
+  \draw[arrow] (index_glasgow.south) -- (diff.north);
+  \draw[arrow] (diff.south) -- (pca.north);
+  \draw[arrow] (pca.south) -- (clf.north); 
+  \draw[arrow] (clf.south) -- (output.north);
+  
+  \draw[arrow] (prior_ecg.south) -- (prior_glasgow.north);
+  \draw[arrow] (prior_glasgow.south) |- (diff.west);
+  \draw[arrow,-] (prior_glasgow.south) |- (cat1);
+
+
+
+\end{tikzpicture}
+
+\end{document}

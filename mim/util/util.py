@@ -140,3 +140,8 @@ def infer_categorical(data):
 
 def is_categorical(s):
     return len(s.value_counts()) <= 10
+
+
+def interpolate(first, last, length):
+    """Integer interpolation, rounds all numbers to nearest integer."""
+    return list(map(round, np.linspace(first, last, length)))

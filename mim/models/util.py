@@ -1,11 +1,12 @@
 import math
 
-import numpy as np
 from tensorflow.python.keras.layers import (
     AveragePooling1D, Conv1D, BatchNormalization, ReLU, MaxPooling1D,
     Dropout, Flatten, Dense
 )
 from tensorflow.python.keras.regularizers import l2
+
+from mim.util.util import interpolate
 
 
 def cnn_helper(
@@ -41,16 +42,14 @@ def cnn_helper(
 
     if filters is None:
         if filter_first is not None and filter_last is not None:
-            filters = list(map(
-                round, np.linspace(filter_first, filter_last, num_layers)))
+            filters = interpolate(filter_first, filter_last, num_layers)
         else:
             raise ValueError('Must specify either filters or both '
                              'filter_first and filter_last. ')
 
     if kernels is None:
         if kernel_first is not None and kernel_last is not None:
-            kernels = list(map(
-                round, np.linspace(kernel_first, kernel_last, num_layers)))
+            kernels = interpolate(kernel_first, kernel_last, num_layers)
         else:
             raise ValueError('Must specify either kernels or both '
                              'kernel_first and kernel_last. ')

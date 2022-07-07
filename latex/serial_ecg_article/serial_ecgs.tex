@@ -1,0 +1,570 @@
+\documentclass[preprint]{elsarticle}
+
+%\usepackage{lineno,hyperref}
+%\modulolinenumbers[5]
+\usepackage{siunitx}
+%\usepackage{doi}
+%\usepackage{uri}
+%\usepackage{svg}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{adjustbox}
+\usepackage{float}
+\usepackage{url}
+%\usepackage[pdftex]{hyperref}
+
+\journal{Artificial Intelligence in Medicine}
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%% Elsevier bibliography styles
+%%%%%%%%%%%%%%%%%%%%%%%
+%% To change the style, put a % in front of the second line of the current style and
+%% remove the % from the second line of the style you would like to use.
+%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Numbered
+%\bibliographystyle{model1-num-names}
+
+%% Numbered without titles
+%\bibliographystyle{model1a-num-names}
+
+%% Harvard
+%\bibliographystyle{model2-names.bst}\biboptions{authoryear}
+
+%% Vancouver numbered
+%\usepackage{numcompress}\bibliographystyle{model3-num-names}
+
+%% Vancouver name/year
+%\usepackage{numcompress}\bibliographystyle{model4-names}\biboptions{authoryear}
+
+%% APA style
+%\bibliographystyle{model5-names}\biboptions{authoryear}
+
+%% AMA style
+%\usepackage{numcompress}\bibliographystyle{model6-num-names}
+
+%% `Elsevier LaTeX' style
+\bibliographystyle{elsarticle-num-names}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Prior Electrocardiograms not Useful for Predicting Major Adverse Cardiac Events with Machine Learning}
+
+
+\author[inst1]{Axel Nystr\"{o}m\corref{cor1}}
+\ead{axel.nystrom@med.lu.se}
+\author[inst2,inst3]{Pontus Olsson de Capretz}
+\author[inst4]{Anders Bj\"{o}rkelund}
+\author[inst3,inst5]{Jakob Lundager Forberg}
+\author[inst4,inst6]{Mattias Ohlsson}
+\author[inst1,inst7]{Jonas Bj\"{o}rk}
+\author[inst2,inst3]{Ulf Ekelund}
+
+\affiliation[inst1]{
+    organization={Lund University, Department of Laboratory Medicine},
+    city={Lund},
+    country={Sweden}
+}
+
+\affiliation[inst2]{
+    organization={Skåne University Hospital, Department of Internal and Emergency Medicine},
+    city={Lund},
+    country={Sweden}
+}
+            
+\affiliation[inst3]{
+    organization={Lund University, Department of Clinical Sciences},
+    city={Lund},
+    country={Sweden}
+}
+
+\affiliation[inst4]{
+    organization={Lund University, Department of Astronomy and Theoretical Physics},
+    city={Lund},
+    country={Sweden}
+}
+
+\affiliation[inst5]{
+    organization={Helsingborg Hospital, Department of Emergency Medicine},
+    city={Helsingborg},
+    country={Sweden}
+}
+
+\affiliation[inst6]{
+    organization={Halmstad University, Center for Applied Intelligent Systems Research (CAISR)},
+    city={Halmstad},
+    country={Sweden}
+}
+
+\affiliation[inst7]{
+    organization={Clinical Studies Sweden, Forum South, Skåne University Hospital},
+    city={Lund},
+    country={Sweden}
+}
+
+\cortext[cor1]{Corresponding author}
+
+
+\begin{abstract}
+At the emergency department (ED), it is important to quickly and accurately determine which patients are likely to have a major adverse cardiac event (MACE). Machine learning (ML) models can be used to aid physicians in detecting MACE, and improving the performance of such models is an active area of research. In this study, we sought to determine if ML models can be improved by including a prior electrocardiogram (ECG) from each patient. To that end, we trained several models to predict MACE both with and without prior ECGs, using data collected from 19499 consecutive patients with chest pain from five EDs in southern Sweden, between the years 2017 and 2018. Our results indicate no improvement in AUC from prior ECGs. This was consistent across models, both with and without additional clinical input variables, for different patient subgroups, and for different subsets of the outcome. While contradicting current best practices for manual ECG analysis, the results are positive in the sense that ML models with fewer inputs are more easily and widely applicable in practice.
+\end{abstract}
+
+\begin{keyword}
+Machine~learning\sep Neural~networks\sep Emergency~department\sep Chest~pain\sep Major~adverse~cardiac~event\sep Electrocardiograms
+\end{keyword}
+
+\end{frontmatter}
+
+%\linenumbers
+
+
+\section{Introduction}
+\label{sec:introduction}
+Chest pain is the second most common complaint at the emergency department (ED), and cardiovascular disease is the most common cause of death in Europe \citep{timmis2022}. However, only one out of ten ED chest pain patients suffer from major adverse cardiac events (MACE) within 30 days, including acute myocardial infarction (AMI) and cardiac arrest \citep{mokhtari2016}. It is therefore important to quickly and accurately identify the patients who require immediate care, and those who can wait or be sent home. With current diagnostic methods however, the majority of patients who are admitted or undergo lengthy assessments in the ED do not have adverse events \citep{christenson2004,pollack2006}. Many admissions and investigations are thereby ``unnecessary,'' and cause a substantial health care burden \citep{cullen2015}.
+
+To identify or rule out MACE, the ED physician evaluates the patient history, current symptoms, blood markers of myocardial necrosis such as high-sensitivity troponin T (hs-cTnT), and the electrocardiogram (ECG). If available, a previous ECG is often also assessed since acute myocardial ischemia or infarction induces new ECG changes and since guidelines state that diagnostic accuracy can be improved by comparison with a prior ECG \citep{anderson2013,lee1990}.
+
+Computer-aided ECG analysis systems have existed since the 1960s, but advances in machine learning (ML) in combination with the availability of digitized ECGs has resulted in a rapidly growing number of publications on ML in ECG interpretation in the past years \citep{pipberger1961,ansari2017,liu2021}. However, few studies have investigated the usefulness of a prior ECG when predicting cardiac events using ML. 
+
+\citet{ohlsson2001} in 2001 found that the addition of a previous ECG improved the area under the ROC curve of a neural network model from 0.85 to 0.88 when predicting AMI, but since then the definition of AMI has changed and we can now identify smaller AMIs with more sensitive blood tests (e.g. hs-cTnT). \citet{sbrollini2019} built a neural network to detect cardiac ischemia based on serial ECGs, but although it outperformed logistic regression, the performance gain from the addition of a previous ECG was unclear. \citet{terhaar2019} used features derived from serial ECGs as input to a logistic regression model predicting myocardial ischemia and did not find any improvement over the single ECG predictions from the Glasgow algorithm. All of these three studies used a small number of hand crafted input features from each ECG. To the best of our knowledge, the benefit of prior ECGs for ML classification of cardiac events using full ECG signals has not yet been explored.
+
+In this study, we sought to determine if the prediction of MACE by ECG-based ML models in ED chest pain patients can be improved by the addition of a previous ECG. We compared ML models of varying complexity trained both with and without data on patient age, sex and hs-cTnT results.
+
+\section{Methods}
+\subsection{Study design}
+This was a retrospective study based on data from the ESC-TROP study, which includes 26545 unique, consecutive adult ($\geq 18$ years) patients presenting with chest pain to five EDs in southern Sweden between Feb 1, 2017 and Nov 30, 2018 \citep{mokhtari2020}. For each patient, the ESC-TROP database only includes the first ED visit during the two year study period. The database includes ECGs and blood sample data from the index visit, electronic health records up to five years prior to the index visit and all medical diagnoses made in the geographic region (Sk\aa{}ne) up to 30 days after the index visit. The study was approved by the Regional Ethics Review Board in Lund, Sweden (Dnr 2017/831 and 2018/708). 
+\subsection{Patient population}
+We included all patients in the ESC-TROP database where a hs-cTnT test as well as an ECG was recorded at the ED, and where a final diagnosis of STEMI was not made during the index visit. We excluded all patients with no ECG recorded within 2 hours after ED arrival, and all patients with no prior ECG of good technical quality after the year 1999.
+
+The data was split chronologically into three parts: a training set, containing the first half of the patients, a validation set, containing the third quarter of the patients, and a test set, containing the last quarter of the patients. The training set was used to train the machine learning models, the validation set was used to perform model selection, and the test set was used to assess the performance of the final models. We chose to split the data chronologically rather than randomly, since it allows for a stronger indication of model generalizability \citep{steyerberg2009}.
+
+
+\subsection{Data processing}
+\subsubsection{Target outcome}
+The target outcome for the models was AMI or related complications in the form of MACE, including death from any cause within 30 days of the index visit. MACE was defined as unstable angina, atrioventricular block type 2 or 3, ventricular arrhythmia requiring acute intervention, cardiac arrest, pulmonary edema, cardiogenic shock, coronary artery bypass grafting, percutaneous coronary intervention, transvenous pacemaker insertion, temporary cardiac pacing, or death from any cause. The complete list of ICD-10 diagnosis and intervention codes are listed in \ref{sec:appendix:mace}, Table~\ref{table:appendix:mace}.
+
+\subsubsection{ECG processing}
+The ESC-TROP database contains 536135 ECGs recorded in the included patients between 1970 and 2019 at health care institutions in region Sk\aa{}ne. Each ECG contains 12 leads and is 10 seconds long, sampled at \SI{500}{\hertz}. In each patient, the ECG recorded closest to the ED arrival was considered the index ECG. The previous ECG was chosen as the newest ECG recorded at least one week prior to ED arrival. This interval was chosen to minimize the risk of including ECGs recorded during the same acute episode.
+
+\subsubsection{Glasgow features}
+\label{sec:glasgow}
+In order to compare models that use the raw input ECG signal directly with standard statistical methods such as logistic regression, we also extracted from each ECG a subset of 228 features derived from the Glasgow algorithm \citep{macfarlane2005}. Specifically, for each of the 12 leads we used the $Q$, $R$, $S$, $T+$, $T-$, $ST$, $ST_{2/8}$, and $ST_{3/8}$ amplitudes as well as the $Q$, $R$, $S$, and $QRS$ durations, the $QRS$ area and $ST$ slope. The $ST$ amplitudes, $QRS$ area and $ST$ slopes were further divided into positive and negative parts, so that the total number of features was $12 \cdot 19=228$. This set of features has previously been useful for predicting AMI \citep{forberg2009}.
+
+\subsubsection{Additional clinical variables}
+It is possible that the utility of a prior ECG is affected by additional information that is known to be relevant for predicting MACE. We therefore included age, sex, time since the previous ECG, and the first hs-cTnT result as additional clinical variables. The distribution of the hs-cTnT results and the time between ECG recordings were heavily skewed and therefore logarithmized before use in the models. 
+
+The hs-cTnT blood samples were those used in the care of the patient and collected in lithium heparin tubes and analyzed using Roche Cobas e602 (Roche Diagnostics). The assay has a limit of blank of \SI{3}{\nano\gram\per\liter} and a limit of detection of \SI{5}{\nano\gram\per\liter}. The 99th percentile cut-off is \SI{14}{\nano\gram\per\liter} and the coefficient of variation is $<10\%$ at \SI{13}{\nano\gram\per\liter} \citep{giannitsis2010}.
+
+
+\subsection{Machine learning methods}
+Four types of models of increasing complexity were evaluated with four different sets of inputs: the index ECG with and without the previous ECG, and with and without the additional clinical variables. Each of the four model types were trained for each of the four sets of inputs, resulting in a total of 16 different models. The four models were, in order of complexity: logistic regression (LR), multilayer perceptron (MLP), convolutional neural networks (CNN), and a residual neural network model (RN) pre-trained by \citet{ribeiro2020} on two million ECGs.
+
+The basic structure of the models and our strategy for combining different inputs is illustrated in Figure~\ref{fig:model:overview}. The ECGs were first passed through a feature extraction function, which is the same for the index and prior ECGs, but can differ between the different models. The output from the feature extraction is combined in a combiner function, which is followed by a classification function that makes the final prediction. The hyper-parameters were primarily determined through random search \citep{bergstra2012}. The hyper-parameter search space and the final models are described in further detail in the supplementary material.
+
+\begin{figure}[h!]
+\includegraphics[width=\linewidth]{figures/overview.pdf}
+\centering
+\caption{Abstract overview of the basic structure of the machine learning models. Each ECG is passed through a feature extractor function before being combined with additional clinical variables. The feature extractor is the same within a model, but can differ between models. All models make use of the index ECG (middle column), but the prior ECG (left column) and additional clinical variables (right column) are only used for some of the models. $\Delta t$ is the time between index and prior ECG.}
+\label{fig:model:overview}
+\end{figure}
+
+\subsubsection{Logistic regression}
+The LR models used as input the 228 features per ECG derived from the Glasgow algorithm as described in Section~\ref{sec:glasgow}, pre-processed with principal component analysis (PCA) dimensionality reduction. The optimal target dimension for the PCA was determined through grid-search using the validation set. For the models using two ECGs, the features from the first ECG were concatenated with the difference between the features from the index and prior ECGs. The dimensionality reduction was applied on the Glasgow features before being concatenated with the additional clinical variables.
+
+\subsubsection{Multilayer perceptron}
+The MLPs were trained using the 228 Glasgow-features described in Section~\ref{sec:glasgow}, but without dimensionality reduction. The hyper-parameters for each of the four sets of inputs (one or two ECGs, with or without additional clinical variables) were determined through random search using the validation set.
+
+\subsubsection{Convolutional neural networks}
+The CNNs used the full ECG signals, rather than Glasgow-features as inputs. Similarly to the MLPs, the hyper-parameters were determined through random search using the validation set.
+
+\subsubsection{Residual neural networks}
+The RN models were based on a pre-trained model developed by \citet{ribeiro2020}, where approximately two million ECGs were used to train the network to classify 6 types of ECG abnormalities. In order to use the RN model, each input ECG was resampled and rescaled, and the leads were reordered to match the format expected by the network. The convolutional part of the RN model was kept fixed (but all weights remained trainable), the final dense output layer was removed and replaced by a small MLP. The final network, together with other hyper-parameters, were determined by random search using the validation set. 
+
+\subsubsection{Ensembles}
+Due to the stochastic nature of the training process, there was a small variance in the performance of the neural network models, depending on their initialization. We reduced this variance by forming ensembles of 10 identical models, each initialized with different random seeds. The output of the ensemble was taken as the arithmetic mean of each constituent model output.
+
+\subsection{Methods for analyzing the results}
+\subsubsection{Comparing models}
+In this study, we aimed to quantify the added value of a previous ECG in terms of AUC  when predicting MACE within 30 days. We compared models using the index and prior ECGs with models using only the index ECG, both with with and without additional clinical variables. For each model, an approximate 95\% confidence interval for the AUC score on the test set was constructed using the percentile bootstrap method with $B=10000$ bootstrap samples \citep{efron1981}.
+
+\subsubsection{Subgroup analyses}
+In clinical practice, previous ECGs are typically only reviewed if there are pathological changes in the index ECG, since changes also present in previous ECGs are believed to be less concerning. In light of this, we suspected that the benefit of a previous ECG would be higher in patients with a pathological index ECG. To test this hypothesis, we used the Glasgow diagnoses that indicate myocardial ischemia or AMI, and classified all ECGs labeled with one or more of these as pathological. We then examined the performance of the algorithms on pathological and non-pathological ECGs separately.
+
+It is also possible that the added value of a previous ECG for detecting MACE is higher in older patients because of a higher prevalence of comorbidities, and we therefore divided the patients in the test set into age quartiles; 18 -- 50 years, 51 -- 64 years, 65 -- 75 years, and over 76 years.
+
+Further, since AMI can result in persistent ECG changes and is associated with an increased risk of future cardiovascular events, it is possible that the benefit of a previous ECG differs in patients with or without a prior AMI \citep{strom2007,sawai2017}. We evaluated the models separately on patients with and without AMI in the previous 5 years.
+
+Finally, we analyzed the individual components of MACE. Since some diagnoses were rare, we used only three outcome groups: Unstable angina (ICD-10: I20), AMI (ICD-10: I21 or I22), and all-cause death. The AUC of each model was evaluated in each group separately. It should be noted that all models were still only trained to predict the composite outcome MACE.
+
+\section{Results}
+\subsection{Patient characteristics}
+\label{sec:patient_characteristics}
+As illustrated in Figure~\ref{fig:inclusion}, the original ESC-TROP database contains 26545 distinct chest pain patients, of which 7046 were excluded because of a diagnosis of STEMI during the index visit, missing hs-cTnT lab value, or missing or low-quality ECGs. The remaining 19499 patients were split chronologically into a training set ($n=9750$; 50\%), a validation set ($n=4875$; 25\%) and a test set ($n=4874$, 25\%).
+
+Table~\ref{table:characteristics} shows the characteristics of the included patients. While the frequency of MACE in the training, validation and test sets is similar, we note that the disease history differs substantially, to the effect that patients in the training set are much more prone to have a history of AMI, congestive heart failure, and pulmonary disease, among others. The age of the prior ECG is also higher for patients in the validation and test sets than for the patients in the training set.
+
+\begin{figure}[h!]
+\includegraphics[width=\linewidth]{figures/inclusioncriteria.pdf}
+\centering
+\caption{Inclusion criteria. The ESC-TROP database contains healthcare data from adult patients with chest pain as primary complaint at the ED between 2017 and 2018. Only the first chest-pain visit from each patient is included in ESC-TROP. The chronological split was done such that the patients in the first half of the study period were included in the training set, the patients in the third quarter were included in the validation set and the patients in the final quarter of the study period were included in the test set.}
+\label{fig:inclusion}
+\end{figure}
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}
+  \centering
+  \begin{footnotesize}
+\begin{tabular}{@{}lrrrr@{}}
+  \toprule
+  \textbf{Patient characteristics} & \textbf{Train} & \textbf{Validation} & \textbf{Test} & \textbf{Total} \\
+  \midrule
+n (\%)                                           & 9750 (50)      & 4875 (25)           & 4874 (25)     & 19499 (100)    \\
+Male, \%                                         & 50.7 (50)      & 49.7                & 49.6          & 50.2           \\
+Age, mean (std)                                  & 63 (17.6)      & 62.2 (17.5)         & 62.4 (17.6)   & 62.6 (17.6)    \\
+MACE within 30 days, \%                          & 10.4 (50)      & 10.8                & 10.8          & 10.6           \\
+\midrule
+\textbf{Disease history} & & & & \\
+\midrule
+Acute Myocardial Infarction, \%                  & 9.1            & 5.5                 & 5.9           & 7.4            \\
+Congestive Heart Failure, \%                     & 8.4            & 6.1                 & 6.0           & 7.2            \\
+Peripheral Vascular Disease, \%                  & 1.9            & 1.3                 & 1.7           & 1.7            \\
+Cerebral Vascular Accident, \%                   & 6.9            & 6.0                 & 5.9           & 6.4            \\
+Dementia, \%                                     & 0.7            & 0.5                 & 0.5           & 0.6            \\
+Pulmonary Disease, \%                            & 7.9            & 5.4                 & 6.6           & 6.9            \\
+Connective Tissue Disorder, \%                   & 1.0            & 0.9                 & 1.1           & 1.0            \\
+Liver Disease, \%                                & 0.3            & 0.3                 & 0.4           & 0.3            \\
+Severe Liver Disease, \%                         & 0.1            & 0.1                 & 0.2           & 0.1            \\
+Diabetes, \%                                     & 11.1           & 8.9                 & 8.5           & 9.9            \\
+Diabetes Complications, \%                       & 1.2            & 0.8                 & 1.1           & 1.1            \\
+Renal Disease, \%                                & 3.4            & 2.5                 & 2.9           & 3.0            \\
+Cancer, \%                                       & 5.8            & 5.2                 & 5.4           & 5.5            \\
+Metastatic Cancer, \%                            & 1.0            & 1.2                 & 1.3           & 1.1            \\
+\midrule
+\textbf{Additional Clinical Variables} & & & & \\
+\midrule
+hs-cTnT, median (IQR)                            & 8 (4--17)       & 7 (4--16)            & 8 (4--17)      & 8 (4--17)       \\
+Minutes to hs-cTnT, median (IQR) & 34 (20--60)     & 35 (20--62)          & 31 (18--54)    & 34 (19--59)     \\
+Days between ECGs, median (IQR)                  & 285 (88--807)   & 372 (95--1006)       & 372 (122--984) & 326 (97--909)   \\
+\midrule
+\textbf{ECG} & & & & \\
+\midrule
+Pathological diagnosis on ECG, \%                & 42.4           & 40.2                & 40.2          & 41.3           \\
+\bottomrule
+\end{tabular}
+\caption{Characteristics of included patients. MACE, Major Adverse Cardiovascular Event; n, number; std, standard deviation; IQR, inter quartile range; hs-cTnT, high sensitivity cardiac troponin T; pathological diagnosis according to Glasgow on index ECG; Disease history recorded up to 5 years prior to the study event.}
+\label{table:characteristics}
+  \end{footnotesize}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+\subsection{Main results}
+Figure~\ref{fig:mainresults} shows the AUC with confidence intervals for the different models. In general, there was no meaningful improvement in the prediction of MACE within 30 days with the addition of a prior ECG. Some models performed slightly better with an added prior ECG, but other models performed still better with only a single ECG. For example, the RN model performed slightly better with two ECGs than with one (AUC 0.766 versus 0.758), but the MLP model with one ECG was even better (AUC 0.774 versus 0.772). The variance of the AUC for each model (as estimated through bootstrapping) was an order of magnitude larger than any difference between models with and without prior ECGs. The complete results for all the models and comparisons are included in \ref{sec:appendix:results}. 
+
+\begin{figure}[h!]
+%    \centering
+\includegraphics[width=\linewidth]{figures/main_results.pdf}
+\caption{Main results showing the test-set AUC, including 95\% confidence intervals approximated with bootstrapping. The blue bars correspond to models not using prior ECGs, and the orange bars correspond to models using both the index ECG and the prior ECG. The additional variables used by models on the right hand side of the figure are patient age, sex, troponin T and time since the previous ECG.}
+\label{fig:mainresults}
+\end{figure}
+
+\subsection{Models with versus without additional clinical variables}
+As can be seen in Figure~\ref{fig:mainresults}, all models improved considerably with the inclusion of additional clinical variables. Models using only the ECG had an AUC around 0.77 (95\% CI for the best model: 0.754--0.796), while those including the additional variables had an AUC around 0.87 (95\% CI for the best model: 0.864--0.893). The differences between models with and without a prior ECG were small in comparison. Of the four models, the MLP model performed the best, both with and without additional variables.
+
+\subsection{Patients with versus without pathological index ECGs}
+Figure \ref{fig:pathresults} shows the results stratified by the presence or absence of a pathological index ECG, for the models including additional variables. In general, all models performed slightly better in patients with non-pathological index ECGs, but there was no improvement by the addition of a prior ECG. Models based on only the ECG performed slightly better with an added prior ECG, but the best performing model (MLP) did not improve. 
+
+\begin{figure}[h!]
+\includegraphics[width=\linewidth]{figures/path_results.pdf}
+\caption{Test-set AUC of models using additional clinical variables, stratified on pathological index ECG. The 95\% confidence intervals were approximated with bootstrapping on each stratum separately. The blue bars correspond to models not using prior ECGs, and the orange bars correspond to models using both the index ECG and the prior ECG.}
+\label{fig:pathresults}
+\end{figure}
+
+\subsection{Patients in different age groups}
+The performance of the models in the different age groups is shown in \ref{sec:appendix:results}, Table~\ref{table:appendix:age}. Among the models using ECGs only, the best model (MLP) in the age bracket 51--64 years improved by the addition of a previous ECG (0.706 to 0.733 average AUC), but the performance declined in those aged 65--75 years (0.710 to 0.682 average AUC), suggesting that a previous ECG does not make a big difference. Overall, the RN model was the best ECG-only model for young patients, while the MLP performed better for older patients. Models using additional clinical variables performed substantially better in younger patients, with e.g. a mean AUC of 0.92 with the MLP model in those 18--50 years and 0.82 in those over 76 years. This pattern was much less pronounced in the models using ECGs only.
+
+\subsection{Patients with versus without previous AMI}
+The model performances stratified on previous AMI is shown in \ref{sec:appendix:results}, Table~\ref{table:appendix:ami}. In patients with or without a previous AMI, adding a prior ECG generally did not improve the predictive ability of the models. The exception was the RN models using only ECG and the LR models with additional clinical variables, but both these models were outperformed by the corresponding MLPs. The AUC of all models, both with and without additional clinical variables, were substantially lower in patients with versus without a previous AMI. 
+
+\subsection{MACE components as individual outcomes}
+As can be seen in \ref{sec:appendix:results}, Table~\ref{table:appendix:outcomes}, there were no meaningful predictive improvements with the addition of a previous ECG when evaluating the models on unstable angina, AMI and death separately. For models without additional clinical variables, unstable angina was harder to predict (best AUC 0.71) than AMI (best AUC 0.80) and death within 30 days (AUC 0.83). The corresponding AUC for models including additional clinical variables were 0.77, 0.92 and 0.89, respectively. 
+
+\section{Discussion}
+This study aimed to determine whether the addition of a previous ECG would improve the AUC of ML models predicting MACE within 30 days in ED chest pain patients. The purpose was thus not to identify the best predictive model for this outcome, but rather to give ``equal opportunity'' for models with different inputs, to see which performed the best. Our results consistently showed no improvements from prior ECGs, across several different models, additional input features, and patient subgroups, including patients of different ages, with or without prior AMI, and with pathological or non-pathological index ECGs.
+
+These findings are somewhat counterintuitive because they run against current guidelines and best practices for manual ECG analysis, with the implication that it might be a waste of time to consider prior ECGs. While one should be careful to draw hasty conclusions, it seems sensible to further scrutinize the evidence in favor of evaluating prior ECGs, especially when it is based on data that is several decades old.
+
+The lack of model improvement from prior ECGs is an indication that future research on ML for predicting MACE should focus on adding variables other than prior ECGs to the models. This is advantageous since not all patients have prior ECGs, and not all health care environments have access to digital ECG databases. To the extent that an ML model can maintain predictive performance absent prior ECGs, such models will have a wider applicability.
+
+Our models consistently performed better for several subgroups (though not with respect to prior ECGs): patients with non-pathological index ECGs, younger patients, and those with no history of AMI, were all ``easier'' to predict than their counterparts. These patients are typically healthier and have fewer comorbidities. One reason for the increased model performance could be that whenever there is no sign of MACE, such patients are more likely to in fact be healthy. Similarly, when there are signs of MACE, it counts for more because the signal is less likely to be ``obscured'' by comorbidities or other explanations.
+
+Interestingly, the best models in our comparisons were not the most advanced – the MLP outperformed both the CNN and RN models despite markedly fewer trainable parameters. We speculate that this is because the MLP model used the Glasgow features, which are expert features known to be useful for ECG analysis, while the CNN and RN models learned everything from the raw signal. In this sense, the MLP models were ``pre-trained'' with human knowledge and the CNN models were not. Given enough data and computing power, we expect that the CNN and RN models can perform at least similar to the MLP models.
+
+The MLP models used in this study are similar to that employed by \citet{ohlsson2001} who combined Glasgow features from serial ECGs in a small neural network. When adding a previous ECG, the AUC improved by three percentage points (0.85 to 0.88). In our study, we had almost three times more training data but were still unable to achieve a similar AUC, and we found no clinically significant improvement from a previous ECG. A possible explanation is that the patient populations were different; Ohlsson's data were collected in 1990--1997 and ours in 2017--18. Indeed, our AMI incidence was 7.4\% compared to over 20\% in the Ohlsson study. In addition, the characteristics of the AMI patients and the ECG findings are likely different due to new AMI definitions and highly sensitive troponin assays. 
+
+Although we only tested four different ML models, our results suggest that ML models predicting MACE in ED chest pain patients do not improve significantly by the addition of a prior ECG, and that adding other information is likely more beneficial. However, it should be noted that ED physicians may still make better decisions by comparing new and old ECGs. Humans do not assess the ECG in the same way as ML models, and ED physicians are often interested in additional outcomes other than MACE within 30 days.
+
+\subsection{Limitations}
+This study has some limitations. First, we used AUC as the metric for model performance whereas a fixed classification threshold would be used for decision-making in clinical care. We used AUC since the chosen threshold might differ in various clinical settings, and since the AUC reflects the overall performance at all thresholds. Although we cannot exclude it, we find it unlikely that the results would have been qualitatively different with a fixed classification threshold.
+
+Second, as observed in section~\ref{sec:patient_characteristics}, there were differences between the training, validation and test sets, particularly with respect to disease history. These differences likely occurred because the ESC-TROP database only includes the first visit for each patient during the study period, and because we split the dataset chronologically rather than randomly. The test set (and to a lesser degree the validation set) was therefore biased toward patients who rarely visit the ED with chest pain. The models' performances may have been worse as a result, and it is possible that splitting the dataset randomly would have improved performance. However, since this applied similarly to models with and without a previous ECG, and because the proportion of MACE was similar across the splits, we find it reasonable to believe that the qualitative effects on the results were negligible. Furthermore, randomly splitting the data comes with its own set of drawbacks, which are avoided by a chronological split \citep{steyerberg2009}.
+
+Third, our study does not include STEMI patients, so it is plausible, if not likely, that our results would differ for that patient group. However, STEMI patients, when detected, have a specific pathway through the health-care system, which largely bypasses the ED. In fact, if STEMI is detected, the patient will immediately be transferred to the cardiac care unit, so from the perspective of the ED physician, STEMI patients are ``someone else's problem''.
+\subsection{Conclusion}
+In this study, we found no improvement by adding a prior ECG to ML models predicting MACE within 30 days in ED chest pain patients. Our results were consistent across model types, patient groups, and additional model inputs. These findings suggest that ML models predicting MACE will perform equally well for patients without prior ECGs, and in the many health care settings lacking a digital ECG database.
+
+\section*{Data availability}
+The data used in this study is sensitive and can not be made publicly available. However, all the code used in the analysis, as well as the final, trained models are available at \url{https://github.com/Tipulidae/mim}. 
+
+\section*{Declaration of competing interest}
+The are no conflicts of interest to declare.
+
+\section*{Acknowledgements}
+This study was part of the AIR Lund (Artificially Intelligent use of Registers at Lund University) research environment, and received funding from the Swedish Research Council (VR; grant no. 2019-00198). The study also received funding from the Swedish Heart-Lung Foundation (2018-0173) and Sweden's innovation agency (Vinnova; DNR 2018-0192). 
+
+\bibliography{serial_ecgs}
+
+\appendix
+\section{Definition of MACE}
+\label{sec:appendix:mace}
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[H]
+  \centering
+  \scriptsize
+\begin{adjustbox}{center}
+\begin{tabular}{@{}p{3.1cm}lrr@{}}
+\toprule
+& \multicolumn{1}{l}{\textbf{Description}} & \multicolumn{1}{c}{\textbf{30-day incidence (\%)}} & \multicolumn{1}{c}{\textbf{Proportion of MACE (\%)}} \\
+\midrule
+\textbf{Diagnoses (ICD-10)} & & & \\
+\midrule
+I200                                          & Unstable angina                                        &  2.69       &   25.5   \\
+I21, I22                                      & Acute myocardial infarction                            &  6.14       &   58.1   \\
+I441, I442                                    & Atrioventricular block                                 &  0.62       &    5.9   \\
+I46                                           & Cardiac arrest                                         &  0.26       &    2.5   \\
+I470, I472, I490                              & Ventricular arrhythmia                                 &  0.33       &    3.2   \\
+J819                                          & Pulmonary edema                                        &  0.19       &    1.8   \\
+R570                                          & Cardiogenic shock                                      &  0.02       &    0.1   \\
+\midrule
+\textbf{Interventions (KV\AA{})} & & & \\
+\midrule
+DF005                                         & Placement of aortic balloon pump                       &  0.02       &    0.1   \\
+DF017, DF028                                  & Cardiopulmonary resuscitation                          &  0.04       &    0.3   \\
+FNA00, FNA10, FNC10, FNC20, FNC30, FNF96      & Coronary artery graft                                  &  0.89       &    8.4   \\
+FNG00, FNG02, FNG05                           & Percutaneous coronary intervention                     &  4.28       &   40.4   \\
+FPE00, FPE10, FPE20, FPE26                    & Transvenous pacemaker insertion                        &  0.49       &    4.7   \\
+TFP00                                         & Temporary cardiac pacing                               &  0.01       &    0.0   \\
+\midrule
+\textbf{Other} & & & \\
+\midrule
+Death                                         & All causes                                             &  1.25       &   11.8   \\
+
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\caption{MACE was defined as any of the events occuring within 30 days of the ED visit. Multiple events can occur simultaneously, which is why the sum of percentages across the categories adds up to more than 100\%.}
+\label{table:appendix:mace}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+
+\section{Additional results}
+\label{sec:appendix:results}
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[H]
+  \centering
+  \scriptsize
+\begin{adjustbox}{center}
+\begin{tabular}{@{}lcccc@{}}
+  \toprule
+  & \multicolumn{4}{c}{\textbf{AUC (95\% Confidence interval)}} \\
+  \cmidrule(lr){2-5}
+  & \multicolumn{2}{l}{\textbf{Without additional clinical variables}} & \multicolumn{2}{l}{\textbf{With additional clinical variables}} \\
+  \cmidrule(lr){2-3}\cmidrule(lr){4-5}
+\textbf{Model} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} \\
+  \midrule
+
+\textbf{LR} & 0.751 (0.730 -- 0.774) & 0.756 (0.734 -- 0.778) & 0.861 (0.845 -- 0.878) & 0.864 (0.849 -- 0.881) \\
+\textbf{MLP} & 0.774 (0.754 -- 0.796) & 0.772 (0.752 -- 0.794) & 0.878 (0.864 -- 0.893) & 0.877 (0.862 -- 0.892) \\
+\textbf{CNN} & 0.728 (0.707 -- 0.752) & 0.735 (0.714 -- 0.757) & 0.873 (0.858 -- 0.888) & 0.875 (0.860 -- 0.890) \\
+\textbf{RN} & 0.758 (0.737 -- 0.779) & 0.766 (0.745 -- 0.787) & 0.874 (0.859 -- 0.889) & 0.876 (0.861 -- 0.891) \\
+
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\caption{AUC of all the models on the test set, with 95\% confidence intervals approximated with bootstrapping.}
+\label{table:appendix:mainresults}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[H]
+  \centering
+  \scriptsize
+\begin{adjustbox}{center}
+\begin{tabular}{@{}llcccc@{}}
+  \toprule
+  & & \multicolumn{4}{c}{\textbf{AUC (95\% Confidence interval)}} \\
+  \cmidrule(lr){3-6}
+  & & \multicolumn{2}{l}{\textbf{Without additional clinical variables}} & \multicolumn{2}{l}{\textbf{With additional clinical variables}} \\
+  \cmidrule(lr){3-4}\cmidrule(lr){5-6}
+  & \multicolumn{1}{l}{\textbf{Model}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} \\
+  \midrule
+
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Non-pathological index visit ECG}\end{minipage}} %
+& \textbf{LR}  & 0.703 (0.664 -- 0.744) & 0.694 (0.654 -- 0.735) & 0.854 (0.828 -- 0.883) & 0.856 (0.830 -- 0.884) \\
+& \textbf{MLP} & 0.733 (0.696 -- 0.770) & 0.731 (0.694 -- 0.768) & 0.876 (0.852 -- 0.901) & 0.876 (0.852 -- 0.900) \\
+& \textbf{CNN} & 0.702 (0.664 -- 0.742) & 0.697 (0.660 -- 0.736) & 0.873 (0.849 -- 0.899) & 0.874 (0.851 -- 0.900) \\
+& \textbf{RN}  & 0.721 (0.684 -- 0.760) & 0.730 (0.693 -- 0.770) & 0.875 (0.852 -- 0.901) & 0.876 (0.852 -- 0.900) \\
+  \cmidrule(lr){1-2}
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Pathological index visit ECG}\end{minipage}} %
+& \textbf{LR}  & 0.704 (0.675 -- 0.735) & 0.720 (0.692 -- 0.749) & 0.826 (0.804 -- 0.850) & 0.833 (0.810 -- 0.856) \\
+& \textbf{MLP} & 0.730 (0.702 -- 0.759) & 0.732 (0.703 -- 0.761) & 0.846 (0.825 -- 0.868) & 0.844 (0.823 -- 0.867) \\
+& \textbf{CNN} & 0.663 (0.632 -- 0.694) & 0.686 (0.657 -- 0.717) & 0.837 (0.815 -- 0.860) & 0.840 (0.818 -- 0.862) \\
+& \textbf{RN}  & 0.703 (0.674 -- 0.732) & 0.714 (0.686 -- 0.743) & 0.839 (0.817 -- 0.862) & 0.842 (0.820 -- 0.864) \\
+
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\caption{AUC of all the models on the test set, evaluated separately on patients with and without pathological index ECGs. The 95\% confidence interval were approximated with bootstrapping.}
+\label{table:appendix:pathological}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[H]
+  \centering
+  \scriptsize
+\begin{adjustbox}{center}
+\begin{tabular}{@{}llcccc@{}}
+  \toprule
+  & & \multicolumn{4}{c}{\textbf{AUC (95\% Confidence interval)}} \\
+  \cmidrule(lr){3-6}
+  & & \multicolumn{2}{l}{\textbf{Without additional clinical variables}} & \multicolumn{2}{l}{\textbf{With additional clinical variables}} \\
+  \cmidrule(lr){3-4}\cmidrule(lr){5-6}
+  & \multicolumn{1}{l}{\textbf{Model}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} \\
+  \midrule
+
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{18--50 years}\end{minipage}} %
+& \textbf{LR} & 0.700 (0.582 -- 0.828) & 0.753 (0.658 -- 0.859) & 0.919 (0.883 -- 0.962) & 0.924 (0.890 -- 0.963) \\
+& \textbf{MLP} & 0.764 (0.666 -- 0.876) & 0.814 (0.738 -- 0.899) & 0.924 (0.886 -- 0.969) & 0.933 (0.903 -- 0.969) \\
+& \textbf{CNN} & 0.758 (0.664 -- 0.864) & 0.802 (0.724 -- 0.895) & 0.936 (0.907 -- 0.972) & 0.939 (0.910 -- 0.975) \\
+& \textbf{RN} & 0.825 (0.739 -- 0.925) & 0.824 (0.742 -- 0.918) & 0.937 (0.908 -- 0.972) & 0.942 (0.916 -- 0.974) \\
+  \cmidrule(lr){1-2}
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{51--64 years}\end{minipage}} %
+& \textbf{LR} & 0.667 (0.612 -- 0.723) & 0.707 (0.655 -- 0.759) & 0.852 (0.815 -- 0.892) & 0.858 (0.822 -- 0.897) \\
+& \textbf{MLP} & 0.706 (0.653 -- 0.758) & 0.733 (0.684 -- 0.782) & 0.867 (0.834 -- 0.904) & 0.866 (0.833 -- 0.902) \\
+& \textbf{CNN} & 0.672 (0.620 -- 0.726) & 0.676 (0.622 -- 0.730) & 0.860 (0.826 -- 0.897) & 0.861 (0.827 -- 0.898) \\
+& \textbf{RN} & 0.695 (0.641 -- 0.749) & 0.700 (0.645 -- 0.755) & 0.863 (0.828 -- 0.900) & 0.863 (0.829 -- 0.900) \\
+  \cmidrule(lr){1-2}  
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{65--75 years}\end{minipage}} %
+& \textbf{LR} & 0.686 (0.643 -- 0.731) & 0.681 (0.638 -- 0.728) & 0.831 (0.800 -- 0.864) & 0.828 (0.797 -- 0.861) \\
+& \textbf{MLP} & 0.710 (0.669 -- 0.752) & 0.682 (0.639 -- 0.725) & 0.846 (0.817 -- 0.877) & 0.843 (0.813 -- 0.874) \\
+& \textbf{CNN} & 0.650 (0.606 -- 0.695) & 0.653 (0.608 -- 0.698) & 0.844 (0.815 -- 0.875) & 0.846 (0.816 -- 0.876) \\
+& \textbf{RN} & 0.678 (0.636 -- 0.724) & 0.697 (0.656 -- 0.740) & 0.847 (0.818 -- 0.879) & 0.851 (0.822 -- 0.881) \\
+  \cmidrule(lr){1-2}
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Over \\76 years}\end{minipage}} %
+& \textbf{LR} & 0.709 (0.670 -- 0.749) & 0.700 (0.659 -- 0.741) & 0.808 (0.775 -- 0.843) & 0.816 (0.783 -- 0.850) \\
+& \textbf{MLP} & 0.726 (0.689 -- 0.764) & 0.727 (0.687 -- 0.768) & 0.823 (0.791 -- 0.857) & 0.818 (0.784 -- 0.853) \\
+& \textbf{CNN} & 0.661 (0.620 -- 0.702) & 0.669 (0.627 -- 0.710) & 0.807 (0.772 -- 0.843) & 0.810 (0.775 -- 0.846) \\
+& \textbf{RN} & 0.680 (0.640 -- 0.720) & 0.692 (0.653 -- 0.732) & 0.810 (0.776 -- 0.845) & 0.813 (0.779 -- 0.849) \\
+
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\caption{AUC of all the models on the test set, evaluated separately on patients in different age groups. The 95\% confidence intervals were approximated with bootstrapping.}
+\label{table:appendix:age}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[H]
+  \centering
+  \scriptsize
+\begin{adjustbox}{center}
+\begin{tabular}{@{}llcccc@{}}
+  \toprule
+  & & \multicolumn{4}{c}{\textbf{AUC (95\% Confidence interval)}} \\
+  \cmidrule(lr){3-6}
+  & & \multicolumn{2}{l}{\textbf{Without additional clinical variables}} & \multicolumn{2}{l}{\textbf{With additional clinical variables}} \\
+  \cmidrule(lr){3-4}\cmidrule(lr){5-6}
+  & \multicolumn{1}{l}{\textbf{Model}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} \\
+  \midrule
+
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{No previous AMI}\end{minipage}} %
+& \textbf{LR} & 0.749 (0.724 -- 0.774) & 0.759 (0.734 -- 0.784) & 0.868 (0.852 -- 0.886) & 0.871 (0.855 -- 0.889) \\
+& \textbf{MLP} & 0.776 (0.753 -- 0.799) & 0.777 (0.754 -- 0.801) & 0.886 (0.871 -- 0.902) & 0.885 (0.870 -- 0.902) \\
+& \textbf{CNN} & 0.724 (0.700 -- 0.750) & 0.732 (0.708 -- 0.757) & 0.882 (0.866 -- 0.899) & 0.883 (0.868 -- 0.900) \\
+& \textbf{RN} & 0.760 (0.737 -- 0.785) & 0.768 (0.744 -- 0.792) & 0.883 (0.868 -- 0.900) & 0.884 (0.869 -- 0.901) \\
+  \cmidrule(lr){1-2}
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Previous AMI}\end{minipage}} %
+& \textbf{LR} & 0.672 (0.617 -- 0.727) & 0.661 (0.604 -- 0.720) & 0.752 (0.702 -- 0.804) & 0.765 (0.716 -- 0.816) \\
+& \textbf{MLP} & 0.676 (0.621 -- 0.731) & 0.667 (0.611 -- 0.724) & 0.771 (0.724 -- 0.821) & 0.767 (0.718 -- 0.817) \\
+& \textbf{CNN} & 0.658 (0.601 -- 0.716) & 0.660 (0.604 -- 0.717) & 0.755 (0.705 -- 0.805) & 0.762 (0.713 -- 0.813) \\
+& \textbf{RN} & 0.645 (0.587 -- 0.702) & 0.660 (0.603 -- 0.715) & 0.757 (0.708 -- 0.809) & 0.766 (0.718 -- 0.817) \\
+
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\caption{AUC of all the models on the test set, evaluated separately on patients with and without a previous AMI in the past five years. The 95\% confidence intervals were approximated with bootstrapping.} 
+\label{table:appendix:ami}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+
+
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[H]
+  \centering
+  \scriptsize
+\begin{adjustbox}{center}
+\begin{tabular}{@{}llcccc@{}}
+  \toprule
+  & & \multicolumn{4}{c}{\textbf{AUC (95\% Confidence interval)}} \\
+  \cmidrule(lr){3-6}
+  & & \multicolumn{2}{l}{\textbf{Without additional clinical variables}} & \multicolumn{2}{l}{\textbf{With additional clinical variables}} \\
+  \cmidrule(lr){3-4}\cmidrule(lr){5-6}
+  & \multicolumn{1}{l}{\textbf{Model}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} & \multicolumn{1}{l}{\textbf{Index visit ECG only}} & \multicolumn{1}{l}{\textbf{Prior ECG added}} \\
+  \midrule
+
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{MACE}\end{minipage}} %
+& \textbf{LR} & 0.751 (0.730 -- 0.774) & 0.756 (0.734 -- 0.778) & 0.861 (0.845 -- 0.878) & 0.864 (0.849 -- 0.881) \\
+& \textbf{MLP} & 0.774 (0.754 -- 0.796) & 0.772 (0.752 -- 0.794) & 0.878 (0.864 -- 0.893) & 0.877 (0.862 -- 0.892) \\
+& \textbf{CNN} & 0.728 (0.707 -- 0.752) & 0.735 (0.714 -- 0.757) & 0.873 (0.858 -- 0.888) & 0.875 (0.860 -- 0.890) \\
+& \textbf{RN} & 0.758 (0.737 -- 0.779) & 0.766 (0.745 -- 0.787) & 0.874 (0.859 -- 0.889) & 0.876 (0.861 -- 0.891) \\
+  \cmidrule(lr){1-2}
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Unstable Angina}\end{minipage}} %
+& \textbf{LR} & 0.668 (0.624 -- 0.715) & 0.677 (0.633 -- 0.721) & 0.730 (0.694 -- 0.767) & 0.734 (0.699 -- 0.770) \\
+& \textbf{MLP} & 0.701 (0.659 -- 0.745) & 0.712 (0.670 -- 0.754) & 0.765 (0.733 -- 0.798) & 0.763 (0.730 -- 0.796) \\
+& \textbf{CNN} & 0.660 (0.615 -- 0.704) & 0.695 (0.652 -- 0.739) & 0.761 (0.728 -- 0.795) & 0.768 (0.735 -- 0.802) \\
+& \textbf{RN} & 0.686 (0.642 -- 0.731) & 0.690 (0.647 -- 0.736) & 0.765 (0.732 -- 0.798) & 0.765 (0.733 -- 0.798) \\
+  \cmidrule(lr){1-2}
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Acute \linebreak Myocardial \linebreak Infarction}\end{minipage}} %
+& \textbf{LR} & 0.778 (0.752 -- 0.804) & 0.788 (0.764 -- 0.814) & 0.911 (0.897 -- 0.925) & 0.914 (0.901 -- 0.929) \\
+& \textbf{MLP} & 0.800 (0.776 -- 0.826) & 0.804 (0.780 -- 0.828) & 0.922 (0.909 -- 0.936) & 0.920 (0.906 -- 0.934) \\
+& \textbf{CNN} & 0.738 (0.711 -- 0.765) & 0.748 (0.722 -- 0.775) & 0.916 (0.902 -- 0.931) & 0.917 (0.903 -- 0.932) \\
+& \textbf{RN} & 0.768 (0.742 -- 0.794) & 0.777 (0.752 -- 0.804) & 0.917 (0.903 -- 0.931) & 0.920 (0.907 -- 0.935) \\
+  \cmidrule(lr){1-2}
+\multirow{4}{*}{\begin{minipage}{0.65in}\textbf{Death}\end{minipage}} %
+& \textbf{LR} & 0.828 (0.783 -- 0.878) & 0.833 (0.792 -- 0.877) & 0.885 (0.853 -- 0.922) & 0.885 (0.855 -- 0.922) \\
+& \textbf{MLP} & 0.821 (0.779 -- 0.866) & 0.795 (0.741 -- 0.853) & 0.873 (0.843 -- 0.908) & 0.870 (0.840 -- 0.904) \\
+& \textbf{CNN} & 0.821 (0.777 -- 0.869) & 0.805 (0.757 -- 0.856) & 0.868 (0.838 -- 0.902) & 0.865 (0.834 -- 0.901) \\
+& \textbf{RN} & 0.830 (0.785 -- 0.881) & 0.827 (0.780 -- 0.880) & 0.870 (0.841 -- 0.904) & 0.871 (0.841 -- 0.907) \\
+
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\caption{AUC of all the models on the test set, evaluated against subsets of the MACE outcome. The 95\% confidence intervals were approximated with bootstrapping. Note that the models were not retrained for the new outcomes.}
+\label{table:appendix:outcomes}
+\end{table}
+\renewcommand{\arraystretch}{1}
+\end{document}
