@@ -116,7 +116,7 @@ def make_basic_features(data):
 
 
 class Base(Extractor):
-    def get_data(self) -> Container:
+    def get_development_data(self) -> Container:
         raise NotImplementedError
 
     def get_labels(self, brsm):
@@ -145,7 +145,7 @@ class Base(Extractor):
 
 
 class Flat(Base):
-    def get_data(self) -> Container:
+    def get_development_data(self) -> Container:
         brsm = load_outcomes_from_ab_brsm()
         sv = massage._multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', brsm)
 
@@ -199,7 +199,7 @@ def foo(mh, brsm, spec):
 
 
 class Ragged(Base):
-    def get_data(self) -> Container:
+    def get_development_data(self) -> Container:
         brsm = load_outcomes_from_ab_brsm()
         mh = load('/mnt/air-crypt/air-crypt-esc-trop/axel/'
                   'sk1718_brsm_staggered_diagnoses.pickle')

@@ -11,7 +11,7 @@ class FakeExtractor(Extractor):
         else:
             self.mc_kwargs = {}
 
-    def get_data(self) -> DataWrapper:
+    def get_development_data(self) -> DataWrapper:
         x, y = make_classification(**self.mc_kwargs)
         n_samples, n_features = x.shape
         feature_names = [f"x{i}" for i in range(n_features)]

@@ -151,7 +151,7 @@ class SuccessiveHalving(Searcher):
                     )
                     log.info(f"Experiment {experiment.name} with kwargs\n"
                              f"{s}\n\n")
-                    experiment.run()
+                    experiment.conduct()
                 score = np.mean(experiment.validation_scores)
                 scores[name] = score
 
@@ -236,7 +236,7 @@ class RandomSearch(Searcher):
             log.info(f"Experiment {xp.name} with kwargs\n"
                      f"{s}\n\n")
 
-            xp.run()
+            xp.conduct()
 
     def experiments(self):
         # For more complicated search strategies, this generator might have

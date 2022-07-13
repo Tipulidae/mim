@@ -48,11 +48,11 @@ class SmallTestExperiment(Experiment, Enum):
 
 class TestRunOneExperiment:
     def test_fake_experiment(self):
-        result = SmallTestExperiment.test_fake_data.run()
+        result = SmallTestExperiment.test_fake_data.conduct()
         assert isinstance(result, ExperimentResult)
         assert result.num_splits == 5
-        assert np.mean(result.test_scores) > 0.8
+        assert np.mean(result.validation_scores) > 0.8
 
     def test_keras(self):
-        result = SmallTestExperiment.test_keras.run()
-        assert np.mean(result.test_scores) > 0
+        result = SmallTestExperiment.test_keras.conduct()
+        assert np.mean(result.validation_scores) > 0

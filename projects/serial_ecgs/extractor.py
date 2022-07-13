@@ -121,7 +121,7 @@ class EscTrop(Extractor):
 
         return preprocess_ecg(data, self.processing)
 
-    def get_data(self) -> DataWrapper:
+    def get_development_data(self) -> DataWrapper:
         log.debug('Making index')
         index = self.make_index()
         log.debug('Making labels')

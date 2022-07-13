@@ -563,6 +563,55 @@ class DDSA(Experiment, Enum):
         },
     )
 
+    DELETE_ME = Experiment(
+        description="Just for testing purposes",
+        model=ptbxl_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'down_sample': False,
+                'num_layers': 3,
+                'dropout': 0.3,
+                'filter_first': 32,
+                'filter_last': 16,
+                'kernel_first': 11,
+                'kernel_last': 5,
+            },
+            'ffnn_kwargs': {
+                'sizes': [100, 10],
+                'dropouts': [0.3, 0.3],
+                'batch_norms': [False, False],
+                'activity_regularizer': 0.01,
+                'kernel_regularizer': 0.01,
+                'bias_regularizer': 0.01,
+            },
+        },
+        extractor=PTBXL,
+        extractor_kwargs={
+            'labels': {'sex': True},
+            'features': {'leads': 12, 'resolution': 'high'},
+            'index': {'size': -1}
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.001,
+            }
+        },
+        epochs=10,
+        batch_size=64,
+        building_model_requires_development_data=True,
+        ignore_callbacks=False,
+        loss='binary_crossentropy',
+        cv=ShuffleSplit,
+        cv_kwargs={
+            'n_splits': 1,
+            'train_size': 2/3,
+            'random_state': 43
+        },
+        scoring=roc_auc_score,
+        metrics=['accuracy', 'auc']
+    )
+
 
 class Tuning(HyperExperiment, Enum):
     RS_1L_ALL = HyperExperiment(

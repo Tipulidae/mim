@@ -604,5 +604,8 @@ class Extractor:
         self.fits_in_memory = fits_in_memory
         self.cv_kwargs = cv_kwargs
 
-    def get_data(self) -> DataWrapper:
+    def get_development_data(self) -> DataWrapper:
+        raise NotImplementedError
+
+    def get_test_data(self) -> DataWrapper:
         raise NotImplementedError

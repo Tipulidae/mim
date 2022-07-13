@@ -39,19 +39,19 @@ class TestExperiment:
 
     def test_default_classifier_is_rf(self):
         xp = FakeExperiment.no_default_algorithm
-        model = xp.get_model(None, None, 0)
+        model = xp.build_model(None, None, 0)
         assert isinstance(model, Model)
         assert isinstance(model.model, RandomForestClassifier)
 
     def test_different_classifier(self):
         xp = FakeExperiment.using_different_classifier
-        model = xp.get_model(None, None, 0)
+        model = xp.build_model(None, None, 0)
         assert isinstance(model, Model)
         assert isinstance(model.model, LogisticRegression)
 
     def test_can_specify_different_params(self):
         xp = FakeExperiment.has_custom_params_dict
-        assert 42 == xp.get_model(None, None, 0).model.n_estimators
+        assert 42 == xp.build_model(None, None, 0).model.n_estimators
 
     def test_result_path_for_normal_experiment(self):
         expected_path = os.path.join(
@@ -61,7 +61,8 @@ class TestExperiment:
             'results.pickle'
         )
 
-        assert FakeExperiment.default_experiment.result_path == expected_path
+        assert FakeExperiment.default_experiment.train_result_path == \
+               expected_path
 
     def test_result_path_for_bare_experiment(self):
         bare = Experiment(
@@ -75,7 +76,7 @@ class TestExperiment:
             'results.pickle'
         )
 
-        assert bare.result_path == expected_path
+        assert bare.train_result_path == expected_path
 
     def test_can_specify_parent_name_for_result_path(self):
         xp = Experiment(
@@ -92,4 +93,4 @@ class TestExperiment:
             'results.pickle'
         )
 
-        assert xp.result_path == expected_path
+        assert xp.train_result_path == expected_path

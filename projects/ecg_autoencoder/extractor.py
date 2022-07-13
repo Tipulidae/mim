@@ -55,7 +55,7 @@ class EscTropECG(Extractor):
 
         return np.array(ecgs.index), ecgs['male']
 
-    def get_data(self) -> DataWrapper:
+    def get_development_data(self) -> DataWrapper:
         log.debug('Making index')
         index, male = self.make_index()
 

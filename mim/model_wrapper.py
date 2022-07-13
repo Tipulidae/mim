@@ -2,17 +2,13 @@
 
 import os
 from enum import Enum
+from time import time
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import tensorflow.keras as keras
-
-from tensorflow.keras.callbacks import (
-    ModelCheckpoint,
-    TensorBoard,
-    ReduceLROnPlateau
-)
+from tensorflow.keras.callbacks import TensorBoard, ReduceLROnPlateau
 
 from mim.util.logs import get_logger
 from mim.util.util import keras_model_summary_as_string
@@ -46,7 +42,11 @@ class Model:
     ):
         self.model = model
         self.can_use_tf_dataset = can_use_tf_dataset
-        self.checkpoint_path = checkpoint_path
+        if checkpoint_path:
+            self.checkpoint_path = checkpoint_path
+        else:
+            self.checkpoint_path = ""
+
         if hasattr(model, "random_state"):
             model.random_state = random_state
 
@@ -77,13 +77,14 @@ class Model:
         return (self.model_type is ModelTypes.CLASSIFIER and
                 len(self.model.classes_) == 2)
 
-    def save(self, split_number, name='last.ckpt'):
+    def save(self, split_number):
+        name = 'model.sklearn'
         if split_number is None:
             split_folder = ""
         else:
             split_folder = f'split_{split_number}'
 
-        checkpoint = os.path.join(self.checkpoint_path, split_folder)
+        checkpoint = os.path.join(self.checkpoint_path, split_folder, name)
         pd.to_pickle(self.model, checkpoint)
 
     def _prediction(self, x):
@@ -104,6 +105,22 @@ class LearningRateLogger(tf.keras.callbacks.Callback):
                       tf.keras.optimizers.schedules.LearningRateSchedule):
             lr = optimizer._decayed_lr('float32').numpy()
             logs['learning_rate'] = lr
+
+
+class PredictionLogger(keras.callbacks.Callback):
+    def __init__(self, train, val):
+        super().__init__()
+        self.training_data = train.x(can_use_tf_dataset=True).batch(32)
+        self.validation_data = val.x(can_use_tf_dataset=True).batch(32)
+
+    def on_epoch_end(self, epoch, logs=None):
+        t0 = time()
+        logs["training_predictions"] = self.model.predict(
+            self.training_data)
+        if self.validation_data:
+            logs["validation_predictions"] = self.model.predict(
+                self.validation_data)
+        log.info(f"PredictionCallback time: {time() - t0}")
 
 
 class KerasWrapper(Model):
@@ -161,17 +178,18 @@ class KerasWrapper(Model):
             else:
                 split_folder = f'split_{split_number}'
 
-            checkpoint = os.path.join(self.checkpoint_path, split_folder)
+            # checkpoint = os.path.join(self.checkpoint_path, split_folder)
             tensorboard = os.path.join(self.tensorboard_path, split_folder)
 
             callbacks = [
-                ModelCheckpoint(
-                    filepath=os.path.join(checkpoint, 'last.ckpt')
-                ),
-                ModelCheckpoint(
-                    filepath=os.path.join(checkpoint, 'best.ckpt'),
-                    save_best_only=True
-                ),
+                # ModelCheckpoint(
+                #     filepath=os.path.join(checkpoint, 'last.ckpt')
+                # ),
+                # ModelCheckpoint(
+                #     filepath=os.path.join(checkpoint, 'best.ckpt'),
+                #     save_best_only=True
+                # ),
+                PredictionLogger(training_data, validation_data),
                 TensorBoard(log_dir=tensorboard),
                 LearningRateLogger()
             ]
@@ -201,7 +219,8 @@ class KerasWrapper(Model):
     def only_last_prediction_column_is_used(self):
         return False
 
-    def save(self, split_number, name='last.ckpt'):
+    def save(self, split_number):
+        name = "model.keras"
         if split_number is None:
             split_folder = ""
         else:

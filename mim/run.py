@@ -16,17 +16,19 @@ def experiment_from_name(name):
     return getattr(import_module(module_name), class_name)
 
 
-def run_experiments(experiments, continue_on_error=False):
+def run_experiments(experiments, continue_on_error=False, action='train'):
     """
     Run all experiments and save the results to disk.
 
     :param experiments: List of experiments to run
     :param continue_on_error: Whether to continue running experiments even
     if one should fail.
+    :param action: Either 'train' or 'test'. Whether to train (and validate)
+    the models, or to load a trained model and evaluate it on the test-set.
     """
     for experiment in experiments:
         try:
-            experiment.run()
+            experiment.run(action=action)
         except Exception as e:
             log.error(
                 f'Something went wrong with task {experiment.name}! '
@@ -39,15 +41,35 @@ def run_experiments(experiments, continue_on_error=False):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="Run (or re-run) experiments from enum specified in base "
-                    "argument. Experiment is expected to be in the projects "
-                    "module. Example: \n "
-                    "'python -m mim.run ddsa.experiment.DDSA -p CNN1_1L' \n "
-                    "will run all experiments that starts with CNN1_1L in the "
-                    "DDSA experiment enum in the projects.ddsa.experiment "
-                    "module."
+    description = """
+    An experiment is a recipe that specifies a model, parameters and data.
+    Each experiment has a unique name, and is listed in one of the project
+    modules. Use this function to either run (train + validate) an experiment,
+    or to evaluate it (load a previously trained model and evaluate it on the
+    test set). The action parameter specifies whether to train or test the
+    experiment.
+
+    Example usage: \n
+    'python -m mim.run ddsa.experiments.DDSA -p CNN1_1L' --action test\n
+    will evaluate all experiments that starts with CNN1_1L in the
+    DDSA experiment enum in the projects.ddsa.experiment module.
+
+    Type --help for more info.
+    """
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        'base',
+        help='name of the base experiment to run. Example: '
+             'serial_ecgs.experiments.ESCT'
     )
+    parser.add_argument(
+        '-a', '--action', type=str, choices=['train', 'test'],
+        help='whether to train (and validate) or test the models. '
+             'Can only test experiments that are done training. '
+             'Default is train.',
+        default='train'
+    )
+
     parser.add_argument(
         '-r', '--rerun',
         help='rerun experiments that already have a result',
@@ -65,11 +87,6 @@ if __name__ == '__main__':
         action='store_true'
     )
     parser.add_argument(
-        'base',
-        help='name of the base experiment to run. Example: '
-             'serial_ecgs.experiments.ESCT'
-    )
-    parser.add_argument(
         '-x', '--xps',
         help='comma separated list of experiments to run (if not specified, '
              'run all experiments)',
@@ -83,8 +100,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     xps_done = []
-    xps_todo = []
+    xps_to_run = []
     xps_to_rerun = []
+    xps_not_conducted = []
 
     base_xp_enum = experiment_from_name(args.base)
 
@@ -100,11 +118,20 @@ if __name__ == '__main__':
     else:
         xps_to_consider = list(base_xp_enum)
 
-    for xp in xps_to_consider:
-        if xp.is_done:
-            xps_done.append(xp)
-        else:
-            xps_todo.append(xp)
+    if args.action == 'train':
+        for xp in xps_to_consider:
+            if xp.is_trained:
+                xps_done.append(xp)
+            else:
+                xps_to_run.append(xp)
+    elif args.action == 'test':
+        for xp in xps_to_consider:
+            if xp.is_evaluated:
+                xps_done.append(xp)
+            elif xp.is_trained:
+                xps_to_run.append(xp)
+            else:
+                xps_not_conducted.append(xp)
 
     if args.rerun:
         xps_to_rerun = xps_done
@@ -112,21 +139,28 @@ if __name__ == '__main__':
 
     for xp in xps_done:
         log.info(f'{xp.name} has status DONE')
-    for xp in xps_todo:
-        log.info(f'{xp.name} has status NOT STARTED')
+    for xp in xps_not_conducted:
+        log.info(f'{xp.name} has status NOT CONDUCTED')
+    for xp in xps_to_run:
+        log.info(f'{xp.name} has status RUN')
     for xp in xps_to_rerun:
-        log.info(f'{xp.name} has status RERUN')
+        log.info(f'{xp.name} has status RE-RUN')
 
     log.info(f'{len(xps_done)} experiments has status DONE')
-    log.info(f'{len(xps_todo)} experiments has status NOT STARTED')
-    log.info(f'{len(xps_to_rerun)} experiments has status RERUN')
+    log.info(f'{len(xps_to_run)} experiments has status RUN')
+    log.info(f'{len(xps_to_rerun)} experiments has status RE-RUN')
+    if xps_not_conducted:
+        log.info(f"{len(xps_not_conducted)} experiments has status "
+                 f"NOT CONDUCTED and can't be evaluated.")
 
-    all_xps_to_run = xps_todo + xps_to_rerun
+    all_xps_to_run = xps_to_run + xps_to_rerun
 
     if not args.suppress:
         answer = input(
-            f'Continue running {len(all_xps_to_run)} experiments? (y/n)')
+            f'Continue running ({args.action}ing) {len(all_xps_to_run)} '
+            f'experiments? (y/n)')
         if answer.lower() != 'y':
             exit(0)
 
-    run_experiments(all_xps_to_run, continue_on_error=args.force)
+    run_experiments(all_xps_to_run, continue_on_error=args.force,
+                    action=args.action)

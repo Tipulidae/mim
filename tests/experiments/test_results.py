@@ -1,11 +1,11 @@
 import pandas as pd
 
-from mim.experiments.results import TrainingResult, ExperimentResult
+from mim.experiments.results import TrainResult, ExperimentResult
 
 
 class TestExperimentResult:
     def test_predictions_from_single_fold(self):
-        p = TrainingResult(
+        p = TrainResult(
             fit_time=0.1,
             score_time=0.2,
             targets=pd.DataFrame([1, 0, 0, 1]),
@@ -18,22 +18,22 @@ class TestExperimentResult:
             experiment_summary={},
         )
 
-        assert r.predictions.equals(p.predictions)
+        assert r.validation_predictions.equals(p.validation_predictions)
 
     def test_predictions_from_multiple_folds(self):
-        p1 = TrainingResult(
+        p1 = TrainResult(
             fit_time=0.1,
             score_time=0.2,
             targets=pd.DataFrame([1, 0, 0, 1]),
             predictions=pd.DataFrame([0.8, 0.2, 0.1, 0.6]),
         )
-        p2 = TrainingResult(
+        p2 = TrainResult(
             fit_time=0.1,
             score_time=0.2,
             targets=pd.DataFrame([1, 1, 0, 0]),
             predictions=pd.DataFrame([0.8, 0.4, 0.1, 0.4]),
         )
-        p3 = TrainingResult(
+        p3 = TrainResult(
             fit_time=0.1,
             score_time=0.2,
             targets=pd.DataFrame([0, 0, 0, 1, 1, 0, 0]),
@@ -51,11 +51,11 @@ class TestExperimentResult:
              0.4, 0.1, 0.4],
             index=[0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6]
         )
-        print(r.predictions)
-        assert r.predictions.equals(expected_predictions)
+        print(r.validation_predictions)
+        assert r.validation_predictions.equals(expected_predictions)
 
     def test_single_split_history(self):
-        p1 = TrainingResult(
+        p1 = TrainResult(
             fit_time=0.1,
             score_time=0.2,
             targets=pd.DataFrame([1, 0, 0, 1]),
@@ -78,7 +78,7 @@ class TestExperimentResult:
         assert r.history.equals(expected_history)
 
     def test_double_split_history(self):
-        p1 = TrainingResult(
+        p1 = TrainResult(
             fit_time=0.1,
             score_time=0.2,
             targets=pd.DataFrame([1, 0, 0, 1]),
@@ -88,7 +88,7 @@ class TestExperimentResult:
                 'val_loss': [3, 1.2, 0.9, 0.6]
             }
         )
-        p2 = TrainingResult(
+        p2 = TrainResult(
             fit_time=0.1,
             score_time=0.2,
             targets=pd.DataFrame([1, 0, 0, 1]),

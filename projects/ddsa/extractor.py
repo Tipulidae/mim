@@ -46,7 +46,7 @@ def make_features(info, resolution='high', leads=12):
     return x, columns
 
 
-def make_index(size=-1):
+def _load_ptbxl_index_info():
     index = (
         pd.read_csv(
             os.path.join(PTBXL_PATH, 'ptbxl_database.csv'),
@@ -56,19 +56,35 @@ def make_index(size=-1):
         .dropna(subset=['sex', 'age', 'weight', 'height'])
         .drop_duplicates(subset=['patient_id'], keep='first')
     )
-    index = index[index.strat_fold < 9]
     index.patient_id = index.patient_id.astype(int)
+    return index
 
+
+def make_development_index(size=-1):
+    index = _load_ptbxl_index_info()
+    index = index[index.strat_fold < 9]
     if 0 < size <= len(index):
         index = index.iloc[:size, :]
 
     return index
 
 
-class PTBXL(Extractor):
-    def get_data(self) -> DataWrapper:
-        index = make_index(**self.index)
+def make_test_index():
+    index = _load_ptbxl_index_info()
+    index = index[index.strat_fold == 9]
+    return index
 
+
+class PTBXL(Extractor):
+    def get_development_data(self) -> DataWrapper:
+        index = make_development_index(**self.index)
+        return self._make_data(index)
+
+    def get_test_data(self) -> DataWrapper:
+        index = make_test_index()
+        return self._make_data(index)
+
+    def _make_data(self, index):
         return DataWrapper(
             features=make_features(index, **self.features),
             labels=make_labels(index, **self.labels),

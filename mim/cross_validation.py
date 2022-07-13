@@ -21,6 +21,9 @@ class CrossValidationWrapper:
         for train, val in self.cv.split(x, y=y, groups=groups):
             yield data.split(train, val)
 
+    def get_n_splits(self):
+        return self.cv.get_n_splits()
+
 
 def targets_for_stratification(data):
     """

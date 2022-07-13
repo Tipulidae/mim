@@ -5,24 +5,26 @@ import shutil
 from copy import copy
 from time import time
 from pathlib import Path
-from typing import Any, NamedTuple, Callable, Union
+from glob import glob
+from typing import Any, Tuple, NamedTuple, Callable, Union
 
 import numpy as np
 import pandas as pd
 import silence_tensorflow.auto  # noqa: F401
 import tensorflow as tf
+from tensorflow import keras
 from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import PredefinedSplit, KFold
 
-from mim.extractors.extractor import Extractor, DataWrapper
+from mim.extractors.extractor import Extractor
 from mim.cross_validation import CrossValidationWrapper
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
 from mim.util.metadata import Metadata
 from mim.util.util import callable_to_string
-from mim.experiments.results import ExperimentResult, TrainingResult
+from mim.experiments.results import ExperimentResult, TestResult, Result
 import mim.experiments.hyper_parameter as hp
 
 log = get_logger("Experiment")
@@ -66,31 +68,83 @@ class Experiment(NamedTuple):
     pre_processor_kwargs: dict = {}
     reduce_lr_on_plateau: Any = None
 
-    def run(self):
+    def run(self, action='train'):
         try:
             # Wipe all old results here!
-            if os.path.exists(self.base_path):
-                log.debug(f'Removing old experiment results from '
-                          f'{self.base_path}')
-                shutil.rmtree(self.base_path, ignore_errors=True)
+            if action == 'train':
+                self.clear_old_results()
+                results = self._train_and_validate()
+                path = self.train_result_path
+            elif action == 'test':
+                results = self._evaluate()
+                path = self.test_result_path
             else:
-                log.debug('No old experiment results found.')
+                raise ValueError(
+                    f'Invalid action, {action}, must be either train '
+                    f'or test!'
+                )
 
-            os.makedirs(self.base_path, exist_ok=True)
-            results = self._run()
             if self.save_results:
-                pd.to_pickle(results, self.result_path)
-                log.debug(f'Saved results in {self.result_path}')
+                pd.to_pickle(results, path)
+                log.debug(f'Saved results in {path}')
             return results
         except Exception as e:
             log.error('Something went wrong!')
             raise e
 
-    def _run(self) -> ExperimentResult:
+    def clear_old_results(self):
+        if os.path.exists(self.base_path):
+            log.debug(f'Removing old experiment results from '
+                      f'{self.base_path}')
+            shutil.rmtree(self.base_path, ignore_errors=True)
+        else:
+            log.debug('No old experiment results found.')
+
+        os.makedirs(self.base_path, exist_ok=True)
+
+    def _evaluate(self) -> TestResult:
+        """
+        Evaluate the experiment on the test set. This will load a previously
+        trained model, which requires the _train_and_validate step to have
+        finished. After loading the model (or models, if there are more than
+        one split in the cross-validation), evaluate it on the test-set.
+        """
+        log.info(f'Evaluating experiment {self.name}: {self.description}')
+        data = self.get_extractor().get_test_data()
+        targets = data.y
+        predictions = []
+        for path in self._model_paths():
+            model = self.load_model(path)
+            prediction = model.predict(data)
+            predictions.append(prediction)
+
+        predictions = pd.concat(
+            predictions,
+            axis=1,
+            keys=range(len(predictions)),
+            names=['split', 'target']
+        )
+
+        results = TestResult(
+            metadata=Metadata().report(conda=self.log_conda_env),
+            targets=targets,
+            predictions=predictions
+        )
+        return results
+
+    def _model_paths(self):
+        return glob(os.path.join(self.base_path, 'split*/model.*'))
+
+    def _train_and_validate(self) -> ExperimentResult:
+        """
+        Load all the necessary data, split according to the specified
+        cross-validation function. Build the model, then train using the
+        training data and evaluate on the validation data.
+        """
         log.info(f'Running experiment {self.name}: {self.description}')
         t = time()
 
-        data = self.get_data()
+        data = self.get_extractor().get_development_data()
         results = ExperimentResult(
             feature_names=data.feature_names,
             metadata=Metadata().report(conda=self.log_conda_env),
@@ -102,16 +156,17 @@ class Experiment(NamedTuple):
         for i, (train, validation) in enumerate(cv.split(data)):
             pre_process = self.get_pre_processor(i)
             train, validation = pre_process(train, validation)
-            results.add(
-                train_model(
-                    train,
-                    validation,
-                    self.get_model(train, validation, split_number=i),
-                    self.scoring,
-                    split_number=i,
-                    save_model=self.save_model
-                )
+            model = self.build_model(train, validation, split_number=i)
+            results.model_summary = model.summary
+            train_result, validation_result = train_model(
+                train,
+                validation,
+                model,
+                self.scoring,
+                split_number=i,
+                save_model=self.save_model
             )
+            results.add(train_result, validation_result)
 
         log.info(f'Finished computing scores for {self.name} in '
                  f'{time() - t}s. ')
@@ -124,14 +179,13 @@ class Experiment(NamedTuple):
         return self.pre_processor(
             split_number=split, **self.pre_processor_kwargs)
 
-    def get_data(self) -> DataWrapper:
+    def get_extractor(self) -> Extractor:
         """
-        Uses the extractor and specifications to create the X and y data
-        set.
+        Create and return the Extractor
 
-        :return: DataWrapper object
+        :return: Extractor object
         """
-        return self.extractor(**self.extractor_kwargs).get_data()
+        return self.extractor(**self.extractor_kwargs)
 
     def get_cross_validation(self, predefined_splits=None):
         if not self.use_predefined_splits and self.cv is None:
@@ -149,7 +203,7 @@ class Experiment(NamedTuple):
 
         return CrossValidationWrapper(cv)
 
-    def get_model(self, train, validation, split_number):
+    def build_model(self, train, validation, split_number):
         model_kwargs = copy(self.model_kwargs)
 
         if self.building_model_requires_development_data:
@@ -168,7 +222,9 @@ class Experiment(NamedTuple):
         np.random.seed(rand_state)
         tf.random.set_seed(rand_state)
         model = self.model(**model_kwargs)
+        return self._wrap_model(model)
 
+    def _wrap_model(self, model):
         if isinstance(model, tf.keras.Model):
             # TODO: refactor this! :(
             if isinstance(self.optimizer, dict):
@@ -208,6 +264,17 @@ class Experiment(NamedTuple):
                 random_state=self.random_state
             )
 
+    def load_model(self, path):
+        def _load():
+            model_type = path.split('.')[-1]
+            if model_type == 'sklearn':
+                return pd.read_pickle(path)
+            elif model_type == 'keras':
+                return keras.models.load_model(filepath=path)
+            raise TypeError(f'Unexpected model type {model_type}')
+
+        return self._wrap_model(_load())
+
     def asdict(self):
         return callable_to_string(self._asdict())
 
@@ -223,8 +290,12 @@ class Experiment(NamedTuple):
             return self.alias
 
     @property
-    def result_path(self):
-        return os.path.join(self.base_path, 'results.pickle')
+    def train_result_path(self):
+        return os.path.join(self.base_path, 'train_val_results.pickle')
+
+    @property
+    def test_result_path(self):
+        return os.path.join(self.base_path, 'test_results.pickle')
 
     @property
     def base_path(self):
@@ -238,49 +309,83 @@ class Experiment(NamedTuple):
         )
 
     @property
-    def is_done(self):
-        file = Path(self.result_path)
+    def is_trained(self):
+        file = Path(self.train_result_path)
+        return file.is_file()
+
+    @property
+    def is_evaluated(self):
+        file = Path(self.test_result_path)
         return file.is_file()
 
     @property
     def validation_scores(self):
-        if self.is_done:
-            results = pd.read_pickle(self.result_path)
-            return results.test_scores
+        if self.is_trained:
+            results = pd.read_pickle(self.train_result_path)
+            return results.validation_scores
         else:
             return None
 
 
+def _training_prediction_history(history_dict, index):
+    return _prediction_history(history_dict, index, 'training_predictions')
+
+
+def _validation_prediction_history(history_dict, index):
+    return _prediction_history(history_dict, index, 'validation_predictions')
+
+
+def _prediction_history(history_dict, key, index):
+    if key not in history_dict:
+        return None
+
+    data = np.hstack(history_dict[key])
+    return pd.DataFrame(
+        data,
+        index=index,
+        columns=pd.Index(range(data.shape[1]), name='epoch')
+    )
+
+
+def gather_results(model, history, data, key) -> Result:
+    result = Result()
+    result.targets = data.y
+    result.predictions = model.predict(data)
+    result.history = _prediction_history(history, key, result.targets.index)
+    return result
+
+
 def train_model(training_data, validation_data, model, scoring,
-                split_number=None, save_model=True) -> TrainingResult:
-    result = TrainingResult(model_summary=model.summary)
+                split_number=None, save_model=True) -> Tuple[Result, Result]:
     t0 = time()
     log.info(f'\n\nFitting classifier, split {split_number}')
 
-    result.history = model.fit(
+    history = model.fit(
         training_data,
         validation_data=validation_data,
         split_number=split_number
     )
-    result.fit_time = time() - t0
+    train_result = gather_results(
+        model, history, training_data, 'training_predictions')
+    train_result.time = time() - t0
+
+    validation_result = gather_results(
+        model, history, validation_data, 'validation_predictions')
+
+    validation_result.time = time() - train_result.time - t0
+
+    if scoring:
+        train_result.score = scoring(
+            train_result.targets, train_result.predictions)
+        validation_result.score = scoring(
+            validation_result.targets, validation_result.predictions)
+        log.debug(f'train score: {train_result.score}, '
+                  f'validation score: {validation_result.score}')
 
     if save_model:
         model.save(split_number=split_number)
 
-    result.targets = validation_data.y
-    result.predictions = model.predict(validation_data)
-    result.score_time = time() - result.fit_time - t0
-
-    if scoring:
-        result.train_score = scoring(
-            training_data.y,
-            model.predict(training_data),
-        )
-        result.test_score = scoring(result.targets, result.predictions)
-        log.debug(f'test score: {result.test_score}, '
-                  f'train score: {result.train_score}')
-
-    return result
+    return train_result, validation_result
 
 
 def fix_metrics(m):

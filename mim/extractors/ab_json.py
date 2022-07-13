@@ -62,7 +62,7 @@ class JSONDataPoint:
 
 
 class ABJSONExtractor(Extractor):
-    def get_data(self) -> Container:
+    def get_development_data(self) -> Container:
         train_json = []
         for train_file in self.index['train_files']:
             train_json.extend(_parse_json(train_file))

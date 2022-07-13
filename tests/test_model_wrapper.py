@@ -6,7 +6,7 @@ from mim.fakes.fake_extractors import FakeExtractor
 
 class TestModel:
     def test_rf_binary_classification_output_is_one_dimensional(self):
-        data = FakeExtractor().get_data()
+        data = FakeExtractor().get_development_data()
         clf = Model(RandomForestClassifier(n_estimators=10))
         clf.fit(data)
         assert clf.only_last_prediction_column_is_used
