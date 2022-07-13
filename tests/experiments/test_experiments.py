@@ -58,7 +58,7 @@ class TestExperiment:
             PATH_TO_TEST_RESULTS,
             'FakeExperiment',
             'default_experiment',
-            'results.pickle'
+            'train_val_results.pickle'
         )
 
         assert FakeExperiment.default_experiment.train_result_path == \
@@ -73,7 +73,7 @@ class TestExperiment:
             PATH_TO_TEST_RESULTS,
             'Experiment',
             'bare',
-            'results.pickle'
+            'train_val_results.pickle'
         )
 
         assert bare.train_result_path == expected_path
@@ -90,7 +90,7 @@ class TestExperiment:
             'HyperSearch',
             'RANDOM_SEARCH',
             'foo',
-            'results.pickle'
+            'train_val_results.pickle'
         )
 
         assert xp.train_result_path == expected_path

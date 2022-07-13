@@ -336,7 +336,7 @@ def _validation_prediction_history(history_dict, index):
 
 
 def _prediction_history(history_dict, key, index):
-    if key not in history_dict:
+    if not history_dict or key not in history_dict:
         return None
 
     data = np.hstack(history_dict[key])
