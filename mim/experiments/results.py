@@ -10,7 +10,8 @@ class Result:
     score: float = 0.0
     targets: pd.DataFrame = None
     predictions: pd.DataFrame = None
-    history: pd.DataFrame = None
+    prediction_history: pd.DataFrame = None
+    history: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -39,7 +40,7 @@ class ExperimentResult:
         return len(self.training_results)
 
     @property
-    def train_times(self):
+    def training_times(self):
         return [r.time for r in self.training_results]
 
     @property
@@ -47,7 +48,7 @@ class ExperimentResult:
         return [r.time for r in self.validation_results]
 
     @property
-    def train_scores(self):
+    def training_scores(self):
         return [r.score for r in self.training_results]
 
     @property
@@ -60,7 +61,7 @@ class ExperimentResult:
             [r.targets for r in self.validation_results], axis=0)
 
     @property
-    def train_targets(self):
+    def training_targets(self):
         return pd.concat(
             [r.targets for r in self.training_results], axis=0)
 
@@ -75,30 +76,35 @@ class ExperimentResult:
             [r.predictions for r in self.training_results], axis=0)
 
     @property
-    def training_history(self):
+    def training_prediction_history(self):
+        return self._prediction_history(self.training_results)
+
+    @property
+    def validation_prediction_history(self):
+        return self._prediction_history(self.validation_results)
+
+    def _prediction_history(self, results):
         return pd.concat(
-            [r.history for r in self.training_results],
+            [r.prediction_history for r in results],
             axis=1,
             keys=range(self.num_splits),
-            names=['split', 'epoch']
+            names=['split', 'epoch', 'target']
         )
+
+    @property
+    def training_history(self):
+        return self._result_history(self.training_results)
 
     @property
     def validation_history(self):
-        return pd.concat(
-            [r.history for r in self.validation_results],
-            axis=1,
-            keys=range(self.num_splits),
-            names=['split', 'epoch']
-        )
+        return self._result_history(self.validation_results)
 
-    @property
-    def history(self):
-        if self.training_results[0].history is None:
+    def _result_history(self, results):
+        if results[0].history is None:
             return None
 
         return pd.concat(
-            [pd.DataFrame(r.history) for r in self.training_results],
+            [pd.DataFrame(r.history) for r in results],
             keys=range(self.num_splits),
             names=['split', 'epoch'],
             axis=1

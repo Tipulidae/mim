@@ -587,7 +587,7 @@ class DDSA(Experiment, Enum):
         },
         extractor=PTBXL,
         extractor_kwargs={
-            'labels': {'sex': True},
+            'labels': {'age': True, 'weight': True},
             'features': {'leads': 12, 'resolution': 'high'},
             'index': {'size': -1}
         },
@@ -601,15 +601,23 @@ class DDSA(Experiment, Enum):
         batch_size=64,
         building_model_requires_development_data=True,
         ignore_callbacks=False,
-        loss='binary_crossentropy',
+        save_prediction_history=True,
+        save_model_checkpoints=False,
+        use_tensorboard=False,
+        save_learning_rate=True,
+
         cv=ShuffleSplit,
         cv_kwargs={
             'n_splits': 1,
             'train_size': 2/3,
             'random_state': 43
         },
-        scoring=roc_auc_score,
-        metrics=['accuracy', 'auc']
+        # loss='binary_crossentropy',
+        # scoring=roc_auc_score,
+        # metrics=['accuracy', 'auc']
+        loss='mean_absolute_error',
+        scoring=r2_score,
+        metrics=['mae', 'mse']
     )
 
 

@@ -121,7 +121,7 @@ class EscTrop(Extractor):
 
         return preprocess_ecg(data, self.processing)
 
-    def get_development_data(self) -> DataWrapper:
+    def get_data(self):
         log.debug('Making index')
         index = self.make_index()
         log.debug('Making labels')
@@ -143,9 +143,17 @@ class EscTrop(Extractor):
         hold_out_splitter = CrossValidationWrapper(
             ChronologicalSplit(test_size=test_size)
         )
-        dev, _ = next(hold_out_splitter.split(data))
+        development_data, test_data = next(hold_out_splitter.split(data))
         log.debug('Finished extracting esc-trop data')
-        return dev
+        return development_data, test_data
+
+    def get_development_data(self) -> DataWrapper:
+        development_data, _ = self.get_data()
+        return development_data
+
+    def get_test_data(self) -> DataWrapper:
+        _, test_data = self.get_data()
+        return test_data
 
 
 def preprocess_ecg(data, processing, scale=5000):

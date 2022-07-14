@@ -55,7 +55,6 @@ class Experiment(NamedTuple):
     initial_epoch: int = 0
     batch_size: Union[int, hp.Param] = 64
     metrics: Any = ['accuracy', 'auc']
-    ignore_callbacks: bool = False
     skip_compile: bool = False
     random_state: Union[int, hp.Param] = 123
     scoring: Any = roc_auc_score
@@ -67,6 +66,11 @@ class Experiment(NamedTuple):
     pre_processor: Any = None
     pre_processor_kwargs: dict = {}
     reduce_lr_on_plateau: Any = None
+    ignore_callbacks: bool = False
+    save_prediction_history: bool = False
+    save_model_checkpoints: bool = False
+    use_tensorboard: bool = False
+    save_learning_rate: bool = False
 
     def run(self, action='train'):
         try:
@@ -255,6 +259,10 @@ class Experiment(NamedTuple):
                 metrics=fix_metrics(self.metrics),
                 skip_compile=self.skip_compile,
                 ignore_callbacks=self.ignore_callbacks,
+                save_prediction_history=self.save_prediction_history,
+                save_model_checkpoints=self.save_model_checkpoints,
+                use_tensorboard=self.use_tensorboard,
+                save_learning_rate=self.save_learning_rate,
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
             )
         else:
@@ -327,32 +335,47 @@ class Experiment(NamedTuple):
             return None
 
 
-def _training_prediction_history(history_dict, index):
-    return _prediction_history(history_dict, index, 'training_predictions')
-
-
-def _validation_prediction_history(history_dict, index):
-    return _prediction_history(history_dict, index, 'validation_predictions')
-
-
-def _prediction_history(history_dict, key, index):
-    if not history_dict or key not in history_dict:
-        return None
-
-    data = np.hstack(history_dict[key])
-    return pd.DataFrame(
-        data,
-        index=index,
-        columns=pd.Index(range(data.shape[1]), name='epoch')
+def _history_to_dataframe(history, data):
+    # history is a list of dataframes, and I want to combine them into
+    # one big dataframe
+    return pd.concat(
+        map(data.to_dataframe, history),
+        axis=1,
+        keys=range(len(history)),
+        names=['epoch', 'target']
     )
 
 
-def gather_results(model, history, data, key) -> Result:
+def gather_results(model, history_dict, data) -> Result:
     result = Result()
     result.targets = data.y
     result.predictions = model.predict(data)
-    result.history = _prediction_history(history, key, result.targets.index)
+    if not history_dict:
+        return result
+
+    if 'predictions' in history_dict:
+        predictions = history_dict.pop('predictions')
+        result.prediction_history = _history_to_dataframe(predictions, data)
+
+    result.history = history_dict
     return result
+
+
+def _split_history(history_dict):
+    training_history = {}
+    validation_history = {}
+
+    if history_dict:
+        for key, value in history_dict.items():
+            if 'val_' in key:
+                if key == 'val_predictions':
+                    validation_history['predictions'] = value
+                else:
+                    validation_history[key] = value
+            else:
+                training_history[key] = value
+
+    return training_history, validation_history
 
 
 def train_model(training_data, validation_data, model, scoring,
@@ -365,13 +388,11 @@ def train_model(training_data, validation_data, model, scoring,
         validation_data=validation_data,
         split_number=split_number
     )
-    train_result = gather_results(
-        model, history, training_data, 'training_predictions')
+    train_history, val_history = _split_history(history)
+    train_result = gather_results(model, train_history, training_data)
     train_result.time = time() - t0
 
-    validation_result = gather_results(
-        model, history, validation_data, 'validation_predictions')
-
+    validation_result = gather_results(model, val_history, validation_data)
     validation_result.time = time() - train_result.time - t0
 
     if scoring:

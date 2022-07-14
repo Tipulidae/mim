@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import tensorflow.keras as keras
-from tensorflow.keras.callbacks import TensorBoard, ReduceLROnPlateau
+from tensorflow.keras.callbacks import TensorBoard, ReduceLROnPlateau, \
+    ModelCheckpoint
 
 from mim.util.logs import get_logger
 from mim.util.util import keras_model_summary_as_string
@@ -115,12 +116,19 @@ class PredictionLogger(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         t0 = time()
-        logs["training_predictions"] = self.model.predict(
-            self.training_data)
+        logs["predictions"] = _fix_prediction(
+            self.model.predict(self.training_data))
         if self.validation_data:
-            logs["validation_predictions"] = self.model.predict(
-                self.validation_data)
+            logs["val_predictions"] = _fix_prediction(
+                self.model.predict(self.validation_data))
         log.info(f"PredictionCallback time: {time() - t0}")
+
+
+def _fix_prediction(prediction):
+    if isinstance(prediction, list):
+        return np.concatenate(prediction, axis=1)
+    else:
+        return prediction
 
 
 class KerasWrapper(Model):
@@ -135,6 +143,10 @@ class KerasWrapper(Model):
             loss_weights=None,
             metrics=None,
             ignore_callbacks=False,
+            save_prediction_history=False,
+            save_model_checkpoints=False,
+            use_tensorboard=False,
+            save_learning_rate=False,
             checkpoint_path=None,
             skip_compile=False,
             tensorboard_path=None,
@@ -158,6 +170,10 @@ class KerasWrapper(Model):
         self.epochs = epochs
         self.initial_epoch = initial_epoch
         self.ignore_callbacks = ignore_callbacks
+        self.save_prediction_history = save_prediction_history
+        self.save_model_checkpoints = save_model_checkpoints
+        self.use_tensorboard = use_tensorboard
+        self.save_learning_rate = save_learning_rate
         self.class_weight = class_weight
         self.reduce_lr_on_plateau = reduce_lr_on_plateau
         log.info("\n\n" + keras_model_summary_as_string(model))
@@ -173,31 +189,9 @@ class KerasWrapper(Model):
         if self.ignore_callbacks:
             callbacks = None
         else:
-            if split_number is None:
-                split_folder = ""
-            else:
-                split_folder = f'split_{split_number}'
-
-            # checkpoint = os.path.join(self.checkpoint_path, split_folder)
-            tensorboard = os.path.join(self.tensorboard_path, split_folder)
-
-            callbacks = [
-                # ModelCheckpoint(
-                #     filepath=os.path.join(checkpoint, 'last.ckpt')
-                # ),
-                # ModelCheckpoint(
-                #     filepath=os.path.join(checkpoint, 'best.ckpt'),
-                #     save_best_only=True
-                # ),
-                PredictionLogger(training_data, validation_data),
-                TensorBoard(log_dir=tensorboard),
-                LearningRateLogger()
-            ]
-
-            if self.reduce_lr_on_plateau is not None:
-                callbacks.append(
-                    ReduceLROnPlateau(**self.reduce_lr_on_plateau)
-                )
+            callbacks = self._init_callbacks(
+                split_number, training_data, validation_data
+            )
         if self.batch_size < 0:
             self.batch_size = len(training_data)
         return super().fit(
@@ -210,6 +204,34 @@ class KerasWrapper(Model):
             class_weight=self.class_weight,
             **kwargs
         )
+
+    def _init_callbacks(self, split_number, training_data, validation_data):
+        callbacks = []
+        if split_number is None:
+            split_folder = ""
+        else:
+            split_folder = f'split_{split_number}'
+
+        if self.save_prediction_history:
+            callbacks.append(
+                PredictionLogger(training_data, validation_data)
+            )
+        if self.save_model_checkpoints:
+            path = os.path.join(self.checkpoint_path, split_folder)
+            callbacks.append(ModelCheckpoint(
+                filepath=os.path.join(path, 'last.ckpt')))
+            callbacks.append(ModelCheckpoint(
+                filepath=os.path.join(path, 'last.ckpt')))
+        if self.use_tensorboard:
+            path = os.path.join(self.tensorboard_path, split_folder)
+            callbacks.append(TensorBoard(log_dir=path))
+        if self.save_learning_rate:
+            callbacks.append(LearningRateLogger())
+        if self.reduce_lr_on_plateau is not None:
+            callbacks.append(
+                ReduceLROnPlateau(**self.reduce_lr_on_plateau)
+            )
+        return callbacks
 
     @property
     def summary(self):
@@ -231,7 +253,4 @@ class KerasWrapper(Model):
 
     def _prediction(self, x):
         prediction = self.model.predict(x.batch(self.batch_size))
-        if isinstance(prediction, list):
-            return np.concatenate(prediction, axis=1)
-
-        return prediction
+        return _fix_prediction(prediction)
