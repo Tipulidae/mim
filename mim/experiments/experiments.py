@@ -17,7 +17,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import PredefinedSplit, KFold
 
-from mim.extractors.extractor import Extractor
+from mim.experiments.extractor import Extractor
 from mim.cross_validation import CrossValidationWrapper
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper

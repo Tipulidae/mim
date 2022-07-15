@@ -1,4 +1,4 @@
-from mim.extractors.extractor import DataWrapper
+from mim.experiments.extractor import DataWrapper
 from mim.fakes.fake_extractors import FakeExtractor
 
 

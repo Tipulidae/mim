@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
+from enum import Enum
 
 import pandas as pd
 
@@ -17,6 +18,11 @@ from mim.util.ab_util import parse_iso8601_datetime
 #  --- Contains a spurious " on line 1265613, must be parsed with
 #      pd.read_csv(..., quoting=3)
 ###
+
+class BgColors(Enum):
+    Melior = ""
+    RED = "#dsgdsgsd"
+    # etc, but too lazy to realize it now
 
 
 class RowEvent:
@@ -53,6 +59,49 @@ class MeliorDiagnosEvent(RowEvent):
         for e in self.entries:
             s += f'{e}<br/>'
         s += "</td>"
+        return s
+
+
+class SoSOppenEvent(RowEvent):
+    SHORTNAME = "SoS_OV"
+    BGCOLOR = "#66AA88"
+
+    def to_html(self):
+        diagnoses = [
+            self.row[k] for k in [f"DIA{i}" for i in range(1, 31)]
+            if not pd.isnull(self.row[k])
+        ]
+        gender = "Man" if self.row["KON"] == 1 else "Kvinna"
+        if pd.isnull(self.row["OP"]):
+            kva = ""
+        else:
+            kva = "<br/>".join(self.row["OP"].split(" "))
+
+        s = self.row_prefix()
+        s += f'<td>-----<br/>{gender}, ' \
+             f'{self.row["ALDER"]} år</td>' \
+             f'<td>Huvuddiagnos: {self.row["hdia"]}<br/>' \
+             f'{", ".join(diagnoses)}</td>' \
+             f'<td>{kva}</td>' \
+             f'<td>Planerad Vård: {self.row["PVARD"]}<br/>' \
+             f'Sjukhus: {self.row["SJUKHUS"]}<br/>' \
+             f'MVO: {self.row["MVO"]}</td></tr>'
+
+        return s
+
+
+class SoSLakemedelEvent(RowEvent):
+    SHORTNAME = "SoS_LM"
+    BGCOLOR = "#9977BB"
+
+    def to_html(self):
+
+        s = self.row_prefix()
+        s += f'<td></td>' \
+             f'<td>Namn: {self.row["subnamn"]}<br/>' \
+             f'ATC: {self.row["ATC"]}</td>' \
+             f'<td></td><td></td></tr>'
+
         return s
 
 
@@ -315,12 +364,15 @@ def write_patient_html(alias, filename, dfs):
                                            LabbEvent, True)
     events += generic_df_to_event_by_alias(dfs["sos_sluten"], alias,
                                            "INDATUM", SoSSlutenEvent, False)
+    events += generic_df_to_event_by_alias(dfs["sos_oppen"], alias,
+                                           "INDATUM", SoSOppenEvent, False)
     events += extract_melior(dfs, alias)
     events += extract_sos_dors(dfs["sos_dors"], alias)
+    events += generic_df_to_event_by_alias(dfs["sos_lm"], alias, "EDATUM",
+                                           SoSLakemedelEvent, False)
 
     with open(filename, "w") as fid:
         fid.write(get_html_pre_table(alias))
         for e in sorted(events, key=lambda x: x.timestamp):
             fid.write(e.to_html())
             fid.write("\n")
-            print(e.to_html())

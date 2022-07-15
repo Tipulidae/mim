@@ -13,7 +13,7 @@ from tensorflow.keras.callbacks import TensorBoard, ReduceLROnPlateau, \
 
 from mim.util.logs import get_logger
 from mim.util.util import keras_model_summary_as_string
-from mim.extractors.extractor import DataWrapper
+from mim.experiments.extractor import DataWrapper
 
 log = get_logger('Model Wrapper')
 

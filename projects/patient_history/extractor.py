@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 
-from mim.extractors.extractor import Data, RaggedData, Container, Extractor
+from mim.experiments.extractor import Data, RaggedData, Container, Extractor
 from mim.cross_validation import CrossValidationWrapper
 from mim.util.logs import get_logger
 from mim.util.metadata import load

@@ -4,7 +4,7 @@ import numpy as np
 
 from mim.fakes.fake_extractors import FakeExtractor
 from mim.models.simple_nn import basic_ff
-from mim.metric_wrapper import sparse_categorical_accuracy
+from mim.util.metrics import sparse_categorical_accuracy
 from mim.experiments.experiments import Experiment
 from mim.experiments.results import ExperimentResult
 

@@ -2,7 +2,7 @@ from math import ceil
 
 from sklearn.model_selection import PredefinedSplit
 
-from mim.extractors.extractor import DataWrapper
+from mim.experiments.extractor import DataWrapper
 from mim.util.util import infer_categorical
 from mim.util.logs import get_logger
 

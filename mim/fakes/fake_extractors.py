@@ -1,6 +1,6 @@
 from sklearn.datasets import make_classification
 
-from mim.extractors.extractor import DataWrapper, Extractor
+from mim.experiments.extractor import DataWrapper, Extractor
 
 
 class FakeExtractor(Extractor):

@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler, PowerTransformer
 from sklearn.decomposition import PCA
 
 from mim.experiments.experiments import Experiment
-from mim.extractors.extractor import sklearn_process
+from mim.experiments.extractor import sklearn_process
 from projects.patient_history.extractor import Flat
 from projects.patient_history.models import simple_ffnn, simple_lstm
 

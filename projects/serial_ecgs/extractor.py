@@ -6,7 +6,7 @@ from tqdm import tqdm
 import h5py
 
 from massage.ecg import calculate_four_last_leads
-from mim.extractors.extractor import Extractor, DataWrapper
+from mim.experiments.extractor import Extractor, DataWrapper
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
 from mim.util.logs import get_logger
 from massage.esc_trop import (

@@ -1,6 +1,6 @@
 import numpy as np
 
-from mim.extractors.extractor import (
+from mim.experiments.extractor import (
     Extractor,
     DataWrapper,
     Data,

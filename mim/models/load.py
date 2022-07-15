@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from tensorflow import keras
 
-from mim.extractors.extractor import Data, Container
+from mim.experiments.extractor import Data, Container
 from mim.config import PATH_TO_TEST_RESULTS, PATH_TO_DATA
 from mim.util.metadata import Validator
 from mim.util.logs import get_logger

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.metrics import confusion_matrix, roc_curve
+from tensorflow.python.keras.metrics import SparseCategoricalAccuracy
 
 
 def positive_predictive_value(targets, predictions):
@@ -194,3 +195,9 @@ def rule_in_rule_out_ab(
         min_spec=rule_in_spec,
         quiet=True
     )
+
+
+def sparse_categorical_accuracy(y_true, y_pred):
+    m = SparseCategoricalAccuracy()
+    m.update_state(y_true, y_pred)
+    return m.result().numpy()

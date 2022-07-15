@@ -7,7 +7,7 @@ import wfdb
 from tqdm import tqdm
 
 from mim.config import PATH_TO_DATA
-from mim.extractors.extractor import Extractor, DataWrapper
+from mim.experiments.extractor import Extractor, DataWrapper
 
 
 PTBXL_PATH = os.path.join(PATH_TO_DATA, 'ptbxl')
