@@ -261,14 +261,14 @@ class DataWrapper:
             else:
                 return Data(x[0], columns=list(x[1]))
 
-        n = len(index[0])
+        self.n = len(index[0])
         self.data = Container(
             {
                 'x': wrap_as_data(features),
                 'y': wrap_as_data(labels),
                 'index': wrap_as_data(index),
             },
-            index=range(n),
+            index=range(self.n),
             groups=groups,
             predefined_splits=predefined_splits,
             fits_in_memory=fits_in_memory
@@ -305,6 +305,9 @@ class DataWrapper:
     @property
     def y(self):
         return self.to_dataframe(self.data['y'].as_flat_numpy())
+
+    def __len__(self):
+        return self.n
 
     def x(self, can_use_tf_dataset=True):
         if can_use_tf_dataset:

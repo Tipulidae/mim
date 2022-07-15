@@ -1,10 +1,10 @@
 import math
 
-from tensorflow.python.keras.layers import (
+from tensorflow.keras.layers import (
     AveragePooling1D, Conv1D, BatchNormalization, ReLU, MaxPooling1D,
     Dropout, Flatten, Dense
 )
-from tensorflow.python.keras.regularizers import l2
+from tensorflow.keras.regularizers import l2
 
 from mim.util.util import interpolate
 

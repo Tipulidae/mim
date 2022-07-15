@@ -1,6 +1,5 @@
 from tensorflow import keras
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Concatenate, BatchNormalization, \
+from tensorflow.keras.layers import Input, Concatenate, BatchNormalization, \
     Dense, LSTM, Dropout
 
 from mim.models.util import ffnn_helper

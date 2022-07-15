@@ -1,6 +1,5 @@
 from tensorflow import keras
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Dense
+from tensorflow.keras.layers import Input, Dense
 
 from mim.models.util import cnn_helper, ffnn_helper
 

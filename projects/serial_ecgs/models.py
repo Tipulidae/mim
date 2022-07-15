@@ -1,7 +1,10 @@
 from tensorflow import keras
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Concatenate, BatchNormalization, \
-    Dense, Normalization
+from tensorflow.keras.layers import Input, Concatenate, BatchNormalization, \
+    Dense
+
+# This is just to make PyCharm resolve the import. Otherwise, I should be
+# able to import it straight from tf.keras.layers.
+from tensorflow.python.keras.layers import Normalization
 
 from mim.models.load import load_ribeiro_model
 from mim.models.util import cnn_helper, ffnn_helper
@@ -91,8 +94,8 @@ def logistic_regression_ab(train, validation=None):
         for key, value in train.feature_tensor_shape.items()}
     # ['log_dt', 'age', 'male', 'tnt_1']
     normalization = Normalization(axis=1)
-    normalization.adapt(train['x']['flat_features'].as_numpy())
-    cols = train['x']["flat_features"].columns
+    normalization.adapt(train.x(can_use_tf_dataset=False))
+    cols = train.feature_names['flat_features']
     if 'male' in cols:
         i = cols.index('male')
         w = normalization.get_weights()
