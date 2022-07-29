@@ -1,6 +1,6 @@
 from sklearn.datasets import make_classification
 
-from mim.experiments.extractor import DataWrapper, Extractor
+from mim.experiments.extractor import DataWrapper, Extractor, Data
 
 
 class FakeExtractor(Extractor):
@@ -17,7 +17,7 @@ class FakeExtractor(Extractor):
         feature_names = [f"x{i}" for i in range(n_features)]
         index = list(range(n_samples))
         return DataWrapper(
-            features=(x, feature_names),
-            labels=(y, ['y']),
-            index=(index, ['index'])
+            features=Data(x, columns=feature_names),
+            labels=Data(y, columns=['y']),
+            index=Data(index, columns=['index'])
         )

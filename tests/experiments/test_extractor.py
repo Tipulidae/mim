@@ -297,13 +297,18 @@ class TestContainer:
 
 class TestDataWrapper:
     def test_label_dataframe(self):
-        data = DataWrapper(
-            features={
-                'foo': ([[1, 2, 3], [2, 3, 4]], ['a', 'b', 'c']),
-                'bar': ([3, 4], ['d'])
+        features = Container(
+            {
+                'foo': Data([[1, 2, 3], [2, 3, 4]], columns=['a', 'b', 'c']),
+                'bar': Data([3, 4], columns=['d'])
             },
-            labels=([0, 1], ['some_outcome']),
-            index=(['auhwef', 'jio213'], ['patient_id']),
+        )
+        labels = Data([0, 1], columns=['some_outcome'])
+        index = Data(['auhwef', 'jio213'], columns=['patient_id'])
+        data = DataWrapper(
+            features=features,
+            labels=labels,
+            index=index,
         )
 
         expected = pd.DataFrame(
