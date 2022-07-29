@@ -261,12 +261,15 @@ class DataWrapper:
             else:
                 return Data(x[0], columns=list(x[1]))
 
-        self.n = len(index[0])
+        self.n = len(index)
         self.data = Container(
             {
-                'x': wrap_as_data(features),
-                'y': wrap_as_data(labels),
-                'index': wrap_as_data(index),
+                # 'x': wrap_as_data(features),
+                # 'y': wrap_as_data(labels),
+                # 'index': wrap_as_data(index),
+                'x': features,
+                'y': labels,
+                'index': index,
             },
             index=range(self.n),
             groups=groups,

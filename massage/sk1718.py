@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from mim.util.logs import get_logger
-from mim.util.metadata import save
+from mim.util.metadata import save, load
 
 log = get_logger("Skåne 17-18 massage")
 
@@ -396,14 +396,12 @@ def _multihot(path, index):
         return df.fillna(0).astype(bool).loc[:, col_order]
 
     icd = pivot(icd)
+    icd.columns = [f'ICD_{col}' for col in icd.columns]
     op = pivot(op)
-
+    op.columns = [f'OP_{col}' for col in op.columns]
+    # return icd, op
     log.info('Concatenating results')
-    return (
-        pd.concat([icd, op], axis=1, keys=['ICD', 'OP'])
-        .fillna(False)
-        .sort_index()
-    )
+    return pd.concat([icd, op], axis=1, sort=True).fillna(False)
 
 
 def make_multihot_diagnoses(index):
@@ -421,8 +419,10 @@ def make_multihot_diagnoses(index):
     sv = _multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', index)
     ov = _multihot('SOS_T_T_T_R_PAR_OV_24129_2020.csv', index)
 
-    sv.columns += '_sv'
-    ov.columns += '_ov'
+    # sv.columns += '_sv'
+    # ov.columns += '_ov'
+    sv.columns = [f"SV_{col}" for col in sv.columns]
+    ov.columns = [f"OV_{col}" for col in ov.columns]
 
     log.info('Concatenating diagnoses')
     svov = pd.concat([sv, ov], join='outer').fillna(False)
@@ -441,11 +441,12 @@ def make_multihot_staggered(multihot, brsm):
     staggered such that each row corresponds to a single event-index pair.
     Thus, if a patient is represented twice in the index (brsm), each
     diagnosis event preceding the index date will be included twice: once for
-    each index-visit. Diagnosis events occuring after the index-visits are
+    each index-visit. Diagnosis events occurring after the index-visits are
     removed.
     """
     log.info("Staggering diagnosis history")
-    mh = multihot.reset_index().join(brsm.set_index('Alias'), on='Alias')
+    brsm = brsm.set_index('Alias')[['admission_index', 'admission_date']]
+    mh = multihot.reset_index().join(brsm, on='Alias')
     mh = (
         mh[mh.diagnosis_date < mh.admission_date]
         .sort_values(
@@ -456,7 +457,7 @@ def make_multihot_staggered(multihot, brsm):
     return mh
 
 
-def sum_events_in_interval(mh, brsm, **interval_kwargs):
+def sum_events_in_interval(mhs, brsm, **interval_kwargs):
     """
     :param mh: Multihot-encoded matrix, with index (Alias, diagnosis_date,
     sos_index). Each column correspond to some binary outcome (diagnosis,
@@ -476,8 +477,9 @@ def sum_events_in_interval(mh, brsm, **interval_kwargs):
     level specifying the interval, as I#, where # is the number of the
     interval.
     """
-    cols = list(mh.columns)
-    mhs = make_multihot_staggered(mh, brsm)
+    cols = list(mhs.filter(regex="(ICD_)|(OP_)").columns)
+    # cols = list(mhs.columns)
+    # mhs = make_multihot_staggered(mh, brsm)
 
     intervals = pd.interval_range(
         start=pd.Timedelta(0),
@@ -495,6 +497,7 @@ def sum_events_in_interval(mh, brsm, **interval_kwargs):
                     interval.right,
                     inclusive=interval.closed
                 ),
+                # pd.IndexSlice['admission_index', ]
                 ['admission_index'] + cols
             ]
             .groupby('admission_index')
@@ -505,7 +508,7 @@ def sum_events_in_interval(mh, brsm, **interval_kwargs):
         sums,
         axis=1,
         keys=[f"I{x}" for x in range(len(intervals))]
-    ).reindex(brsm.index).fillna(0)
+    ).reindex(brsm.admission_index, fill_value=0)
 
     return res
 
@@ -543,3 +546,60 @@ def save_multihot_sos_data():
         ov.astype(pd.SparseDtype(bool, False)),
         join(folder_dir, 'sk1718_brsm_multihot_ov.pickle')
     )
+
+
+def foobar():
+    # TODO
+    # This took about 5 minutes to run, given the pre-computed SV and OV
+    # multihot-encoded dataframes.
+    folder_dir = '/mnt/air-crypt/air-crypt-esc-trop/axel/'
+    # brsm = load_outcomes_from_ab_brsm()
+
+    log.debug("Loading sv")
+    sv = load(
+        join(folder_dir, 'sk1718_brsm_multihot_sv.pickle'),
+        allow_uncommitted=True
+    )
+    sv = sv.sparse.to_dense()
+    log.debug("Fixing SV index")
+    sv = pd.concat([sv], keys=['SV'], axis=1).droplevel('sos_index', axis=0)
+    log.debug("Dropping duplicates")
+    sv = sv.reset_index().drop_duplicates().set_index(
+        ['Alias', 'diagnosis_date'])
+
+    log.debug("Loading ov")
+    ov = load(
+        join(folder_dir, 'sk1718_brsm_multihot_ov.pickle'),
+        allow_uncommitted=True
+    )
+    ov = ov.sparse.to_dense()
+    log.debug("Fixing OV index")
+    ov = pd.concat([ov], keys=['OV'], axis=1).droplevel('sos_index', axis=0)
+    log.debug("Dropping duplicates")
+    ov = ov.reset_index().drop_duplicates().set_index(
+        ['Alias', 'diagnosis_date'])
+
+    log.debug("Joining sv and ov")
+    # This eats a LOT of memory (hundreds of GB. I don't know which part is
+    # actually the culprit. If this runs with a lot of free RAM, the join is
+    # relatively quick, and will release some 100GB after finishing. The
+    # fillna is really really slow though, I'm not sure why exactly. Maybe
+    # the type is wrong and it has to cast and so on? I'm not really sure.)
+    ov = ov.join(sv, how='outer').fillna(False)
+    del sv
+
+    log.debug("Saving")
+    save(ov, join(folder_dir, 'sk1718_svov.pickle'))
+    log.debug("Done!")
+    # At least all the memory appears to be released when it's done.
+    # Footprint of final dataframe is about 8Gb.
+    return ov
+
+    # log.debug("Staggering")
+    # log.debug("Joining brsm")
+    # svov = svov.join(brsm.set_index('Alias'), on='Alias')
+    #
+    # log.debug("Saving result")
+    # save(svov, join(folder_dir, 'sk1718_svov.pickle'))
+    # log.debug("Done!")
+    # return svov

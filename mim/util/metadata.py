@@ -297,7 +297,7 @@ def public_methods(obj):
 
 def save(data, path):
     md = Metadata().report()
-    pd.to_pickle((data, md), path)
+    pd.to_pickle((data, md), path, compression='gzip')
 
 
 def load(path, allow_uncommitted=False):
