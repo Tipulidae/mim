@@ -226,7 +226,7 @@ class Validator:
                         f'{branches.pop()} != {branches.pop()}')
 
     def _validate_same_environment(self, metadata):
-        if not self.allow_different_environment:
+        if not self.allow_different_environments:
             envs = set()
             for md in metadata:
                 try:

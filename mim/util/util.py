@@ -1,4 +1,5 @@
 import glob
+from itertools import islice
 
 import numpy as np
 import pandas as pd
@@ -145,3 +146,13 @@ def is_categorical(s):
 def interpolate(first, last, length):
     """Integer interpolation, rounds all numbers to nearest integer."""
     return list(map(round, np.linspace(first, last, length)))
+
+
+def take(n, iterable):
+    """Return first n items of the iterable as a list. If n is negative,
+    return all items.
+    """
+    if n < 0:
+        return list(iterable)
+
+    return list(islice(iterable, n))

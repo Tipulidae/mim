@@ -5,6 +5,7 @@ from importlib import import_module
 import silence_tensorflow.auto  # noqa: F401
 
 from mim.util.logs import get_logger
+from mim import cache
 
 log = get_logger("Run")
 
@@ -96,6 +97,18 @@ if __name__ == '__main__':
         help='run experiments that matches the given pattern '
              '(regular expression)',
     )
+    parser.add_argument(
+        '-c', '--cache',
+        help="Set cache strictness: off = don't cache, safe = invalidate "
+             "cache if there are uncommitted files or if commits or "
+             "conda environment differs, unsafe = allow different commits "
+             "and environments, stupid = never invalidate cache. Caching can "
+             "speed up your code, but if used carelessly, can lead to bugs "
+             "that are difficult to detect. Use at your own peril.",
+        type=str,
+        choices=['off', 'safe', 'unsafe', 'stupid'],
+        default='off'
+    )
 
     args = parser.parse_args()
 
@@ -154,6 +167,14 @@ if __name__ == '__main__':
                  f"NOT CONDUCTED and can't be evaluated.")
 
     all_xps_to_run = xps_to_run + xps_to_rerun
+
+    if args.cache == 'off':
+        cache.settings.enabled = False
+        log.info("Cache setting: off")
+    else:
+        cache.settings.enabled = True
+        cache.settings.set_level(args.cache)
+        log.info(f"Cache setting: {args.cache}")
 
     if not args.suppress:
         answer = input(
