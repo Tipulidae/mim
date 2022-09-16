@@ -90,7 +90,7 @@ class Experiment(NamedTuple):
 
             if self.save_results:
                 pd.to_pickle(results, path)
-                log.debug(f'Saved results in {path}')
+                log.debug(f'Saved results in {path}\n\n\n')
             return results
         except Exception as e:
             log.error('Something went wrong!')

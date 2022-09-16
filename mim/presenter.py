@@ -51,7 +51,7 @@ class Presenter:
     def __init__(self, name, verbose=2):
         self.results = dict()
         paths = insensitive_iglob(
-            f"{PATH_TO_TEST_RESULTS}/{name}/**/results.pickle",
+            f"{PATH_TO_TEST_RESULTS}/{name}/**/train_val_results.pickle",
             recursive=True
         )
 
@@ -72,12 +72,12 @@ class Presenter:
         for name, xp in self._results_that_match_pattern(like):
             results.append(pd.Series(
                 data=[
-                    np.mean(xp['test_score']),
-                    np.std(xp['test_score']),
-                    np.mean(xp['train_score']),
-                    xp['metadata']['current_commit'][:8],
-                    xp['metadata']['has_uncommitted_changes'],
-                    xp['metadata']['timestamp']],
+                    np.mean(xp.validation_scores),
+                    np.std(xp.validation_scores),
+                    np.mean(xp.training_scores),
+                    xp.metadata['current_commit'][:8],
+                    xp.metadata['has_uncommitted_changes'],
+                    xp.metadata['timestamp']],
                 index=[
                     'test_score',
                     'test_score_std',

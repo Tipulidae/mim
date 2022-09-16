@@ -1,17 +1,13 @@
-from os.path import join
-
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupShuffleSplit
+from sklearn.model_selection import PredefinedSplit
 
-from mim.experiments.extractor import Data, RaggedData, Container, \
-    Extractor, DataWrapper
+from mim.experiments.extractor import Data, RaggedData, Extractor, \
+    DataWrapper, Container
 from mim.cross_validation import CrossValidationWrapper
 from mim.util.logs import get_logger
 from mim.util.metadata import load
 from massage import sk1718
-# from massage import sk1718 as massage
-# from massage.sk1718 import lab_value_to_float, load_outcomes_from_ab_brsm
 
 
 log = get_logger("Skåne-1718 extractor")
@@ -120,27 +116,8 @@ def make_basic_features(data):
     )
 
 
-# class NamesAreHard(Extractor):
-#     def get_development_data(self) -> DataWrapper:
-#         pass
-#
-#     def get_test_data(self) -> DataWrapper:
-#         pass
-#
-#     def make_data(self):
-#         base_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/'
-#         brsm = sk1718.load_outcomes_from_ab_brsm()
-#         sv = load(join(base_path, 'sk1718_brsm_multihot_sv.pickle'))
-
-
-# def load_multihot(brsm, sv=True, ov=True):
-#     base_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/'
-#     if sv:
-#          = load(join(base_path, 'sk1718_brsm_multihot_sv.pickle'))
-
-
 class Base(Extractor):
-    def get_data(self) -> DataWrapper:
+    def get_data(self, brms) -> DataWrapper:
         raise NotImplementedError
 
     def get_labels(self, brsm):
@@ -149,13 +126,34 @@ class Base(Extractor):
         return Data(y.values, columns=['ACS'])
 
     def _dev_test_split(self):
-        # Could parameterize the dev-test splitting, but I'm not sure I
-        # actually want to. I want to use the same split each time.
-        data = self.get_data()
+        # The idea is to use any events at Helsingborg as the test (held-out)
+        # set. But some patients have been to multiple hospitals, including
+        # Helsingborg - those visits should then be excluded.
+
+        # Load the index data
+        brsm = sk1718.load_outcomes_from_ab_brsm()
+
+        # Create the whole dataset
+        data = self.get_data(brsm)
+
+        # Now do the hold-out split.
+        # All events at Helsingborg...
+        hbg = brsm.set_index('Alias').hospital == 'Helsingborgs lasarett'
+
+        # All events for patients who at some point were at Helsingborg
+        hbg_and_related = hbg.groupby('Alias').any().reindex(brsm.Alias)
+
+        # All events not at Helsingborg, but where the patient has been
+        # there at some point (These will be excluded)
+        related = hbg ^ hbg_and_related
+
+        # Each event is now mapped to 0 for development, 1 for test, and
+        # -1 for hold-out.
+        split = hbg.astype(int) + related.map({False: 0, True: -1})
+
+        # Perform the actual split dev/test split
         dev_test_splitter = CrossValidationWrapper(
-            GroupShuffleSplit(
-                n_splits=1, test_size=0.25, random_state=42
-            )
+            PredefinedSplit(split.values)
         )
         return next(dev_test_splitter.split(data))
 
@@ -168,145 +166,25 @@ class Base(Extractor):
         return test
 
 
-def foobar(brsm, spec):
-    # Trying to figure out the correct order to do things here...
-
-    if 'sv' in spec['sources']:
-        mh = sk1718._multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', brsm)
-        codes = []
-        if 'diagnoses' in spec:
-            k = spec['diagnoses']
-            icd = mh.like(like='ICD_')
-            icd = icd.iloc[:, :k]
-            icd = sk1718.make_multihot_staggered(icd, brsm)
-            icd = sk1718.sum_events_in_interval(
-                icd, brsm, **spec['intervals']
-            )
-            # Columns will now be {I#}_{SV/OV}_{ICD/OP}_{xxx}
-            # Index is the admission_index.
-            icd.columns = [
-                f"{interval}_SV_{code}" for interval, code in icd.columns
-            ]
-            codes.append(icd)
-        if 'interventions' in spec:
-            k = spec['interventions']
-            op = mh.like(like='OP_')
-            op = op.iloc[:, :k]
-            op = sk1718.make_multihot_staggered(op, brsm)
-            op = sk1718.sum_events_in_interval(
-                op, brsm, **spec['intervals']
-            )
-            # Columns will now be {I#}_{SV/OV}_{ICD/OP}_{xxx}
-            # Index is the admission_index.
-            op.columns = [
-                f"{interval}_SV_{code}" for interval, code in op.columns
-            ]
-            codes.append(op)
-
-    brsm = sk1718.load_outcomes_from_ab_brsm()
-    if 'sv' in spec['sources']:
-        mh = sk1718._multihot("SOS_T_T_T_R_PAR_SV_24129_2020.csv", brsm)
-        codes = []
-        if 'diagnoses' in spec:
-            codes.append(
-                foo(source='sv', code='icd', k=spec['diagnoses'],
-                    interval_spec=spec['intervals'], mh=mh, brsm=brsm)
-            )
-        if 'interventions' in spec:
-            codes.append(
-                foo(source='sv', code='op', k=spec['interventions'],
-                    interval_spec=spec['intervals'], mh=mh, brsm=brsm)
-            )
-
-        # I think I need something like a map:
-        bar = {'icd': 'diagnoses', 'op': 'interventions'}
-        for code in ['icd', 'op']:
-            if bar[code] in spec:
-                codes.append(
-                    foo(source='sv', code=code, k=spec[bar[code]],
-                        interval_spec=spec['intervals'], mh=mh, brsm=brsm)
-                )
-
-    codes = []
-    for source in ['SV', 'OV']:
-        mh = sk1718._multihot(
-            f"SOS_T_T_T_R_PAR_{source}_24129_2020.csv", brsm
-        )
-        bar = {'ICD': 'diagnoses', 'OP': 'interventions'}
-        for code in ['ICD', 'OP']:
-            if bar[code] in spec:
-                codes.append(
-                    foo(
-                        source=source,
-                        code=code,
-                        k=spec[bar[code]],
-                        interval_spec=spec['intervals'],
-                        mh=mh,
-                        brsm=brsm
-                    )
-                )
-    return pd.concat(codes, axis=1)
-
-
-def foo(source, code, k, interval_spec, mh, brsm):
-    source = source.upper()
-    code = code.upper()
-    assert source in ['SV', 'OV']
-    assert code in ['ICD', 'OP']
-
-    mh = mh.filter(like=f"{code}_")
-    mh = mh.iloc[:, k]
-    mh = sk1718.make_multihot_staggered(mh, brsm)
-    mh = sk1718.sum_events_in_interval(mh, brsm, **interval_spec)
-    mh.columns = [
-        f"{interval}_{source}_{code}" for interval, code in mh.columns
-    ]
-
-    # Columns will now be {I#}_{SV/OV}_{ICD/OP}_{xxx}
-    # Index is the admission_index.
-    return mh
-
-
 class Flat(Base):
-    def get_data(self) -> DataWrapper:
-        brsm = sk1718.load_outcomes_from_ab_brsm()
-        # sv = sk1718._multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', brsm)
-
-        base_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/'
-
-        # if 'sv' in self.features:
-        # sv = sk1718._multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', brsm)
-        # sv = load(join(base_path, 'sk1718_brsm_multihot_sv.pickle'))
-        # sv = load(
-        #     join(base_path, 'sk1718_brsm_multihot_sv.pickle'),
-        #     allow_uncommitted=True
-        # )
-        sv = load(
-            join(base_path, 'sk1718_brsm_staggered_diagnoses.pickle'),
-            allow_uncommitted=True
-        )
-        k = 10
-
-        # levels will be:
-        # Interval, SV/OV, ICD/OP,
-        sv_icd = sk1718.sum_events_in_interval(
-            sv['ICD'].iloc[:, :k],
-            brsm,
-            periods=5
-        )
-        sv_op = sk1718.sum_events_in_interval(
-            sv['OP'].iloc[:, :k],
-            brsm,
-            periods=5
+    def get_data(self, brsm) -> DataWrapper:
+        patient_history = sk1718.summarize_patient_history(
+            brsm, **self.features
         )
 
-        sv = pd.concat([sv_icd, sv_op], axis=1, keys=['ICD', 'OP'])
+        # x_dict = {
+        #     'basic': make_basic_features(brsm),
+        #     'history': Data(
+        #         patient_history.values,
+        #         columns=list(patient_history.columns),
+        #     )
+        # }
 
         data = DataWrapper(
-            features=Data(
-                sv.values,
-                columns=list(map('_'.join, sv.columns)),
-            ),
+            features=Container({'history': Data(
+                patient_history.values,
+                columns=list(patient_history.columns),
+            )}),
             labels=self.get_labels(brsm),
             index=Data(brsm.KontaktId.values, columns=['KontaktId']),
             groups=brsm.Alias.values,
@@ -316,7 +194,10 @@ class Flat(Base):
 
 
 class Ragged(Base):
-    def get_development_data(self) -> Container:
+    def get_test_data(self) -> DataWrapper:
+        ...
+
+    def get_development_data(self) -> DataWrapper:
         brsm = sk1718.load_outcomes_from_ab_brsm()
         mh = load('/mnt/air-crypt/air-crypt-esc-trop/axel/'
                   'sk1718_brsm_staggered_diagnoses.pickle')
@@ -359,11 +240,11 @@ class Ragged(Base):
         #     x_dict['comorbidities'] = make_comorbidity_features(
         #         brsm, **self.features['comorbidities']
         #     )
-
+        y = brsm[['I200', 'I21', 'I22']].any(axis=1)
         data = DataWrapper(
             features=RaggedData(
                 data.values,
-                # index=range(len(y)),
+                index=range(len(y)),
                 slices=list(zip(row_starts, row_ends)),
                 columns=list(data)
             ),
@@ -381,5 +262,5 @@ class Ragged(Base):
             groups=brsm.Alias.values,
             fits_in_memory=True
         )
-
-        return self.hold_out(data)
+        return data
+        # return self.hold_out(data)

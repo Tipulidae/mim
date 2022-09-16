@@ -109,3 +109,7 @@ class ExperimentResult:
             names=['split', 'epoch'],
             axis=1
         )
+
+    def __str__(self):
+        base, xp_name = self.path.split('/')[-2:]
+        return f"Experiment result for {base}.{xp_name}"

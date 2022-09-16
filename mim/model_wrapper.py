@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+from pathlib import Path
 from enum import Enum
 from time import time
 
@@ -85,7 +86,13 @@ class Model:
         else:
             split_folder = f'split_{split_number}'
 
-        checkpoint = os.path.join(self.checkpoint_path, split_folder, name)
+        path = os.path.join(self.checkpoint_path, split_folder)
+
+        # If the folder doesn't exist yet, create it!
+        # https://stackoverflow.com/a/273227
+        Path(path).mkdir(parents=True, exist_ok=True)
+
+        checkpoint = os.path.join(path, name)
         pd.to_pickle(self.model, checkpoint)
 
     def _prediction(self, x):

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from mim.util.logs import get_logger
-from mim.util.metadata import save, load
+from mim.cache.decorator import cache
 
 log = get_logger("Skåne 17-18 massage")
 
@@ -317,6 +317,7 @@ def load_outcomes_from_ab_brsm():
         'Vardkontakt_InskrivningDatum': 'admission_date',
         'Vardkontakt_PatientAlderVidInskrivning': 'age',
         'Patient_Kon': 'sex',
+        'Sjukhus_Namn': 'hospital',
         'outcome-30d-I200-SV': 'I200',
         'outcome-30d-I21-SV': 'I21',
         'outcome-30d-I22-SV': 'I22',
@@ -329,8 +330,6 @@ def load_outcomes_from_ab_brsm():
             usecols=colmap.keys())
         .rename(columns=colmap)
         .sort_values(by=['Alias', 'admission_date'])
-        # .set_index(['Alias', 'admission_date'])
-        # .sort_index()
     )
 
     data['admission_index'] = range(len(data))
@@ -339,7 +338,16 @@ def load_outcomes_from_ab_brsm():
     return data
 
 
-def _multihot(path, index):
+@cache
+def multihot_icd_kva(source, index):
+    log.info(
+        f'Constructing multihot encoded ICD and KVÅ events from {source}')
+
+    source = source.upper()
+    assert source in ['SV', 'OV']
+
+    path = f'SOS_T_T_T_R_PAR_{source}_24129_2020.csv'
+    index = index.loc[:, ['Alias', 'LopNr']].set_index('LopNr')
     log.info(f'Loading {path}')
     diagnosis_cols = ['hdia'] + [f'DIA{x}' for x in range(1, 31)]
     op_cols = ['OP']
@@ -349,20 +357,18 @@ def _multihot(path, index):
             usecols=['LopNr', 'INDATUM'] + diagnosis_cols + op_cols,
             parse_dates=['INDATUM'],
             low_memory=False)
-        .reset_index()  # We will use this to disambiguate same-day events
-        .rename(columns={'INDATUM': 'diagnosis_date', 'index': 'sos_index'})
-        .join(index.set_index('LopNr').Alias, on='LopNr', how='inner')
-        .set_index(['Alias', 'diagnosis_date', 'sos_index'])
+        .rename(columns={'INDATUM': 'event_date'})
+        .join(index, on='LopNr', how='inner')
+        .set_index(['Alias', 'event_date'])
         .sort_index()
     )
 
-    # log.info('Stacking diagnoses')
     icd = (
         sos
         .loc[:, diagnosis_cols]
         .stack()
-        .rename('icd10')
-        .reset_index(level=3, drop=True)
+        .rename('ICD')
+        .reset_index(level=2, drop=True)
     )
 
     op = (
@@ -374,94 +380,89 @@ def _multihot(path, index):
         .dropna()
     )
 
-    def pivot(s):
-        name = s.name
-        log.info(f'Pivoting {name}')
-        df = s.reset_index(level=[2, 1]).drop_duplicates()
-        col_order = (
-            df[name]
-            .value_counts()
-            .reset_index()
-            .sort_values(by=[name, 'index'], ascending=[False, True])
-            .loc[:, 'index']
-            .values
-        )
-
-        df['temp'] = True
-        df = df.pivot_table(
-            index=['Alias', 'diagnosis_date', 'sos_index'],
-            columns=name,
-            values='temp'
-        )
-        return df.fillna(0).astype(bool).loc[:, col_order]
-
     icd = pivot(icd)
-    icd.columns = [f'ICD_{col}' for col in icd.columns]
+    icd.columns = [f'{source}_ICD_{col}' for col in icd.columns]
     op = pivot(op)
-    op.columns = [f'OP_{col}' for col in op.columns]
-    # return icd, op
-    log.info('Concatenating results')
-    return pd.concat([icd, op], axis=1, sort=True).fillna(False)
+    op.columns = [f'{source}_OP_{col}' for col in op.columns]
+    return icd, op
 
 
-def make_multihot_diagnoses(index):
+@cache
+def multihot_atc(index):
+    log.info('Constructing multihot encoded ATC events')
+    atc = (
+        read_csv(
+            'SOS_T_R_LMED_24129_2020.csv',
+            usecols=['LopNr', 'ATC', 'EDATUM'],
+            parse_dates=['EDATUM'])
+        .rename(columns={'EDATUM': 'event_date'})
+        .join(index.set_index('LopNr').Alias, on='LopNr', how='inner')
+        .set_index(['Alias', 'event_date'])
+        .sort_index()
+        .loc[:, 'ATC']
+    )
+    atc = pivot(atc)
+    atc.columns = [f"ATC_{col}" for col in atc.columns]
+    return atc
+
+
+def pivot(s):
+    # Input is a series with MultiIndex (Alias, event_date)
+    # Values are ICD, ATC or KVÅ codes.
+    # Output is a dataframe with the same index, but the values are one-hot
+    # encoded columns, with one column for each unique value in the input
+    # series. The columns are sorted by frequency, so that the most common
+    # value in the input is the first column in the output.
+    name = s.name
+    log.info(f'Pivoting {name}')
+    # df = s.reset_index(level=[2, 1]).drop_duplicates()
+    df = s.reset_index().drop_duplicates()
+    col_order = (
+        df[name]
+        .value_counts()
+        .reset_index()
+        .sort_values(by=[name, 'index'], ascending=[False, True])
+        .loc[:, 'index']
+        .values
+    )
+
+    df['temp'] = True
+    df = df.pivot_table(
+        index=['Alias', 'event_date'],
+        columns=name,
+        values='temp'
+    )
+    return df.fillna(0).astype(bool).loc[:, col_order]
+
+
+def stagger_events(df, brsm):
     """
-    :param index: DataFrame with columns LopNr and Alias.
-    :return: DataFrame with Alias, diagnosis_date as multi-index, and
-    around 1500 columns, one for each possible ICD10 diagnosis in the sos-
-    material. Each row corresponds to a multi-hot encoding of a hospital
-    visit. The columns are sorted by frequency, so that the first column is
-    the most common diagnosis, and the last column is the least common.
-    """
-    # output: df with columns Alias, date, <icd1>, <icd2>, ...
 
-    # assert any([sv, ov])
-    sv = _multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', index)
-    ov = _multihot('SOS_T_T_T_R_PAR_OV_24129_2020.csv', index)
-
-    # sv.columns += '_sv'
-    # ov.columns += '_ov'
-    sv.columns = [f"SV_{col}" for col in sv.columns]
-    ov.columns = [f"OV_{col}" for col in ov.columns]
-
-    log.info('Concatenating diagnoses')
-    svov = pd.concat([sv, ov], join='outer').fillna(False)
-    return svov
-
-
-def make_multihot_staggered(multihot, brsm):
-    """
-
-    :param multihot: Multihot encoded diagnoses, one row for each "SV" or
-    "OV" event, corresponding to the diagnoses set at that event. Index
-    should be (Alias, diagnosis_date, index)-triplet.
+    :param df: Dataframe with index (Alias, event_date)-tuple.
     :param brsm: Dataframe containing one row for each chest-pain visit.
     Required columns are Alias, admission_date and admission_index.
-    :return: New version of the multihot-encoded diagnosis matrix, but
-    staggered such that each row corresponds to a single event-index pair.
-    Thus, if a patient is represented twice in the index (brsm), each
-    diagnosis event preceding the index date will be included twice: once for
-    each index-visit. Diagnosis events occurring after the index-visits are
-    removed.
+    :return: New version of the dataframe, but staggered such that each
+    row corresponds to a single event-index pair. Thus, if a patient is
+    represented twice in the index (brsm), each event preceding the index
+    date will be included twice: once for each index-visit. Events
+    occurring after the index-visits are removed.
     """
-    log.info("Staggering diagnosis history")
+    log.info("Staggering events")
     brsm = brsm.set_index('Alias')[['admission_index', 'admission_date']]
-    mh = multihot.reset_index().join(brsm, on='Alias')
-    mh = (
-        mh[mh.diagnosis_date < mh.admission_date]
+    df = df.reset_index().join(brsm, on='Alias')
+    df = (
+        df[df.event_date < df.admission_date]
         .sort_values(
-            by=['Alias', 'admission_index', 'diagnosis_date', 'sos_index'])
+            by=['Alias', 'admission_index', 'event_date'])
         .reset_index(drop=True)
     )
-    # mh['data_index'] = range(len(mh))
-    return mh
+    return df
 
 
 def sum_events_in_interval(mhs, brsm, **interval_kwargs):
     """
-    :param mh: Multihot-encoded matrix, with index (Alias, diagnosis_date,
-    sos_index). Each column correspond to some binary outcome (diagnosis,
-    KVÅ-code, etc).
+    :param mh: Multihot-encoded matrix, with index (Alias, event_date).
+    Each column correspond to some binary "event" (ICD, KVÅ or ATC code).
     :param brsm: Dataframe containing one row for each chest-pain visit.
     Required columns are Alias, admission_date and admission_index.
     :param interval_kwargs: keyword-arguments for the interval_range function,
@@ -477,16 +478,14 @@ def sum_events_in_interval(mhs, brsm, **interval_kwargs):
     level specifying the interval, as I#, where # is the number of the
     interval.
     """
-    cols = list(mhs.filter(regex="(ICD_)|(OP_)").columns)
-    # cols = list(mhs.columns)
-    # mhs = make_multihot_staggered(mh, brsm)
+    cols = list(mhs.filter(regex="(ICD_)|(OP_)|(ATC_)").columns)
 
     intervals = pd.interval_range(
         start=pd.Timedelta(0),
         end=pd.Timedelta('1825D'),
         **interval_kwargs
     )
-    event_age = mhs.admission_date - mhs.diagnosis_date
+    event_age = mhs.admission_date - mhs.event_date
 
     sums = []
     for interval in intervals:
@@ -497,7 +496,6 @@ def sum_events_in_interval(mhs, brsm, **interval_kwargs):
                     interval.right,
                     inclusive=interval.closed
                 ),
-                # pd.IndexSlice['admission_index', ]
                 ['admission_index'] + cols
             ]
             .groupby('admission_index')
@@ -510,96 +508,36 @@ def sum_events_in_interval(mhs, brsm, **interval_kwargs):
         keys=[f"I{x}" for x in range(len(intervals))]
     ).reindex(brsm.admission_index, fill_value=0)
 
+    res.columns = list(map('_'.join, res.columns))
     return res
 
 
-def save_staggered_multihot_diagnoses():
-    # Load the brsm-U index from Anders,
-    # create the multihot diagnosis history from sos sv+ov
-    # stagger the result in preparation for time-series analysis
-    # save the whole thing as a pickle for future use.
-    brsm = load_outcomes_from_ab_brsm()
-    brsm = brsm[['Alias', 'LopNr', 'admission_date', 'admission_index']]
-    svov = make_multihot_diagnoses(brsm).astype(pd.SparseDtype(bool, False))
-    mh = make_multihot_staggered(svov, brsm).drop(columns=['index', 'LopNr'])
-    save(mh, '/mnt/air-crypt/air-crypt-esc-trop/axel/'
-             'sk1718_brsm_staggered_diagnoses.pickle')
-    log.info('Staggered diagnoses saved!')
+def summarize_patient_history(brsm, sources=None, diagnoses=0, interventions=0,
+                              meds=0, intervals=None):
+    dfs = []
+    if intervals is None:
+        intervals = {'periods': 1}
 
+    def stagger_and_sum(df, k):
+        if k > 0:
+            df = df.iloc[:, :k]
+        df = stagger_events(df, brsm)
+        df = sum_events_in_interval(df, brsm, **intervals)
+        return df
 
-def save_multihot_sos_data():
-    # Load brsm-U index
-    # Create multihot-encoded table of ICD and KVÅ-codes for both
-    # SV and OV. Save these to disk as separate tables.
-    folder_dir = '/mnt/air-crypt/air-crypt-esc-trop/axel/'
-    brsm = load_outcomes_from_ab_brsm()
-    brsm = brsm[['Alias', 'LopNr', 'admission_date', 'admission_index']]
+    if sources:
+        for source in sources:
+            icd, op = multihot_icd_kva(source, brsm)
+            if diagnoses:
+                dfs.append(stagger_and_sum(icd, diagnoses))
+            if interventions:
+                dfs.append(stagger_and_sum(op, interventions))
 
-    sv = _multihot('SOS_T_T_T_R_PAR_SV_24129_2020.csv', brsm)
-    save(
-        sv.astype(pd.SparseDtype(bool, False)),
-        join(folder_dir, 'sk1718_brsm_multihot_sv.pickle')
-    )
+    if meds:
+        atc = multihot_atc(brsm)
+        dfs.append(stagger_and_sum(atc, meds))
 
-    ov = _multihot('SOS_T_T_T_R_PAR_OV_24129_2020.csv', brsm)
-    save(
-        ov.astype(pd.SparseDtype(bool, False)),
-        join(folder_dir, 'sk1718_brsm_multihot_ov.pickle')
-    )
+    log.info('Concatenating events')
+    mh = pd.concat(dfs, axis=1, join='outer').fillna(0)
 
-
-def foobar():
-    # TODO
-    # This took about 5 minutes to run, given the pre-computed SV and OV
-    # multihot-encoded dataframes.
-    folder_dir = '/mnt/air-crypt/air-crypt-esc-trop/axel/'
-    # brsm = load_outcomes_from_ab_brsm()
-
-    log.debug("Loading sv")
-    sv = load(
-        join(folder_dir, 'sk1718_brsm_multihot_sv.pickle'),
-        allow_uncommitted=True
-    )
-    sv = sv.sparse.to_dense()
-    log.debug("Fixing SV index")
-    sv = pd.concat([sv], keys=['SV'], axis=1).droplevel('sos_index', axis=0)
-    log.debug("Dropping duplicates")
-    sv = sv.reset_index().drop_duplicates().set_index(
-        ['Alias', 'diagnosis_date'])
-
-    log.debug("Loading ov")
-    ov = load(
-        join(folder_dir, 'sk1718_brsm_multihot_ov.pickle'),
-        allow_uncommitted=True
-    )
-    ov = ov.sparse.to_dense()
-    log.debug("Fixing OV index")
-    ov = pd.concat([ov], keys=['OV'], axis=1).droplevel('sos_index', axis=0)
-    log.debug("Dropping duplicates")
-    ov = ov.reset_index().drop_duplicates().set_index(
-        ['Alias', 'diagnosis_date'])
-
-    log.debug("Joining sv and ov")
-    # This eats a LOT of memory (hundreds of GB. I don't know which part is
-    # actually the culprit. If this runs with a lot of free RAM, the join is
-    # relatively quick, and will release some 100GB after finishing. The
-    # fillna is really really slow though, I'm not sure why exactly. Maybe
-    # the type is wrong and it has to cast and so on? I'm not really sure.)
-    ov = ov.join(sv, how='outer').fillna(False)
-    del sv
-
-    log.debug("Saving")
-    save(ov, join(folder_dir, 'sk1718_svov.pickle'))
-    log.debug("Done!")
-    # At least all the memory appears to be released when it's done.
-    # Footprint of final dataframe is about 8Gb.
-    return ov
-
-    # log.debug("Staggering")
-    # log.debug("Joining brsm")
-    # svov = svov.join(brsm.set_index('Alias'), on='Alias')
-    #
-    # log.debug("Saving result")
-    # save(svov, join(folder_dir, 'sk1718_svov.pickle'))
-    # log.debug("Done!")
-    # return svov
+    return mh
