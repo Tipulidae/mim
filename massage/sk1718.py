@@ -508,8 +508,8 @@ def group_atc_to_level(atc, level=None):
     return atc
 
 
-def summarize_patient_history(brsm, sources=None, diagnoses=0, interventions=0,
-                              meds=0, intervals=None, icd_level=None,
+def summarize_patient_history(brsm, sources=None, num_icd=0, num_kva=0,
+                              num_atc=0, intervals=None, icd_level=None,
                               atc_level=None):
     dfs = []
     if intervals is None:
@@ -525,18 +525,18 @@ def summarize_patient_history(brsm, sources=None, diagnoses=0, interventions=0,
     if sources:
         for source in sources:
             icd, op = multihot_icd_kva(source, brsm)
-            if diagnoses:
+            if num_icd:
                 icd = group_icd_to_level(icd, icd_level)
                 icd.columns = [f'{source}_ICD_{col}' for col in icd.columns]
-                dfs.append(stagger_and_sum(icd, diagnoses))
-            if interventions:
-                dfs.append(stagger_and_sum(op, interventions))
+                dfs.append(stagger_and_sum(icd, num_icd))
+            if num_kva:
+                dfs.append(stagger_and_sum(op, num_kva))
 
-    if meds:
+    if num_atc:
         atc = multihot_atc(brsm)
         atc = group_atc_to_level(atc, atc_level)
         atc.columns = [f"ATC_{col}" for col in atc.columns]
-        dfs.append(stagger_and_sum(atc, meds))
+        dfs.append(stagger_and_sum(atc, num_atc))
 
     log.info('Concatenating events')
     mh = pd.concat(dfs, axis=1, join='outer').fillna(0)
