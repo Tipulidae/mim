@@ -3,8 +3,11 @@ from os.path import join
 import numpy as np
 import pandas as pd
 
+from massage.sos_util import fix_dors_date
 from mim.util.logs import get_logger
 from mim.cache.decorator import cache
+from massage.icd_util import round_icd_to_chapter, icd_chapters, \
+    atc_to_level_rounder
 
 log = get_logger("Skåne 17-18 massage")
 
@@ -108,49 +111,6 @@ def massage_lab_values(lab):
 
 
 def lab_values_to_float(lab):
-    def is_float(s):
-        try:
-            float(s)
-            return True
-        except ValueError:
-            return False
-
-    def lab_value_to_float(value):
-        if is_float(value):
-            return float(value)
-        else:
-            return coerce_lab_value(value)
-
-    def coerce_lab_value(value):
-        if value in inequality_to_float:
-            return inequality_to_float[value]
-        else:
-            return np.nan
-
-    inequality_to_float = {
-        '<0.08': 0.07,
-        '<2.0': 1.0,
-        '>40': 41.0,
-        '<0.0': -1.0,
-        '<0.10': 0.09,
-        '<0.1': 0.09,
-        '<0.60': 0.59,
-        '<50': 49.0,
-        '>150': 151.0,
-        '<20': 19.0,
-        '<5': 4.0,
-        '>9999': 10000.0,
-        '<10': 9.0,
-        '<0.01': 0.009,
-        '>8.0': 9.0,
-        '<3': 2.0,
-        '<0.05': 0.04,
-        '>10.0': 11.0,
-        '<0.8': 0.7,
-        '<0.02': 0.01,
-        '>9998': 10000.0,
-        '>31.0': 32.0,
-    }
     lab = lab.copy()
     lab.Analyssvar_Varde = lab.Analyssvar_Varde.apply(lab_value_to_float)
     return lab
@@ -370,6 +330,9 @@ def multihot_icd_kva(source, index):
         .rename('ICD')
         .reset_index(level=2, drop=True)
     )
+    icd = pivot(icd)
+
+    # icd.columns = [f'{source}_ICD_{col}' for col in icd.columns]
 
     op = (
         sos
@@ -380,8 +343,6 @@ def multihot_icd_kva(source, index):
         .dropna()
     )
 
-    icd = pivot(icd)
-    icd.columns = [f'{source}_ICD_{col}' for col in icd.columns]
     op = pivot(op)
     op.columns = [f'{source}_OP_{col}' for col in op.columns]
     return icd, op
@@ -402,7 +363,7 @@ def multihot_atc(index):
         .loc[:, 'ATC']
     )
     atc = pivot(atc)
-    atc.columns = [f"ATC_{col}" for col in atc.columns]
+    # atc.columns = [f"ATC_{col}" for col in atc.columns]
     return atc
 
 
@@ -415,7 +376,6 @@ def pivot(s):
     # value in the input is the first column in the output.
     name = s.name
     log.info(f'Pivoting {name}')
-    # df = s.reset_index(level=[2, 1]).drop_duplicates()
     df = s.reset_index().drop_duplicates()
     col_order = (
         df[name]
@@ -450,8 +410,13 @@ def stagger_events(df, brsm):
     log.info("Staggering events")
     brsm = brsm.set_index('Alias')[['admission_index', 'admission_date']]
     df = df.reset_index().join(brsm, on='Alias')
+    years_ago = (
+        (df.admission_date - df.event_date)
+        .dt.total_seconds() / (3600 * 24 * 365)
+    )
     df = (
-        df[df.event_date < df.admission_date]
+        # df[df.event_date < df.admission_date]
+        df[(years_ago <= 5) & (years_ago > 0)]
         .sort_values(
             by=['Alias', 'admission_index', 'event_date'])
         .reset_index(drop=True)
@@ -512,8 +477,40 @@ def sum_events_in_interval(mhs, brsm, **interval_kwargs):
     return res
 
 
+def group_icd_to_level(icd, level=None):
+    if level == 'chapter':
+        log.info("Rounding ICD codes to chapters")
+        icd = icd.astype(int).rename(columns=round_icd_to_chapter)
+        icd = pd.concat(
+            [
+                icd[[chapter]].sum(axis=1).rename(chapter)
+                for chapter in icd_chapters
+            ],
+            axis=1,
+        )
+
+    return icd
+
+
+def group_atc_to_level(atc, level=None):
+    if level == 'full':
+        return atc
+
+    atc = atc.astype(int).rename(columns=atc_to_level_rounder(level))
+    categories = sorted(atc.columns.unique())
+    atc = pd.concat(
+        [
+            atc[[category]].sum(axis=1).rename(category)
+            for category in categories
+        ],
+        axis=1
+    )
+    return atc
+
+
 def summarize_patient_history(brsm, sources=None, diagnoses=0, interventions=0,
-                              meds=0, intervals=None):
+                              meds=0, intervals=None, icd_level=None,
+                              atc_level=None):
     dfs = []
     if intervals is None:
         intervals = {'periods': 1}
@@ -529,15 +526,268 @@ def summarize_patient_history(brsm, sources=None, diagnoses=0, interventions=0,
         for source in sources:
             icd, op = multihot_icd_kva(source, brsm)
             if diagnoses:
+                icd = group_icd_to_level(icd, icd_level)
+                icd.columns = [f'{source}_ICD_{col}' for col in icd.columns]
                 dfs.append(stagger_and_sum(icd, diagnoses))
             if interventions:
                 dfs.append(stagger_and_sum(op, interventions))
 
     if meds:
         atc = multihot_atc(brsm)
+        atc = group_atc_to_level(atc, atc_level)
+        atc.columns = [f"ATC_{col}" for col in atc.columns]
         dfs.append(stagger_and_sum(atc, meds))
 
     log.info('Concatenating events')
     mh = pd.concat(dfs, axis=1, join='outer').fillna(0)
 
     return mh
+
+
+def staggered_patient_history(brsm, sources=None, diagnoses=0, interventions=0,
+                              meds=0):
+    dfs = []
+
+    def prune(data, k):
+        if k > 0:
+            data = data.iloc[:, :k]
+        data = data[data.any(axis=1)]
+        return data
+
+    if sources:
+        for source in sources:
+            icd, op = multihot_icd_kva(source, brsm)
+            if diagnoses:
+                dfs.append(prune(icd, diagnoses))
+            if interventions:
+                dfs.append(prune(op, interventions))
+
+    if meds:
+        atc = multihot_atc(brsm)
+        dfs.append(prune(atc, meds))
+
+    log.info('Concatenating events')
+    df = pd.concat(dfs, axis=1, join='outer').fillna(False)
+    df = stagger_events(df, brsm)
+    df['years_ago'] = (
+        (df.admission_date - df.event_date)
+        .dt.total_seconds() / (3600 * 24 * 365)
+    )
+    return df
+
+
+def remove_events_outside_time_interval(
+        events, index_visits, interval_days_start=0, interval_days_end=30):
+    # events has multi-index (Alias, event_date)
+    # index_visists has columns at least Alias, admission_date
+    # Output has multi-index (Alias, KontaktId), and includes all events
+    # that occurred within the specified time from the index. The same event
+    # can be listed multiple times if it matches more than one visit.
+    cols = list(events.columns) + ['Alias', 'KontaktId']
+    events = (
+        events
+        .reset_index()
+        .join(index_visits.set_index('Alias'), on='Alias', how='inner')
+    )
+
+    # Calculate the time between admission and diagnosis, in days
+    dt = (events.event_date.dt.floor('1D') -
+          events.admission_date.dt.floor('1D'))
+    dt = dt.dt.total_seconds() / (3600 * 24)
+    interval = (dt >= interval_days_start) & (dt <= interval_days_end)
+
+    # Keep only the rows within the specified interval.
+    return events.loc[interval, cols].set_index(['Alias', 'KontaktId'])
+
+
+def make_mace(index):
+    icd, op = _make_sos_codes('SV', index)
+    events = remove_events_outside_time_interval(icd, index)
+    mace = make_mace_table(index, icd_events=events, op_events=None)
+    deaths = _make_death_in_30days(index)
+    return mace.join(deaths)
+
+
+def make_mace_table(index, icd_events, op_events):
+    # This is still a bit WIP - haven't included all sources of events, or
+    # intervention codes. Also, the list of ICD codes is different from
+    # before.
+    mace_codes_new = [
+        "I200",
+        "I21",
+        "I22",
+        "I26",  # Lungemboli
+        "I441",
+        "I442",
+        "I46",
+        "I470",
+        "I472",
+        "I490",
+        "I71",  # Aortadissektion
+        "J819",
+    ]
+    index = index.set_index(['Alias', 'KontaktId']).sort_index()
+    diagnoses = pd.DataFrame(index=icd_events.index)
+    mace_table = pd.DataFrame(index=index.index)
+    for icd in mace_codes_new:
+        diagnoses[icd] = icd_events.ICD.str.contains(icd)
+
+    mace_table = mace_table.join(
+        diagnoses.groupby('KontaktId')[mace_codes_new].any(),
+        how='left'
+    )
+    return mace_table.fillna(False)
+
+
+def _make_duplicated_key_mapping(key):
+    # There are a few LopNr that maps to more than one Alias. I want to
+    # remedy this by mapping all the Aliases for any LopNr to the last
+    # used version. This is indicated by the column "SenPNr". This function
+    # returns a dictionary that maps all the old Aliases to their last used
+    # counterparts, for those that have multiple LopNr.
+    dupes = (
+        key[key.LopNr.duplicated(keep=False)]
+        .sort_values(by=['LopNr', 'SenPNr'])
+    )
+    old = (
+        dupes
+        .drop_duplicates(subset=['LopNr'], keep='first')
+        .set_index('LopNr')
+        [['Alias']]
+    )
+    new = (
+        dupes
+        .drop_duplicates(subset=['LopNr'], keep='last')
+        .set_index('LopNr')
+        [['Alias']]
+    )
+    mapping = (
+        old
+        .join(new, lsuffix='_old')
+        .set_index('Alias_old')
+        .to_dict()
+    )
+    return mapping
+
+
+def make_index():
+    # Remaps Alias of duplicated LopNr to the last used Alias
+    # Drops any visits with missing cause
+    # For duplicated entries on the same patient, date and time, take the one
+    # with the latest discharge date.
+    # Does NOT drop missing hospitals (these are primarily Lund, Kristianstad
+    # and Ystad, I think)
+    # Does NOT drop visits with unknown discharge date
+    key = read_csv(
+        'SCB_Ekelund_LEV_Nyckel.csv',
+        usecols=['Alias', 'LopNr', 'SenPNr']
+    )
+    alias_mapping = _make_duplicated_key_mapping(key)
+
+    index_col_map = {
+        'KontaktId': 'KontaktId',
+        'Alias': 'Alias',
+        'Sjukhus_Namn': 'hospital',
+        'BesokOrsak_Kod': 'cause',
+        'Vardkontakt_InskrivningDatum': 'admission_date',
+        'Vardkontakt_UtskrivningDatum': 'discharge_date',
+        'Patient_Kon': 'sex',
+        'Vardkontakt_PatientAlderVidInskrivning': 'age'
+    }
+    index = (
+        read_csv(
+            'PATIENTLIGGAREN_Vårdkontakter_2017_2018.csv',
+            usecols=index_col_map.keys(),
+            parse_dates=[
+                'Vardkontakt_InskrivningDatum',
+                'Vardkontakt_UtskrivningDatum'
+            ])
+        .rename(columns=index_col_map)
+        .dropna(subset=['cause'])
+        .replace(alias_mapping)
+        .join(key.set_index('Alias')['LopNr'], on='Alias', how='inner')
+        .sort_values(
+            by=['Alias', 'admission_date', 'discharge_date'],
+            na_position='first'
+        )
+        .drop_duplicates(subset=['Alias', 'admission_date'], keep='last')
+        .reset_index(drop=True)
+    )
+    return index
+
+
+def _make_sos_codes(source, index):
+    # WIP
+    log.info(f'Extracting ICD and KVÅ events from {source}')
+
+    source = source.upper()
+    assert source in ['SV', 'OV']
+
+    path = f'SOS_T_T_T_R_PAR_{source}_24129_2020.csv'
+
+    log.info(f'Loading {path}')
+    diagnosis_cols = ['hdia'] + [f'DIA{x}' for x in range(1, 31)]
+    op_cols = ['OP']
+    sos = (
+        read_csv(
+            path,
+            usecols=['LopNr', 'INDATUM'] + diagnosis_cols + op_cols,
+            parse_dates=['INDATUM'],
+            low_memory=False)
+        .rename(columns={'INDATUM': 'event_date'})
+        .join(index.set_index('LopNr'), on='LopNr', how='inner')
+        .set_index(['Alias', 'event_date'])
+        .sort_index()
+    )
+
+    icd = (
+        sos
+        .loc[:, diagnosis_cols]
+        .stack()
+        .rename('ICD')
+        .reset_index(level=2, drop=True)
+        .reset_index()
+        .drop_duplicates()
+        .set_index(['Alias', 'event_date'])
+    )
+    # icd = pivot(icd)
+
+    op = (
+        sos
+        .loc[:, 'OP']
+        .str.split(' ')
+        .explode()
+        .rename('OP')
+        .dropna()
+        .reset_index()
+        .drop_duplicates()
+        .set_index(['Alias', 'event_date'])
+    )
+
+    # op = pivot(op)
+    return icd, op
+
+
+def _make_death_in_30days(index):
+    deaths = read_csv(
+        'SOS_R_DORS_24129_2020.csv',
+        usecols=['LopNr', 'DODSDAT'],
+        low_memory=False
+    ).rename(columns={'DODSDAT': 'death_date'}).set_index('LopNr')
+
+    deaths.death_date = pd.to_datetime(
+        deaths.death_date.astype(str).apply(fix_dors_date),
+        format='%Y%m%d'
+    )
+
+    deaths = index[['LopNr', 'Alias', 'KontaktId', 'admission_date']].join(
+        deaths, on='LopNr'
+    )
+    dt = (deaths.death_date - deaths.admission_date
+          ).dt.total_seconds() / (3600 * 24)
+
+    # You're unlikely to have died before going to the hospital...
+    # But it is possible that the day of death is unknown, at which point
+    # date of death is rounded to the first of the month.
+    deaths['death'] = (dt >= -30) & (dt <= 30)
+    return deaths.set_index(['Alias', 'KontaktId'])[['death']]

@@ -15,6 +15,7 @@ from sklearn.metrics import (
     mean_squared_error,
     mean_absolute_error
 )
+from sklearn.calibration import calibration_curve
 import matplotlib.pyplot as plt
 
 from mim.util.logs import get_logger
@@ -113,9 +114,8 @@ class Presenter:
     def scores(self, like='.*', auc=True, rule_in_out=False):
         results = []
         for name, xp in list(self._results_that_match_pattern(like)):
-            targets, predictions = self._target_predictions(name)
-            targets = targets.values.ravel()
-            predictions = predictions.values.ravel()
+            targets = xp.validation_targets.values.ravel()
+            predictions = xp.validation_predictions.values.ravel()
 
             data = []
             index = []
@@ -457,3 +457,30 @@ def calculate_regression_scores(targets, predictions):
         results[name] = scorer(targets, predictions)
 
     return results
+
+
+def plot_calibration_curve(targets, predictions, bins=25, strategy='quantile'):
+    plt.figure(figsize=(10, 10))
+    ax1 = plt.subplot2grid((3, 1), (0, 0), rowspan=2)
+    ax2 = plt.subplot2grid((3, 1), (2, 0))
+
+    ax1.plot([0, 1], [0, 1], "k:", label="Perfectly calibrated")
+
+    fraction_of_positives, mean_predicted_value = calibration_curve(
+        targets, predictions, n_bins=bins, strategy=strategy)
+    ax1.plot(mean_predicted_value, fraction_of_positives, "-",
+             label='Predicted')
+    ax2.hist(predictions, range=(0, 1), bins=bins, label='Prediction',
+             histtype="step", lw=2)
+
+    ax1.set_ylabel("Fraction of positives")
+    ax1.set_ylim([-0.05, 1.05])
+    ax1.legend(loc="lower right")
+    ax1.set_title('Calibration plots  (reliability curve)')
+
+    ax2.set_xlabel("Mean predicted value")
+    ax2.set_ylabel("Count")
+    ax2.legend(loc="upper center", ncol=2)
+
+    plt.tight_layout()
+    plt.show()

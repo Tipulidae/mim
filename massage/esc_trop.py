@@ -5,6 +5,7 @@ import pandas as pd
 import h5py
 from tqdm import tqdm
 
+from massage.sos_util import fix_dors_date
 from massage.carlson_ecg import (
     ECGStatus,
     expected_lead_names,
@@ -13,6 +14,7 @@ from massage.carlson_ecg import (
     glasgow_diagnoses
 )
 from mim.util.logs import get_logger
+
 
 log = get_logger("ESC-Trop Massage")
 
@@ -778,22 +780,13 @@ def _make_diagnoses(csv_name):
     return diagnoses.set_index('Alias')
 
 
-def _fix_dors_date(s):
-    if s[-4:] == '0000':
-        return s[:-4] + '1201'
-    elif s[-2:] == '00':
-        return s[:-2] + '01'
-    else:
-        return s
-
-
 def _make_mace_deaths(index_visits):
     deaths = read_csv('ESC_TROP_SOS_R_DORS__14204_2019.csv')
     deaths = deaths.set_index('Alias')[['DODSDAT']].rename(
         columns={'DODSDAT': 'diagnosis_date'})
 
     deaths.diagnosis_date = pd.to_datetime(
-        deaths.diagnosis_date.astype(str).apply(_fix_dors_date),
+        deaths.diagnosis_date.astype(str).apply(fix_dors_date),
         format='%Y%m%d'
     )
     deaths = index_visits.join(deaths)
@@ -819,7 +812,7 @@ def _make_diagnoses_from_dors():
     )
     diagnoses = diagnoses.rename(columns={'DODSDAT': 'diagnosis_date'})
     diagnoses['diagnosis_date'] = pd.to_datetime(
-        diagnoses.diagnosis_date.astype(str).apply(_fix_dors_date),
+        diagnoses.diagnosis_date.astype(str).apply(fix_dors_date),
         format='%Y%m%d',
     )
     return diagnoses.dropna()

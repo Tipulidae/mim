@@ -60,6 +60,10 @@ class Data:
 
         return new_data
 
+    # def lazy_partition(self, xs):
+    #     for p in partition(xs):
+    #         yield self.lazy_slice(p)
+
     @property
     def index(self):
         return np.array(range(len(self)))
@@ -133,6 +137,22 @@ class Data:
     def __iter__(self):
         for i in range(len(self)):
             yield self[i]
+
+
+def partition(xs):
+    """
+    Turn an input list of objects into a sequence of indices, one for each
+    unique object, such that the index shows the location in the input list
+    where that object is. Example:
+
+    [0, 0, 1, 0, 1, 2, 2] -> [0, 1, 3], [2, 4], [5, 6]
+
+    :param xs:
+    :return:
+    """
+    items = set(xs)
+    for y in sorted(items):
+        yield [i for i, x in enumerate(xs) if x == y]
 
 
 class RaggedData(Data):
@@ -261,7 +281,6 @@ class DataWrapper:
             else:
                 return Data(x[0], columns=list(x[1]))
 
-        self.n = len(index)
         self.data = Container(
             {
                 # 'x': wrap_as_data(features),
@@ -271,7 +290,7 @@ class DataWrapper:
                 'y': labels,
                 'index': index,
             },
-            index=range(self.n),
+            index=range(len(index)),
             groups=groups,
             predefined_splits=predefined_splits,
             fits_in_memory=fits_in_memory
@@ -310,7 +329,7 @@ class DataWrapper:
         return self.to_dataframe(self.data['y'].as_flat_numpy())
 
     def __len__(self):
-        return self.n
+        return len(self.data['index'])
 
     def x(self, can_use_tf_dataset=True):
         if can_use_tf_dataset:
@@ -367,6 +386,12 @@ class DataWrapper:
         new_data = copy(self)
         new_data.data = new_data.data.lazy_slice(index)
         return new_data
+
+    def lazy_partition(self, xs):
+        for p in partition(xs):
+            new_data = copy(self)
+            new_data.data = new_data.data.lazy_slice(p)
+            yield new_data
 
 
 def infer_shape(data):
