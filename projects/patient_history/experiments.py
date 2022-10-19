@@ -3,11 +3,13 @@ from enum import Enum
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import Binarizer, StandardScaler
+from sklearn.preprocessing import Binarizer, StandardScaler, PowerTransformer
+from tensorflow.keras.optimizers import Adam
 
 from mim.experiments.experiments import Experiment
 from mim.experiments.extractor import sklearn_process
 from projects.patient_history.extractor import Flat
+from projects.patient_history.models import simple_mlp
 
 
 class PatientHistory(Experiment, Enum):
@@ -31,6 +33,41 @@ class PatientHistory(Experiment, Enum):
         scoring=roc_auc_score,
         metrics=['accuracy', 'auc'],
     )
+    LR_LISA = LR_BASIC._replace(
+        description='Predicting ACS or death using data from LISA',
+        model_kwargs={
+            'class_weight': 'balanced',
+            'max_iter': 300,
+            'C': 0.0001
+        },
+        extractor_kwargs={
+            'features': {'lisa': True}
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'lisa': {'processor': PowerTransformer},
+        },
+    )
+    LR_LISA_BASIC = LR_BASIC._replace(
+        description='Predicting ACS or death using data from LISA',
+        model_kwargs={
+            'class_weight': 'balanced',
+            'max_iter': 300,
+            'C': 0.01
+        },
+        extractor_kwargs={
+            'features': {
+                'lisa': True,
+                'basic': ['age', 'sex']
+            }
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'lisa': {'processor': PowerTransformer},
+            'basic': {'processor': StandardScaler}
+        },
+    )
+
     LR_SI10_P1 = Experiment(
         description='',
         model=LogisticRegression,
@@ -616,6 +653,40 @@ class PatientHistory(Experiment, Enum):
                 }
             }
         },
+        model_kwargs={
+            'class_weight': 'balanced',
+            'max_iter': 300,
+            'C': 0.001
+        },
+
+    )
+    LR_AC_SIC_OIC_LISA_BASIC_P1 = LR_SIC_BASIC_P1._replace(
+        description='',
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'lisa': True,
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['OV', 'SV'],
+                    'num_icd': -1,
+                    'icd_level': 'chapter',
+                    'num_atc': -1,
+                    'atc_level': 'therapeutic',
+                    'num_kva': 0,
+                }
+            }
+        },
+        model_kwargs={
+            'class_weight': 'balanced',
+            'max_iter': 300,
+            'C': 0.001
+        },
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'basic': {'processor': StandardScaler},
+            'lisa': {'processor': StandardScaler}
+        },
     )
 
     LR_A100_SI100_OI100_P1 = LR_SIC_P1._replace(
@@ -645,5 +716,167 @@ class PatientHistory(Experiment, Enum):
                     'num_atc': 100,
                 }
             }
+        },
+    )
+
+    MLP1_AC_SIC_OIC_BASIC = Experiment(
+        description='ICD codes from SV grouped into chapters.',
+        model=simple_mlp,
+        model_kwargs={
+            'history_mlp_kwargs': {
+                'sizes': [500, 10],
+                'dropouts': [0.5, 0.2],
+                'default_regularizer': 1e-3,
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0]
+            }
+        },
+        extractor=Flat,
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['OV', 'SV'],
+                    'num_icd': -1,
+                    'icd_level': 'chapter',
+                    'num_atc': -1,
+                    'atc_level': 'therapeutic',
+                    'num_kva': 0,
+                }
+            }
+        },
+        building_model_requires_development_data=True,
+        batch_size=256,
+        epochs=100,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-3}
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'basic': {'processor': StandardScaler}
+        },
+        cv=GroupShuffleSplit,
+        cv_kwargs={
+            'n_splits': 1,
+            'train_size': 2 / 3,
+            'random_state': 43,
+        },
+        scoring=roc_auc_score,
+        metrics=['accuracy', 'auc'],
+    )
+    MLP1_A1000_SI1000_OI1000_BASIC = MLP1_AC_SIC_OIC_BASIC._replace(
+        model_kwargs={
+            'history_mlp_kwargs': {
+                'sizes': [100, 10],
+                'dropouts': [0.5, 0.2],
+                'default_regularizer': 1e-2,
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0]
+            }
+        },
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['OV', 'SV'],
+                    'num_icd': 1000,
+                    'num_atc': 1000,
+                    'num_kva': 0,
+                }
+            }
+        },
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'basic': {'processor': StandardScaler},
+        },
+    )
+
+    MLP1_LISA = MLP1_AC_SIC_OIC_BASIC._replace(
+        description='',
+        model_kwargs={
+            'lisa_mlp_kwargs': {
+                'sizes': [100, 10],
+                'dropouts': [0.5, 0.2],
+                'default_regularizer': 1e-2,
+            },
+        },
+        extractor_kwargs={
+            'features': {
+                'lisa': True,
+            }
+        },
+        pre_processor_kwargs={
+            'lisa': {'processor': StandardScaler}
+        },
+    )
+
+    MLP1_LISA_BASIC = MLP1_AC_SIC_OIC_BASIC._replace(
+        description='',
+        model_kwargs={
+            'lisa_mlp_kwargs': {
+                'sizes': [100, 10],
+                'dropouts': [0.5, 0.2],
+                'default_regularizer': 1e-2,
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0]
+            }
+        },
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'lisa': True,
+            }
+        },
+        pre_processor_kwargs={
+            'basic': {'processor': StandardScaler},
+            'lisa': {'processor': StandardScaler}
+        },
+    )
+
+    MLP1_A1000_SI1000_OI1000_LISA_BASIC = MLP1_AC_SIC_OIC_BASIC._replace(
+        description='',
+        model_kwargs={
+            'history_mlp_kwargs': {
+                'sizes': [100, 10],
+                'dropouts': [0.5, 0.2],
+                'default_regularizer': 1e-2,
+            },
+            'lisa_mlp_kwargs': {
+                'sizes': [100, 10],
+                'dropouts': [0.5, 0.2],
+                'default_regularizer': 1e-2,
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0]
+            }
+        },
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'lisa': True,
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['OV', 'SV'],
+                    'num_icd': 1000,
+                    'num_atc': 1000,
+                    'num_kva': 0,
+                }
+            }
+        },
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'basic': {'processor': StandardScaler},
+            'lisa': {'processor': StandardScaler}
         },
     )

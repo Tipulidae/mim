@@ -2,6 +2,7 @@ from os.path import join
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import OneHotEncoder
 
 from massage.sos_util import fix_dors_date
 from mim.util.logs import get_logger
@@ -508,6 +509,7 @@ def group_atc_to_level(atc, level=None):
     return atc
 
 
+@cache
 def summarize_patient_history(brsm, sources=None, num_icd=0, num_kva=0,
                               num_atc=0, intervals=None, icd_level=None,
                               atc_level=None):
@@ -791,3 +793,232 @@ def _make_death_in_30days(index):
     # date of death is rounded to the first of the month.
     deaths['death'] = (dt >= -30) & (dt <= 30)
     return deaths.set_index(['Alias', 'KontaktId'])[['death']]
+
+
+@cache
+def lisa(index):
+    dfs = {year: read_lisa(year) for year in range(2012, 2019)}
+    admission_year = index.admission_date.dt.year
+
+    common_cols = [
+        # "lisa_missing",
+        "marital_status",
+        "citizenship_eu15",
+        "citizenship_eu28",
+        "children_aged_0_3",
+        "children_aged_4_6",
+        "children_aged_7_10",
+        "children_aged_11_15",
+        "children_aged_16_17",
+        "education_level_old",
+        "education_level",
+        "education_duration",
+        "education_type",
+        "education_focus",
+        "graduation_decade",
+        "occupational_status",
+        "occupation_type",
+        "occupation_code",
+        "socioeconomic_group",
+        "socioeconomic_class"
+    ]
+
+    yearly_cols = [
+        'parental_benefit',
+        'sickness_benefit',
+        'received_sickness_benefit',
+        'sickness_and_rehab_benefit',
+        'sickness_benefit_days',
+        'unemployment_benefit',
+        'unemployment_days',
+        'political_benefit',
+        'early_retirement_benefit',
+        'received_early_retirement_benefit',
+        'sickness_pension_days',
+        'capital_income',
+        'retirement_pension',
+        'social_benefit',
+        'housing_benefit',
+        'disposable_income_family_v1',
+        'disposable_income_family_v2',
+        'disposable_income',
+        'lisa_missing'
+    ]
+
+    year_2017 = (
+        index.loc[admission_year == 2017, ['LopNr']]
+        .join(dfs[2016][common_cols], on='LopNr')
+    )
+    for year in range(2012, 2017):
+        old_lisa = dfs[year][yearly_cols].rename(
+            columns={x: f'{x}_{2017-year}_yrs_ago' for x in yearly_cols}
+        )
+        year_2017 = year_2017.join(old_lisa, on='LopNr')
+
+    year_2018 = (
+        index.loc[admission_year == 2018, ['LopNr']]
+        .join(dfs[2017][common_cols], on='LopNr')
+    )
+    for year in range(2013, 2018):
+        old_lisa = dfs[year][yearly_cols].rename(
+            columns={x: f'{x}_{2018-year}_yrs_ago' for x in yearly_cols}
+        )
+        year_2018 = year_2018.join(old_lisa, on='LopNr')
+
+    common = pd.concat([year_2017, year_2018], axis=0)
+    indicator_missing = list(common.filter(like='missing'))
+    common[indicator_missing] = common[indicator_missing].fillna(True)
+    common = common.reindex(index.index)
+
+    common = common.fillna({
+        'marital_status': '*',
+        'citizenship_eu15': 11,
+        'citizenship_eu28': 11,
+        'children_aged_0_3': -1,
+        'children_aged_4_6': -1,
+        'children_aged_7_10': -1,
+        'children_aged_11_15': -1,
+        'children_aged_16_17': -1,
+        'education_level_old': '*',
+        'education_level': 9,
+        'education_duration': 9,
+        'education_type': 9,
+        'education_focus': '99',
+        'graduation_decade': '***',
+        'occupational_status': 6,
+        'occupation_type': 0,
+        'occupation_code': '*',
+        'socioeconomic_group': '*',
+        'socioeconomic_class': '*',
+    })
+    common = common.fillna(0).set_index('LopNr')
+
+    categorical_columns = [
+        "marital_status",
+        "citizenship_eu15",
+        "citizenship_eu28",
+        "children_aged_0_3",
+        "children_aged_4_6",
+        "children_aged_7_10",
+        "children_aged_11_15",
+        "children_aged_16_17",
+        "education_level_old",
+        "education_level",
+        "education_duration",
+        "education_type",
+        "education_focus",
+        "graduation_decade",
+        "occupational_status",
+        "occupation_type",
+        "occupation_code",
+        "socioeconomic_group",
+        "socioeconomic_class",
+    ]
+    remaining_columns = common.columns.difference(categorical_columns)
+
+    ohe = OneHotEncoder(sparse=False)
+    return pd.concat([
+        pd.DataFrame(
+            ohe.fit_transform(common[categorical_columns]),
+            index=common.index,
+            columns=ohe.get_feature_names_out(),
+        ),
+        common[remaining_columns]
+    ], axis=1).astype(float)
+
+
+def read_lisa(year):
+    assert year in range(2012, 2019)
+
+    col_map = {
+        'lopnr': 'LopNr',
+        'Civil': 'marital_status',
+        'MedbGrEg': 'citizenship_eu15',
+        'MedbGrEg4': 'citizenship_eu28',
+        'Barn0_3': 'children_aged_0_3',
+        'Barn4_6': 'children_aged_4_6',
+        'Barn7_10': 'children_aged_7_10',
+        'Barn11_15': 'children_aged_11_15',
+        'Barn16_17': 'children_aged_16_17',
+        'Sun2000niva_old': 'education_level_old',
+        'Sun2000niva': 'education_level_sun2000',
+        'Sun2000Inr': 'education_focus',
+        'ExamAr': 'graduation_year',
+        'SyssStat11': 'occupational_status',
+        'YrkStalln': 'occupation_type',
+        # 'SsykStatus_J16': 'occupation_in_own_company'
+
+        'ForLed': 'parental_benefit',
+        'SjukPP': 'sickness_benefit',
+        'SjukTyp': 'received_sickness_benefit',
+        'SjukRe': 'sickness_and_rehab_benefit',
+        'SjukP_Ndag_MiDAS': 'sickness_benefit_days',
+        'ArbLos': 'unemployment_benefit',
+        'ALosDag': 'unemployment_days',
+        # Hur översätter man arbetsmarknadspolitiska åtgärder??
+        'AmPol': 'political_benefit',
+        'ForTid': 'early_retirement_benefit',
+        'ForTidTyp': 'received_early_retirement_benefit',
+        'SjukErs_Ndag_MiDAS': 'sickness_pension_days',
+        'KapInk': 'capital_income',
+        'SumAldP03': 'retirement_pension',
+        'SocBidrFam': 'social_benefit',
+        'BostBidrFam': 'housing_benefit',
+        'DispInkKE': 'disposable_income_family_v1',
+        'DispInkKE04': 'disposable_income_family_v2',
+        'DispInk04': 'disposable_income'
+    }
+
+    if year > 2015:
+        col_map['Ssyk4_2012_J16'] = 'occupation_code'
+
+    if year == 2016:
+        col_map['ESeG'] = 'socioeconomic_group'
+    elif year >= 2017:
+        col_map['ESeG_J16'] = 'socioeconomic_group'
+
+    df = (
+        read_csv(f"SCB_Ekelund_LEV_LISA{year}.csv", usecols=col_map.keys())
+        .rename(columns=col_map)
+        .set_index('LopNr')
+    )
+
+    # In the year 2016, for some reason, there are some nans in this column.
+    # They should map to value 11, which is the designated "unknown"
+    # citizenship code according to the LISA documentation.
+    df.citizenship_eu15 = df.citizenship_eu15.fillna(11.0)
+    df['lisa_missing'] = False
+
+    day_cols = [
+        'sickness_benefit_days',
+        'unemployment_days',
+        'sickness_pension_days'
+    ]
+    days = 366 if year in [2012, 2016] else 365
+    df[day_cols] /= days
+
+    sun2000 = df.education_level_sun2000.astype(str)
+    df['education_level'] = sun2000.str[0].astype(int)
+    df['education_duration'] = sun2000.str[1].astype(int)
+    df['education_type'] = sun2000.str[2].astype(int)
+    df['graduation_decade'] = df.graduation_year.str[:3]
+
+    if year > 2015:
+        df.education_focus = df.education_focus.str[:2]
+        df.occupation_code = df.occupation_code.fillna('*').str[0]
+
+        df.socioeconomic_group = (
+            df.socioeconomic_group.fillna('*').astype(str).str[0]
+        )
+        df['socioeconomic_class'] = df.socioeconomic_group.map({
+            '1': 'high',
+            '2': 'high',
+            '3': 'middle',
+            '4': 'middle',
+            '5': 'working',
+            '6': 'working',
+            '7': 'working',
+            '*': '*'
+        })
+
+    return df

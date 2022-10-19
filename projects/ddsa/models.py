@@ -1,7 +1,7 @@
 from tensorflow import keras
 from tensorflow.keras.layers import Input, Dense
 
-from mim.models.util import cnn_helper, ffnn_helper
+from mim.models.util import cnn_helper, mlp_helper
 
 
 def ptbxl_cnn(
@@ -16,14 +16,14 @@ def ptbxl_cnn(
 
     inp = Input(shape=train.feature_tensor_shape)
     x = cnn_helper(inp, **cnn_kwargs)
-    x = ffnn_helper(x, **ffnn_kwargs)
+    x = mlp_helper(x, **ffnn_kwargs)
 
     output_layers = []
 
     for name in train.target_columns:
         y = x
         if name in final_ffnn_kwargs:
-            y = ffnn_helper(x, **final_ffnn_kwargs[name])
+            y = mlp_helper(x, **final_ffnn_kwargs[name])
 
         output_layers.append(
             Dense(

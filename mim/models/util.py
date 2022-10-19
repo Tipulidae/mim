@@ -86,7 +86,7 @@ def cnn_helper(
     return x
 
 
-def ffnn_helper(
+def mlp_helper(
         x, sizes,
         activation='relu',
         dropouts=None,

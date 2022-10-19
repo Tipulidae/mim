@@ -65,7 +65,7 @@ class Base(Extractor):
         if 'outcome' in self.labels:
             outcome = self.labels['outcome']
         else:
-            outcome = 'BAD'
+            outcome = 'ACS'
 
         if outcome == 'age':
             return Data(
@@ -127,6 +127,10 @@ class Flat(Base):
 
         if 'basic' in self.features:
             x_dict['basic'] = make_basic_features(brsm)
+
+        if 'lisa' in self.features:
+            lisa = sk1718.lisa(brsm)
+            x_dict['lisa'] = Data(lisa.values, columns=list(lisa.columns))
 
         data = DataWrapper(
             features=Container(x_dict),
