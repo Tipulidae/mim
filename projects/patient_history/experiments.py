@@ -3,7 +3,9 @@ from enum import Enum
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import Binarizer, StandardScaler, PowerTransformer
+from xgboost import XGBClassifier
 from tensorflow.keras.optimizers import Adam
 
 from mim.experiments.experiments import Experiment
@@ -807,6 +809,10 @@ class PatientHistory(Experiment, Enum):
                 'dropouts': [0.5, 0.2],
                 'default_regularizer': 1e-2,
             },
+            'final_mlp_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0]
+            }
         },
         extractor_kwargs={
             'features': {
@@ -816,6 +822,9 @@ class PatientHistory(Experiment, Enum):
         pre_processor_kwargs={
             'lisa': {'processor': StandardScaler}
         },
+    )
+    MLP1_LISA2 = MLP1_LISA._replace(
+        random_state=1239823
     )
 
     MLP1_LISA_BASIC = MLP1_AC_SIC_OIC_BASIC._replace(
@@ -841,6 +850,46 @@ class PatientHistory(Experiment, Enum):
             'basic': {'processor': StandardScaler},
             'lisa': {'processor': StandardScaler}
         },
+        save_prediction_history=True
+
+        # metrics=['auc', 'rule_out']
+        # scoring=rule_out
+    )
+    MLP1_LISA_BASIC2 = MLP1_LISA_BASIC._replace(
+        description='',
+        random_state=12393,
+        save_prediction_history=False
+        # save_prediction_history=True
+
+        # metrics=['auc', 'rule_out']
+        # scoring=rule_out
+    )
+
+    MLP1_LISA_BASIC_W = MLP1_AC_SIC_OIC_BASIC._replace(
+        description='',
+        model_kwargs={
+            'lisa_mlp_kwargs': {
+                'sizes': [100, 10],
+                'dropouts': [0.5, 0.2],
+                'default_regularizer': 1e-2,
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10],
+                'dropouts': [0.0]
+            }
+        },
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'lisa': True,
+            }
+        },
+        pre_processor_kwargs={
+            'basic': {'processor': StandardScaler},
+            'lisa': {'processor': StandardScaler}
+        },
+        loss_weights=[1e-3, 1.0],
+        # save_prediction_history=True
     )
 
     MLP1_A1000_SI1000_OI1000_LISA_BASIC = MLP1_AC_SIC_OIC_BASIC._replace(
@@ -879,4 +928,59 @@ class PatientHistory(Experiment, Enum):
             'basic': {'processor': StandardScaler},
             'lisa': {'processor': StandardScaler}
         },
+    )
+
+    RF_BASIC = Experiment(
+        description='Predicting ACS or death using only age and sex',
+        model=RandomForestClassifier,
+        model_kwargs={
+            'class_weight': 'balanced',
+            'n_estimators': 1000,
+            'n_jobs': -1
+            # 'max_iter': 300
+        },
+        extractor=Flat,
+        extractor_kwargs={
+            'features': {'basic': ['age', 'sex']}
+        },
+        cv=GroupShuffleSplit,
+        cv_kwargs={
+            'n_splits': 1,
+            'train_size': 2 / 3,
+            'random_state': 43,
+        },
+        scoring=roc_auc_score,
+        metrics=['accuracy', 'auc'],
+    )
+
+    RF_LISA_BASIC = RF_BASIC._replace(
+        description='',
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'lisa': True,
+            }
+        },
+    )
+
+    XGB_LISA_BASIC = Experiment(
+        description='Predicting ACS or death using only age and sex',
+        model=XGBClassifier,
+        model_kwargs={
+        },
+        extractor=Flat,
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'lisa': True,
+            }
+        },
+        cv=GroupShuffleSplit,
+        cv_kwargs={
+            'n_splits': 1,
+            'train_size': 2 / 3,
+            'random_state': 43,
+        },
+        scoring=roc_auc_score,
+        metrics=['accuracy', 'auc'],
     )

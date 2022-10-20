@@ -136,7 +136,8 @@ def rule_in_rule_out_ab(
         rule_in_spec=0.90,
         rule_in_ppv=0.7,
         rule_out_sens=0.99,
-        rule_out_npv=0.995):
+        rule_out_npv=1.0
+):
     # Some copy-paste from AB's rule-in/rule-out calculations, mainly so
     # that I can compare and make sure that it agrees with my implementation.
     def prob_label_matrix_to_thresholds(plm):

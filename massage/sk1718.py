@@ -796,7 +796,7 @@ def _make_death_in_30days(index):
 
 
 @cache
-def lisa(index):
+def lisa(index, onehot=True):
     dfs = {year: read_lisa(year) for year in range(2012, 2019)}
     admission_year = index.admission_date.dt.year
 
@@ -893,38 +893,40 @@ def lisa(index):
     })
     common = common.fillna(0).set_index('LopNr')
 
-    categorical_columns = [
-        "marital_status",
-        "citizenship_eu15",
-        "citizenship_eu28",
-        "children_aged_0_3",
-        "children_aged_4_6",
-        "children_aged_7_10",
-        "children_aged_11_15",
-        "children_aged_16_17",
-        "education_level_old",
-        "education_level",
-        "education_duration",
-        "education_type",
-        "education_focus",
-        "graduation_decade",
-        "occupational_status",
-        "occupation_type",
-        "occupation_code",
-        "socioeconomic_group",
-        "socioeconomic_class",
-    ]
-    remaining_columns = common.columns.difference(categorical_columns)
-
-    ohe = OneHotEncoder(sparse=False)
-    return pd.concat([
-        pd.DataFrame(
-            ohe.fit_transform(common[categorical_columns]),
-            index=common.index,
-            columns=ohe.get_feature_names_out(),
-        ),
-        common[remaining_columns]
-    ], axis=1).astype(float)
+    if onehot:
+        categorical_columns = [
+            "marital_status",
+            "citizenship_eu15",
+            "citizenship_eu28",
+            "children_aged_0_3",
+            "children_aged_4_6",
+            "children_aged_7_10",
+            "children_aged_11_15",
+            "children_aged_16_17",
+            "education_level_old",
+            "education_level",
+            "education_duration",
+            "education_type",
+            "education_focus",
+            "graduation_decade",
+            "occupational_status",
+            "occupation_type",
+            "occupation_code",
+            "socioeconomic_group",
+            "socioeconomic_class",
+        ]
+        remaining_columns = common.columns.difference(categorical_columns)
+        ohe = OneHotEncoder(sparse=False)
+        return pd.concat([
+            pd.DataFrame(
+                ohe.fit_transform(common[categorical_columns]),
+                index=common.index,
+                columns=ohe.get_feature_names_out(),
+            ),
+            common[remaining_columns]
+        ], axis=1).astype(float)
+    else:
+        return common
 
 
 def read_lisa(year):
