@@ -14,7 +14,9 @@ class HyperExperiment(NamedTuple):
     strategy_kwargs: dict = None
     validate_experiment_params: Any = None
 
-    def run(self):
+    def run(self, action='train'):
+        if action != 'train':
+            raise ValueError("Can't validate hyper-experiments yet.")
         log.info(
             f"Running hyper-experiment {self.name} using strategy "
             f"{self.strategy.__name__}"
