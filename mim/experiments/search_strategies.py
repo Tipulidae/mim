@@ -229,14 +229,14 @@ class RandomSearch(Searcher):
 
     def search(self):
         for xp in self.experiments():
-            if xp.is_done:
+            if xp.is_trained:
                 continue
 
             s = pd.Series(hp.flatten(xp.asdict()), name=xp.name)
             log.info(f"Experiment {xp.name} with kwargs\n"
                      f"{s}\n\n")
 
-            xp.conduct()
+            xp.run()
 
     def experiments(self):
         # For more complicated search strategies, this generator might have

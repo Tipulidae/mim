@@ -40,7 +40,7 @@ class HyperExperiment(NamedTuple):
         return callable_to_string(self._asdict())
 
     @property
-    def is_done(self):
+    def is_trained(self):
         # TODO: Fix this!
         return False
 
