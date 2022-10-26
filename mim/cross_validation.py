@@ -71,3 +71,16 @@ class PredefinedSplitsRepeated:
             ps = PredefinedSplit(self.predefined_splits)
             for train, test in ps.split(x, y, groups):
                 yield train, test
+
+
+class RepeatingCrossValidator:
+    def __init__(self, cv, cv_kwargs, repeats=5):
+        self.cv = cv
+        self.cv_kwargs = cv_kwargs
+        self.repeats = repeats
+
+    def split(self, x, y=None, groups=None):
+        for i in range(self.repeats):
+            cv = self.cv(**self.cv_kwargs)
+            for train, test in cv.split(x, y, groups):
+                yield train, test

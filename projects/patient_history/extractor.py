@@ -1,3 +1,6 @@
+import pandas as pd
+from sklearn.preprocessing import OneHotEncoder
+
 from mim.experiments.extractor import Data, RaggedData, Extractor, \
     DataWrapper, Container
 from mim.util.logs import get_logger
@@ -10,6 +13,7 @@ log = get_logger("Skåne-1718 extractor")
 
 def make_basic_features(brsm):
     data = brsm.loc[:, ['age', 'sex']].copy()
+    # data['age'] = (data['age'] - 50) / 100
     data['male'] = (data.sex == 'M').astype(int)
     data['female'] = (data.sex == 'F').astype(int)
 
@@ -55,6 +59,88 @@ def make_brsm():
     data.admission_date = data.admission_date.dt.floor('D')
 
     return data.reset_index()
+
+
+def make_lisa_features(
+        brsm,
+        onehot=True,
+        bin_income=False,
+        family=False,
+        education=False,
+        occupation=False,
+        income=False,
+):
+    lisa = sk1718.lisa(brsm, bin_income=bin_income)
+    cols = ['lisa_missing']
+    if not any([family, education, occupation, income]):
+        cols = list(lisa)
+
+    if family:
+        cols.extend([
+            'children_aged_0_3',
+            'children_aged_4_6',
+            'children_aged_7_10',
+            'children_aged_11_15',
+            'children_aged_16_17',
+            'citizenship_eu15',
+            'citizenship_eu28',
+            'marital_status',
+        ])
+    if education:
+        cols.extend([
+            'education_duration',
+            'education_field',
+            'education_level',
+            'education_level_old',
+            'education_type',
+            'graduation_decade',
+        ])
+    if occupation:
+        cols.extend([
+            'occupation_code',
+            'occupation_type',
+            'occupational_status',
+            'socioeconomic_class',
+            'socioeconomic_group',
+        ])
+    if income:
+        cols.extend([
+            'capital_income',
+            'disposable_income',
+            'disposable_income_family_v1',
+            'disposable_income_family_v2',
+            'early_retirement_benefit',
+            'housing_benefit',
+            'parental_benefit',
+            'political_benefit',
+            'received_early_retirement_benefit',
+            'received_sickness_benefit',
+            'retirement_pension',
+            'sickness_and_rehab_benefit',
+            'sickness_benefit',
+            'sickness_benefit_days',
+            'sickness_pension_days',
+            'social_benefit',
+            'unemployment_benefit',
+            'unemployment_days',
+        ])
+    # log.debug(f"{cols=}")
+    lisa = lisa[cols]
+
+    if onehot:
+        categorical_cols = lisa.select_dtypes(include=['category']).columns
+        remaining_cols = lisa.columns.difference(categorical_cols)
+        ohe = OneHotEncoder(sparse=False)
+        lisa = pd.concat([
+            pd.DataFrame(
+                ohe.fit_transform(lisa[categorical_cols]),
+                index=lisa.index,
+                columns=ohe.get_feature_names_out(),
+            ),
+            lisa[remaining_cols]
+        ], axis=1).astype(float)
+
+    return lisa
 
 
 class Base(Extractor):
@@ -129,7 +215,7 @@ class Flat(Base):
             x_dict['basic'] = make_basic_features(brsm)
 
         if 'lisa' in self.features:
-            lisa = sk1718.lisa(brsm)
+            lisa = make_lisa_features(brsm, **self.features['lisa'])
             x_dict['lisa'] = Data(lisa.values, columns=list(lisa.columns))
 
         data = DataWrapper(

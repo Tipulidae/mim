@@ -14,17 +14,15 @@ def _make_input(shape):
         return Input(shape=shape)
 
 
-def simple_mlp(train, validation=None, history_mlp_kwargs=None,
-               lisa_mlp_kwargs=None, basic_mlp_kwargs=None,
-               final_mlp_kwargs=None):
+def mlp1(train, validation=None, history_mlp_kwargs=None,
+         lisa_mlp_kwargs=None, basic_mlp_kwargs=None,
+         final_mlp_kwargs=None):
     inp = _make_input(train.feature_tensor_shape)
     layers = []
     if 'history' in inp:
         history = inp['history']
-        # history = BatchNormalization()(inp['history'])
         layers.append(mlp_helper(history, **history_mlp_kwargs))
     if 'lisa' in inp:
-        # history = BatchNormalization()(inp['lisa'])
         layers.append(mlp_helper(inp['lisa'], **lisa_mlp_kwargs))
     if 'basic' in inp:
         if basic_mlp_kwargs:
@@ -42,24 +40,17 @@ def simple_mlp(train, validation=None, history_mlp_kwargs=None,
 
     output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
     return keras.Model(inp, output)
-    # # shapes = train.feature_tensor_shape
-    # # if isinstance(shapes, dict):
-    # #     inp = {
-    # #         features: Input(shape=shapes[features])
-    # #         for features in shapes
-    # #     }
-    # #     x = Concatenate()(inp.values())
-    # # else:
-    # #     inp = Input(shape=shapes)
-    # #     x = inp
-    #
-    # # x = BatchNormalization()(x)
-    #
-    # if mlp_kwargs:
-    #     x = mlp_helper(x, **mlp_kwargs)
-    #
-    # output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
-    # return keras.Model(inp, output)
+
+
+def mlp2(train, validation=None, mlp_kwargs=None):
+    inp = _make_input(train.feature_tensor_shape)
+
+    x = Concatenate()(inp.values())
+    if mlp_kwargs:
+        x = mlp_helper(x, **mlp_kwargs)
+
+    output = Dense(1, activation="sigmoid", kernel_regularizer="l2")(x)
+    return keras.Model(inp, output)
 
 
 def simple_lstm(train, validation=None, **kwargs):

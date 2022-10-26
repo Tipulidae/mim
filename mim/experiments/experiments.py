@@ -18,7 +18,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import PredefinedSplit, KFold
 
 from mim.experiments.extractor import Extractor
-from mim.cross_validation import CrossValidationWrapper
+from mim.cross_validation import CrossValidationWrapper, \
+    RepeatingCrossValidator
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
@@ -71,6 +72,7 @@ class Experiment(NamedTuple):
     save_model_checkpoints: bool = False
     use_tensorboard: bool = False
     save_learning_rate: bool = False
+    ensemble: int = 0
 
     def run(self, action='train'):
         try:
@@ -114,12 +116,24 @@ class Experiment(NamedTuple):
         one split in the cross-validation), evaluate it on the test-set.
         """
         log.info(f'Evaluating experiment {self.name}: {self.description}')
-        data = self.get_extractor().get_test_data()
-        targets = data.y
+        extractor = self.get_extractor()
+
+        # Unfortunately, for now, I will have to load both development and
+        # test sets, so that I can pre-process the test set using parameters
+        # estimated from the development set. Ideally, I will move the
+        # pre-processing to be part of the model-wrapper and automatically
+        # save any pre-processing parameters along with the actual model,
+        # but this requires more re-factoring than I have time for right now.
+        dev = extractor.get_development_data()
+        test = extractor.get_test_data()
+        pre_process = self.get_pre_processor(0)
+        dev, test = pre_process(dev, test)
+
+        targets = test.y
         predictions = []
         for path in self._model_paths():
             model = self.load_model(path)
-            prediction = model.predict(data)
+            prediction = model.predict(test)
             predictions.append(prediction)
 
         predictions = pd.concat(
@@ -192,20 +206,27 @@ class Experiment(NamedTuple):
         return self.extractor(**self.extractor_kwargs)
 
     def get_cross_validation(self, predefined_splits=None):
-        if not self.use_predefined_splits and self.cv is None:
-            raise ValueError("Must specify cv or use predefined splits!")
-
-        elif self.use_predefined_splits or self.cv is None:
+        if self.use_predefined_splits:
             if predefined_splits is None:
                 raise ValueError(
-                    "Data must contain predefined_splits when using "
-                    "PredefinedSplit cross-validation."
+                    "Specified use_predefined_splits, but Data has no "
+                    "predefined_splits!"
                 )
-            cv = PredefinedSplit(predefined_splits)
+            cv = PredefinedSplit
+            cv_kwargs = {'test_fold': predefined_splits}
         else:
-            cv = self.cv(**self.cv_kwargs)
+            cv = self.cv
+            cv_kwargs = self.cv_kwargs
 
-        return CrossValidationWrapper(cv)
+        if self.ensemble:
+            cv_kwargs = {
+                'cv': cv,
+                'cv_kwargs': cv_kwargs,
+                'repeats': self.ensemble
+            }
+            cv = RepeatingCrossValidator
+
+        return CrossValidationWrapper(cv(**cv_kwargs))
 
     def build_model(self, train, validation, split_number):
         model_kwargs = copy(self.model_kwargs)

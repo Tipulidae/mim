@@ -1,4 +1,5 @@
 import math
+from typing import Union, List
 
 from tensorflow.keras.layers import (
     AveragePooling1D, Conv1D, BatchNormalization, ReLU, MaxPooling1D,
@@ -89,46 +90,78 @@ def cnn_helper(
 def mlp_helper(
         x, sizes,
         activation='relu',
-        dropouts=None,
-        default_dropout=0.0,
-        batch_norms=None,
-        default_regularizer=0.0,
-        activity_regularizer=None,
-        activity_regularizers=None,
-        kernel_regularizer=None,
-        kernel_regularizers=None,
-        bias_regularizer=None,
-        bias_regularizers=None):
-    num_layers = len(sizes)
-    if dropouts is None:
-        dropouts = num_layers * [default_dropout]
-    if batch_norms is None:
-        batch_norms = num_layers * [False]
-    if activity_regularizers is None:
-        if activity_regularizer is None:
-            activity_regularizer = default_regularizer
-        activity_regularizers = num_layers*[activity_regularizer]
-    if kernel_regularizers is None:
-        if kernel_regularizer is None:
-            kernel_regularizer = default_regularizer
-        kernel_regularizers = num_layers*[kernel_regularizer]
-    if bias_regularizers is None:
-        if bias_regularizer is None:
-            bias_regularizer = default_regularizer
-        bias_regularizers = num_layers*[bias_regularizer]
+        dropout: Union[float, List[float]] = 0.0,
+        batch_norm: Union[bool, List[bool]] = False,
+        regularizer: Union[float, List[float], dict] = 0.0
+):
+    """
 
+    :param x:
+    :param sizes:
+    :param activation:
+    :param dropout:
+    :param batch_norm:
+    :param regularizer: Specify the l2 regularization weights. If it's a
+    float, uses the same weight for kernel, bias and activation, for all
+    layers. Use a list to specify different weights for each layer. Use a
+    dict to specify different weights for kernel, bias and activation
+    regularization.
+    :return:
+    """
+    num_layers = len(sizes)
+
+    def parse_batch_norm(arg):
+        if isinstance(arg, bool):
+            return num_layers * [arg]
+        elif isinstance(arg, list):
+            assert len(arg) == num_layers
+            return arg
+        else:
+            raise TypeError
+
+    def parse_dropout(arg):
+        if isinstance(arg, float):
+            return num_layers * [arg]
+        elif isinstance(arg, list):
+            assert len(arg) == num_layers
+            return arg
+        else:
+            raise TypeError
+
+    def parse_regularizers(arg):
+        if isinstance(arg, dict):
+            assert {'activity', 'kernel', 'bias'}.issubset(arg.keys())
+            return (
+                parse_regularizer(arg['activity']),
+                parse_regularizer(arg['kernel']),
+                parse_regularizer(arg['bias'])
+            )
+        else:
+            return 3 * (parse_regularizer(arg),)
+
+    def parse_regularizer(arg):
+        if isinstance(arg, float):
+            return num_layers * [arg]
+        elif isinstance(arg, list):
+            assert len(arg) == num_layers
+            return arg
+        else:
+            raise TypeError
+
+    activity, kernel, bias = parse_regularizers(regularizer)
+    dropouts = parse_dropout(dropout)
+    batch_norms = parse_batch_norm(batch_norm)
     assert _all_lists_have_same_length(
-        [sizes, dropouts, batch_norms, activity_regularizers,
-         kernel_regularizers, bias_regularizers]
+        [sizes, dropouts, batch_norms, activity, kernel, bias]
     )
 
     for layer in range(num_layers):
         x = Dense(
             sizes[layer],
             activation=activation,
-            activity_regularizer=l2(activity_regularizers[layer]),
-            kernel_regularizer=l2(kernel_regularizers[layer]),
-            bias_regularizer=l2(bias_regularizers[layer])
+            activity_regularizer=l2(activity[layer]),
+            kernel_regularizer=l2(kernel[layer]),
+            bias_regularizer=l2(bias[layer])
         )(x)
 
         if batch_norms[layer]:

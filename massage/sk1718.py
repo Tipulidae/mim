@@ -2,7 +2,7 @@ from os.path import join
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder
+
 
 from massage.sos_util import fix_dors_date
 from mim.util.logs import get_logger
@@ -541,7 +541,10 @@ def summarize_patient_history(brsm, sources=None, num_icd=0, num_kva=0,
         dfs.append(stagger_and_sum(atc, num_atc))
 
     log.info('Concatenating events')
-    mh = pd.concat(dfs, axis=1, join='outer').fillna(0)
+    if len(dfs) > 1:
+        mh = pd.concat(dfs, axis=1, join='outer').fillna(0)
+    else:
+        mh = dfs[0].fillna(0)
 
     return mh
 
@@ -600,6 +603,26 @@ def remove_events_outside_time_interval(
 
     # Keep only the rows within the specified interval.
     return events.loc[interval, cols].set_index(['Alias', 'KontaktId'])
+
+
+def care_consumption():
+    # WIP!!!
+    # ph = ...
+    # Hmm... Maybe I can actually just get the chapter codes directly,
+    # if all I care about is the total number of diagnoses...
+    # num_diagnoses_last_year = ph.filter(regex='I0_SV_ICD').sum(axis=1)
+    # num_diagnoses_total = ph.filter(regex='SV_ICD').sum(axis=1)
+
+    # Number of visits without ACS diagnoses in the past x years:
+    # This should work, EXCEPT the mace table does .any, I want .sum.
+    # Could maybe break out that code snippet, or just copy/paste it into
+    # here.
+    index = ...
+    icd, op = _make_sos_codes('SV', index)
+    events = remove_events_outside_time_interval(
+        icd, index, interval_days_start=-365, interval_days_end=-1)
+    mace = make_mace_table(index, icd_events=events, op_events=None)
+    return mace
 
 
 def make_mace(index):
@@ -796,81 +819,22 @@ def _make_death_in_30days(index):
 
 
 @cache
-def lisa(index, onehot=True):
-    dfs = {year: read_lisa(year) for year in range(2012, 2019)}
+def lisa(index, bin_income=False):
     admission_year = index.admission_date.dt.year
-
-    common_cols = [
-        # "lisa_missing",
-        "marital_status",
-        "citizenship_eu15",
-        "citizenship_eu28",
-        "children_aged_0_3",
-        "children_aged_4_6",
-        "children_aged_7_10",
-        "children_aged_11_15",
-        "children_aged_16_17",
-        "education_level_old",
-        "education_level",
-        "education_duration",
-        "education_type",
-        "education_focus",
-        "graduation_decade",
-        "occupational_status",
-        "occupation_type",
-        "occupation_code",
-        "socioeconomic_group",
-        "socioeconomic_class"
-    ]
-
-    yearly_cols = [
-        'parental_benefit',
-        'sickness_benefit',
-        'received_sickness_benefit',
-        'sickness_and_rehab_benefit',
-        'sickness_benefit_days',
-        'unemployment_benefit',
-        'unemployment_days',
-        'political_benefit',
-        'early_retirement_benefit',
-        'received_early_retirement_benefit',
-        'sickness_pension_days',
-        'capital_income',
-        'retirement_pension',
-        'social_benefit',
-        'housing_benefit',
-        'disposable_income_family_v1',
-        'disposable_income_family_v2',
-        'disposable_income',
-        'lisa_missing'
-    ]
-
-    year_2017 = (
-        index.loc[admission_year == 2017, ['LopNr']]
-        .join(dfs[2016][common_cols], on='LopNr')
+    lisa2016 = (
+        index
+        .loc[admission_year == 2017, ['LopNr']]
+        .join(read_lisa(2016), on='LopNr')
     )
-    for year in range(2012, 2017):
-        old_lisa = dfs[year][yearly_cols].rename(
-            columns={x: f'{x}_{2017-year}_yrs_ago' for x in yearly_cols}
-        )
-        year_2017 = year_2017.join(old_lisa, on='LopNr')
-
-    year_2018 = (
-        index.loc[admission_year == 2018, ['LopNr']]
-        .join(dfs[2017][common_cols], on='LopNr')
+    lisa2017 = (
+        index
+        .loc[admission_year == 2018, ['LopNr']]
+        .join(read_lisa(2017), on='LopNr')
     )
-    for year in range(2013, 2018):
-        old_lisa = dfs[year][yearly_cols].rename(
-            columns={x: f'{x}_{2018-year}_yrs_ago' for x in yearly_cols}
-        )
-        year_2018 = year_2018.join(old_lisa, on='LopNr')
+    df = pd.concat([lisa2016, lisa2017], axis=0).reindex(index.index)
+    df.lisa_missing = df.lisa_missing.fillna(True)
 
-    common = pd.concat([year_2017, year_2018], axis=0)
-    indicator_missing = list(common.filter(like='missing'))
-    common[indicator_missing] = common[indicator_missing].fillna(True)
-    common = common.reindex(index.index)
-
-    common = common.fillna({
+    df = df.fillna({
         'marital_status': '*',
         'citizenship_eu15': 11,
         'citizenship_eu28': 11,
@@ -883,50 +847,197 @@ def lisa(index, onehot=True):
         'education_level': 9,
         'education_duration': 9,
         'education_type': 9,
-        'education_focus': '99',
-        'graduation_decade': '***',
+        'education_field': '99',
+        'graduation_decade': '*0',
         'occupational_status': 6,
         'occupation_type': 0,
         'occupation_code': '*',
         'socioeconomic_group': '*',
         'socioeconomic_class': '*',
     })
-    common = common.fillna(0).set_index('LopNr')
+    df = df.fillna(0).set_index('LopNr')
 
-    if onehot:
-        categorical_columns = [
-            "marital_status",
-            "citizenship_eu15",
-            "citizenship_eu28",
-            "children_aged_0_3",
-            "children_aged_4_6",
-            "children_aged_7_10",
-            "children_aged_11_15",
-            "children_aged_16_17",
-            "education_level_old",
-            "education_level",
-            "education_duration",
-            "education_type",
-            "education_focus",
-            "graduation_decade",
-            "occupational_status",
-            "occupation_type",
-            "occupation_code",
-            "socioeconomic_group",
-            "socioeconomic_class",
-        ]
-        remaining_columns = common.columns.difference(categorical_columns)
-        ohe = OneHotEncoder(sparse=False)
-        return pd.concat([
-            pd.DataFrame(
-                ohe.fit_transform(common[categorical_columns]),
-                index=common.index,
-                columns=ohe.get_feature_names_out(),
-            ),
-            common[remaining_columns]
-        ], axis=1).astype(float)
-    else:
-        return common
+    df = df.replace({
+        'marital_status': {
+            'OG': 'unmarried',
+            'G': 'married',
+            'S': 'divorced',
+            'Ä': 'widow',
+            'RP': 'partner',
+            'SP': 'divorced_partner',
+            'EP': 'widow_partner',
+            '*': 'unknown'
+        },
+        'citizenship_eu15': {
+            0: 'sweden',
+            1: 'nordic',
+            2: 'eu',
+            3: 'europe',
+            4: 'africa',
+            5: 'north_america',
+            6: 'south_america',
+            7: 'asia',
+            8: 'oceania',
+            9: 'soviet',
+            11: 'unknown'
+        },
+        'citizenship_eu28': {
+            0: 'sweden',
+            1: 'nordic',
+            2: 'eu',
+            3: 'europe',
+            4: 'africa',
+            5: 'north_america',
+            6: 'south_america',
+            7: 'asia',
+            8: 'oceania',
+            9: 'soviet',
+            11: 'unknown'
+        },
+        'education_level_old': {
+            '1': 'primary_lt_9yrs',
+            '2': 'primary_9yrs',
+            '3': 'gymnasium_2yrs',
+            '4': 'gymnasium_3yrs',
+            '5': 'uni_lt_3yrs',
+            '6': 'uni_3yrs',
+            '7': 'phd',
+            '*': 'unknown'
+        },
+        'education_level': {
+            1.0: 'primary_lt_9yrs',
+            2.0: 'primary_9yrs',
+            3.0: 'gymnasium',
+            4.0: 'uni_lt_3yrs',
+            5.0: 'uni_3yrs',
+            6.0: 'phd',
+            9.0: 'unknown'
+        },
+        'education_type': {
+            0.0: 'general',
+            1.0: 'pedagogy',
+            2.0: 'humanities',
+            3.0: 'social_science',
+            4.0: 'natural_science',
+            5.0: 'technology',
+            6.0: 'agriculture',
+            7.0: 'health_care',
+            8.0: 'service',
+            9.0: 'unknown'
+        },
+        'education_field': {
+            '01': 'general',
+            '08': 'literacy',
+            '09': 'personal_development',
+            '14': 'pedagogy',
+            '21': 'art_media',
+            '22': 'humanities',
+            '31': 'social_science',
+            '32': 'journalism',
+            '34': 'economy',
+            '38': 'law',
+            '42': 'biology',
+            '44': 'physics',
+            '46': 'mathematics',
+            '48': 'computer_science',
+            '52': 'technoloy',
+            '54': 'manufacturing',
+            '58': 'construction',
+            '62': 'agriculture',
+            '64': 'veterinary',
+            '72': 'health_care',
+            '76': 'social_work',
+            '81': 'personal_services',
+            '84': 'transportation',
+            '85': 'environmental_protection',
+            '86': 'security',
+            '99': 'unknown'
+        },
+        'occupational_status': {
+            1.0: 'gainful_employment',
+            5.0: 'unemployed_with_income',
+            6.0: 'unemployed_without_income'
+        },
+        'occupation_type': {
+            0.0: 'unknown',
+            1.0: 'seamen',
+            2.0: 'employee',
+            4.0: 'own_company',
+            5.0: 'own_company_ltd'  # företagare i eget AB
+        },
+        'occupation_code': {
+            '0': 'military',
+            '1': 'manager',
+            '2': 'advanced_university_level',
+            '3': 'university_level',
+            '4': 'administration',
+            '5': 'service',
+            '6': 'agriculture',
+            '7': 'construction',
+            '8': 'manufacturing',
+            '9': 'entry_level',
+            '*': 'unknown'
+        },
+    })
+
+    categorical_cols = [
+        "marital_status",
+        "citizenship_eu15",
+        "citizenship_eu28",
+        "children_aged_0_3",
+        "children_aged_4_6",
+        "children_aged_7_10",
+        "children_aged_11_15",
+        "children_aged_16_17",
+        "education_level_old",
+        "education_level",
+        "education_duration",
+        "education_type",
+        "education_field",
+        "graduation_decade",
+        "occupational_status",
+        "occupation_type",
+        "occupation_code",
+        "socioeconomic_group",
+        "socioeconomic_class",
+    ]
+    df[categorical_cols] = df[categorical_cols].astype('category')
+
+    if bin_income:
+        df.disposable_income = pd.cut(
+            df.disposable_income,
+            [-np.inf, 1285, 1712, 2634, np.inf],
+            labels=['poor', 'low_mid', 'upper_mid', 'rich']
+        )
+        df.disposable_income_family_v1 = pd.cut(
+            df.disposable_income_family_v1,
+            [-np.inf, 1207, 1560, 2220, np.inf],
+            labels=['poor', 'low_mid', 'upper_mid', 'rich']
+        )
+        df.disposable_income_family_v2 = pd.cut(
+            df.disposable_income_family_v2,
+            [-np.inf, 1453, 1951, 2819, np.inf],
+            labels=['poor', 'low_mid', 'upper_mid', 'rich']
+        )
+        df.capital_income = pd.cut(
+            df.capital_income,
+            [-np.inf, -1000, 1000, 10000, np.inf],
+            labels=['big_losses', 'no_capital', 'rich', 'filthy_rich']
+        )
+
+    benefit_cols = [
+        'retirement_pension',
+        'social_benefit',
+        'housing_benefit',
+        'unemployment_benefit',
+        'political_benefit',
+        'parental_benefit',
+        'sickness_benefit',
+        'sickness_and_rehab_benefit',
+        'early_retirement_benefit'
+    ]
+    df[benefit_cols] /= 1000  # scale is now 100kkr/year
+    return df
 
 
 def read_lisa(year):
@@ -944,7 +1055,7 @@ def read_lisa(year):
         'Barn16_17': 'children_aged_16_17',
         'Sun2000niva_old': 'education_level_old',
         'Sun2000niva': 'education_level_sun2000',
-        'Sun2000Inr': 'education_focus',
+        'Sun2000Inr': 'education_field',
         'ExamAr': 'graduation_year',
         'SyssStat11': 'occupational_status',
         'YrkStalln': 'occupation_type',
@@ -981,6 +1092,7 @@ def read_lisa(year):
 
     df = (
         read_csv(f"SCB_Ekelund_LEV_LISA{year}.csv", usecols=col_map.keys())
+        .drop_duplicates(subset=['lopnr'], keep='first')
         .rename(columns=col_map)
         .set_index('LopNr')
     )
@@ -1003,10 +1115,11 @@ def read_lisa(year):
     df['education_level'] = sun2000.str[0].astype(int)
     df['education_duration'] = sun2000.str[1].astype(int)
     df['education_type'] = sun2000.str[2].astype(int)
-    df['graduation_decade'] = df.graduation_year.str[:3]
+    df['graduation_decade'] = df.graduation_year.str[2] + '0'
+    df = df.drop(columns=['graduation_year', 'education_level_sun2000'])
 
     if year > 2015:
-        df.education_focus = df.education_focus.str[:2]
+        df.education_field = df.education_field.str[:2]
         df.occupation_code = df.occupation_code.fillna('*').str[0]
 
         df.socioeconomic_group = (
