@@ -58,7 +58,7 @@ class ExperimentResult:
     @property
     def validation_targets(self):
         return pd.concat(
-            [r.targets for r in self.validation_results], axis=0)
+            [r.targets for r in self.validation_results], axis=1).mean(axis=1)
 
     @property
     def training_targets(self):
@@ -68,7 +68,8 @@ class ExperimentResult:
     @property
     def validation_predictions(self):
         return pd.concat(
-            [r.predictions for r in self.validation_results], axis=0)
+            [r.predictions for r in self.validation_results],
+            axis=1).mean(axis=1)
 
     @property
     def train_predictions(self):

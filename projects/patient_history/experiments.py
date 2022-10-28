@@ -13,6 +13,7 @@ from mim.experiments.hyper_experiments import HyperExperiment
 from mim.experiments.search_strategies import RandomSearch
 from mim.experiments import hyper_parameter as hp
 from mim.experiments.extractor import sklearn_process
+from mim.util.metrics import rule_out
 from projects.patient_history.extractor import Flat
 from projects.patient_history.models import mlp1, mlp2
 
@@ -34,6 +35,10 @@ class PatientHistory(Experiment, Enum):
             'n_splits': 1,
             'train_size': 2 / 3,
             'random_state': 43,
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'basic': {'processor': StandardScaler}
         },
         scoring=roc_auc_score,
         metrics=['accuracy', 'auc'],
@@ -71,6 +76,34 @@ class PatientHistory(Experiment, Enum):
             'lisa': {'processor': StandardScaler},
             'basic': {'processor': StandardScaler}
         },
+    )
+    TEMP_C = LR_BASIC._replace(
+        description='delete me',
+        model_kwargs={
+            'class_weight': 'balanced',
+            'max_iter': 300,
+            'C': 0.0001,
+        },
+        extractor_kwargs={
+            'features': {
+                'lisa': {},
+                'basic': ['age', 'sex'],
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['SV', 'OV'],
+                    'num_icd': 1000,
+                    'num_kva': 100,
+                    'num_atc': 1000,
+                }
+            }
+        },
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'basic': {'processor': StandardScaler},
+            'lisa': {'processor': StandardScaler}
+        },
+        scoring=rule_out,
+        pre_processor=sklearn_process,
     )
     LR_LISA_FAM_BASIC = LR_LISA_BASIC._replace(
         description='Predicting ACS or death using data from LISA',
@@ -1513,6 +1546,77 @@ class HyperSearch(HyperExperiment, Enum):
             pre_processor_kwargs={
                 'history': {'processor': Binarizer},
                 'lisa': {'processor': StandardScaler},
+                'basic': {'processor': StandardScaler},
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        1e-2, 3e-3, 1e-3, 3e-4, 1e-4
+                    ])
+                }
+            },
+            batch_size=256,
+            epochs=200,
+            ensemble=10,
+            cv=GroupShuffleSplit,
+            cv_kwargs={
+                'n_splits': 1,
+                'train_size': 2 / 3,
+                'random_state': 43,
+            },
+            scoring=roc_auc_score,
+            metrics=['accuracy', 'auc'],
+            building_model_requires_development_data=True,
+            save_model=False,
+            random_state=hp.Int(0, 1000000000)
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 200
+        }
+    )
+
+    MLP2_AIK_BASIC = HyperExperiment(
+        template=Experiment(
+            description='ATC + ICD + KVÅ + age + sex to predict ACS',
+            model=mlp2,
+            model_kwargs={
+                'mlp_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [500, 100, 50, 10],
+                            k=num_layers,
+                            ascending=False
+                        ),
+                        'dropout': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers
+                        ),
+                        'regularizer': hp.Choices(
+                            [1e-2, 1e-3, 1e-4, 0.0],
+                            k=num_layers
+                        )
+                    } for num_layers in [1, 2, 3]
+                ]),
+            },
+            extractor=Flat,
+            extractor_kwargs={
+                'features': {
+                    'basic': ['age', 'sex'],
+                    'history': {
+                        'intervals': {'periods': 1},
+                        'sources': ['OV', 'SV'],
+                        'num_icd': 1000,
+                        'num_atc': 1000,
+                        'num_kva': 100,
+                    }
+                }
+            },
+            pre_processor=sklearn_process,
+            pre_processor_kwargs={
+                'history': {'processor': Binarizer},
                 'basic': {'processor': StandardScaler},
             },
             optimizer={

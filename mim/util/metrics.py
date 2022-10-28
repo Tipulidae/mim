@@ -121,6 +121,11 @@ def rule_in(targets, predictions, rule_in_spec=0.90, rule_in_ppv=0.7):
 
 
 def rule_out(targets, predictions, rule_out_sens=0.99, rule_out_npv=0.995):
+    if isinstance(targets, pd.DataFrame):
+        targets = targets.values.ravel()
+    if isinstance(predictions, pd.DataFrame):
+        predictions = predictions.values.ravel()
+
     results = rule_in_rule_out(
         targets,
         predictions,
