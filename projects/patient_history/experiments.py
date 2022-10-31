@@ -1648,3 +1648,139 @@ class HyperSearch(HyperExperiment, Enum):
             'iterations': 200
         }
     )
+
+    MLP2_LISA_BASIC = HyperExperiment(
+        template=Experiment(
+            description='LISA + age + sex to predict ACS',
+            model=mlp2,
+            model_kwargs={
+                'mlp_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [500, 100, 50, 10],
+                            k=num_layers,
+                            ascending=False
+                        ),
+                        'dropout': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers
+                        ),
+                        'regularizer': hp.Choices(
+                            [1e-2, 1e-3, 1e-4, 0.0],
+                            k=num_layers
+                        )
+                    } for num_layers in [1, 2, 3]
+                ]),
+            },
+            extractor=Flat,
+            extractor_kwargs={
+                'features': {
+                    'basic': ['age', 'sex'],
+                    'lisa': {},
+                }
+            },
+            pre_processor=sklearn_process,
+            pre_processor_kwargs={
+                'lisa': {'processor': StandardScaler},
+                'basic': {'processor': StandardScaler},
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        1e-2, 3e-3, 1e-3, 3e-4, 1e-4
+                    ])
+                }
+            },
+            batch_size=256,
+            epochs=200,
+            ensemble=10,
+            cv=GroupShuffleSplit,
+            cv_kwargs={
+                'n_splits': 1,
+                'train_size': 2 / 3,
+                'random_state': 43,
+            },
+            scoring=roc_auc_score,
+            metrics=['accuracy', 'auc'],
+            building_model_requires_development_data=True,
+            save_model=False,
+            random_state=hp.Int(0, 1000000000)
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 200
+        }
+    )
+
+    MLP2_LAIK = HyperExperiment(
+        template=Experiment(
+            description='LISA + ATC + ICD + KVÅ to predict ACS',
+            model=mlp2,
+            model_kwargs={
+                'mlp_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [500, 100, 50, 10],
+                            k=num_layers,
+                            ascending=False
+                        ),
+                        'dropout': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers
+                        ),
+                        'regularizer': hp.Choices(
+                            [1e-2, 1e-3, 1e-4, 0.0],
+                            k=num_layers
+                        )
+                    } for num_layers in [1, 2, 3]
+                ]),
+            },
+            extractor=Flat,
+            extractor_kwargs={
+                'features': {
+                    'lisa': {},
+                    'history': {
+                        'intervals': {'periods': 1},
+                        'sources': ['OV', 'SV'],
+                        'num_icd': 1000,
+                        'num_atc': 1000,
+                        'num_kva': 100,
+                    }
+                }
+            },
+            pre_processor=sklearn_process,
+            pre_processor_kwargs={
+                'history': {'processor': Binarizer},
+                'lisa': {'processor': StandardScaler},
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        1e-2, 3e-3, 1e-3, 3e-4, 1e-4
+                    ])
+                }
+            },
+            batch_size=256,
+            epochs=200,
+            ensemble=10,
+            cv=GroupShuffleSplit,
+            cv_kwargs={
+                'n_splits': 1,
+                'train_size': 2 / 3,
+                'random_state': 43,
+            },
+            scoring=roc_auc_score,
+            metrics=['accuracy', 'auc'],
+            building_model_requires_development_data=True,
+            save_model=False,
+            random_state=hp.Int(0, 1000000000)
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 200
+        }
+    )
