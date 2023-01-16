@@ -1623,7 +1623,7 @@ class PatientHistory(Experiment, Enum):
             'mlp_kwargs': {
                 'sizes': [500, 100, 50],
                 'dropout': [0.2, 0.2, 0.5],
-                'regularizer': [1e-3],
+                'regularizer': [1e-3, 1e-4, 1e-4],
             },
         },
         extractor_kwargs={
