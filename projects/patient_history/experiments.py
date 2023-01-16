@@ -1401,17 +1401,17 @@ class PatientHistory(Experiment, Enum):
         },
     )
 
-    MLP2_AIK_LISA_BASIC = Experiment(
-        description='',
+    # Best models after random search, so far (177, 65, 21 and 31 iterations):
+    MLP2_BLAIK = Experiment(
+        description='All the data. Model is xp_84 from the random search.',
         model=mlp2,
         model_kwargs={
             'mlp_kwargs': {
-                'sizes': [100, 10],
-                'dropout': [0.5, 0.2],
-                'regularizer': [1e-2, 1e-3],
+                'sizes': [500, 100, 50],
+                'dropout': [0.2, 0.5, 0.5],
+                'regularizer': [1e-3, 1e-4, 1e-4],
             },
         },
-
         extractor=Flat,
         extractor_kwargs={
             'features': {
@@ -1428,10 +1428,11 @@ class PatientHistory(Experiment, Enum):
         },
         building_model_requires_development_data=True,
         batch_size=256,
-        epochs=100,
+        epochs=200,
+        ensemble=10,
         optimizer={
             'name': Adam,
-            'kwargs': {'learning_rate': 1e-3}
+            'kwargs': {'learning_rate': 1e-2}
         },
         pre_processor=sklearn_process,
         pre_processor_kwargs={
@@ -1448,7 +1449,230 @@ class PatientHistory(Experiment, Enum):
         scoring=roc_auc_score,
         metrics=['accuracy', 'auc'],
     )
+    MLP2_BAIK = MLP2_BLAIK._replace(
+        description='Age+sex+ATC+ICD+KVÅ. Model is xp_59 from the random '
+                    'search',
+        model_kwargs={
+            'mlp_kwargs': {
+                'sizes': [100, 100, 10],
+                'dropout': [0.1, 0.2, 0.4],
+                'regularizer': [1e-2, 1e-3, 0.0],
+            },
+        },
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['OV', 'SV'],
+                    'num_icd': 1000,
+                    'num_atc': 1000,
+                    'num_kva': 100,
+                }
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-2}
+        },
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'basic': {'processor': StandardScaler},
+        },
+    )
+    MLP2_LAIK = MLP2_BLAIK._replace(
+        description='LISA+ATC+ICD+KVÅ. Model is xp_19 from the random '
+                    'search.',
+        model_kwargs={
+            'mlp_kwargs': {
+                'sizes': [100],
+                'dropout': [0.5],
+                'regularizer': [1e-3],
+            },
+        },
+        extractor_kwargs={
+            'features': {
+                'lisa': {},
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['OV', 'SV'],
+                    'num_icd': 1000,
+                    'num_atc': 1000,
+                    'num_kva': 100,
+                }
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 3e-3}
+        },
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'lisa': {'processor': StandardScaler}
+        },
+    )
+    MLP2_BL = MLP2_BLAIK._replace(
+        description='Age+sex+LISA. Model is xp_4 from the random search.',
+        model_kwargs={
+            'mlp_kwargs': {
+                'sizes': [50, 10],
+                'dropout': [0.3, 0.5],
+                'regularizer': [1e-3, 1e-4],
+            },
+        },
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'lisa': {},
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-4}
+        },
+        pre_processor_kwargs={
+            'basic': {'processor': StandardScaler},
+            'lisa': {'processor': StandardScaler}
+        },
+    )
 
+    # Best models after full random search (200 iterations each, except BAIK
+    # which has only 157 iterations):
+    MLP3_BLAIK = Experiment(
+        description='All the data. Model is xp_84 from the random search.',
+        model=mlp2,
+        model_kwargs={
+            'mlp_kwargs': {
+                'sizes': [500, 100, 50],
+                'dropout': [0.2, 0.5, 0.5],
+                'regularizer': [1e-3, 1e-4, 1e-4],
+            },
+        },
+        extractor=Flat,
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'lisa': {},
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['OV', 'SV'],
+                    'num_icd': 1000,
+                    'num_atc': 1000,
+                    'num_kva': 100,
+                }
+            }
+        },
+        building_model_requires_development_data=True,
+        batch_size=256,
+        epochs=200,
+        ensemble=10,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-2}
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'basic': {'processor': StandardScaler},
+            'lisa': {'processor': StandardScaler}
+        },
+        cv=GroupShuffleSplit,
+        cv_kwargs={
+            'n_splits': 1,
+            'train_size': 2 / 3,
+            'random_state': 43,
+        },
+        scoring=roc_auc_score,
+        metrics=['accuracy', 'auc'],
+    )
+    MLP3_BAIK = MLP3_BLAIK._replace(
+        description='Age+sex+ATC+ICD+KVÅ. Model is xp_84 from the random '
+                    'search',
+        model_kwargs={
+            'mlp_kwargs': {
+                'sizes': [500, 100, 50],
+                'dropout': [0.2, 0.2, 0.5],
+                'regularizer': [1e-3, 1e-4, 1e-4],
+            },
+        },
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['OV', 'SV'],
+                    'num_icd': 1000,
+                    'num_atc': 1000,
+                    'num_kva': 100,
+                }
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-2}
+        },
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'basic': {'processor': StandardScaler},
+        },
+    )
+    MLP3_LAIK = MLP3_BLAIK._replace(
+        description='LISA+ATC+ICD+KVÅ. Model is xp_84 from the random '
+                    'search.',
+        model_kwargs={
+            'mlp_kwargs': {
+                'sizes': [500, 100, 50],
+                'dropout': [0.2, 0.2, 0.5],
+                'regularizer': [1e-3],
+            },
+        },
+        extractor_kwargs={
+            'features': {
+                'lisa': {},
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['OV', 'SV'],
+                    'num_icd': 1000,
+                    'num_atc': 1000,
+                    'num_kva': 100,
+                }
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-2}
+        },
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'lisa': {'processor': StandardScaler}
+        },
+    )
+    MLP3_BL = MLP3_BLAIK._replace(
+        description='Age+sex+LISA. Model is xp_152 from the random search.',
+        model_kwargs={
+            'mlp_kwargs': {
+                'sizes': [500],
+                'dropout': [0.3],
+                'regularizer': [1e-4],
+            },
+        },
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+                'lisa': {},
+            }
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 3e-4}
+        },
+        pre_processor_kwargs={
+            'basic': {'processor': StandardScaler},
+            'lisa': {'processor': StandardScaler}
+        },
+    )
+
+    # Other models
     RF_BASIC = Experiment(
         description='Predicting ACS or death using only age and sex',
         model=RandomForestClassifier,

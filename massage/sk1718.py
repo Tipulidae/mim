@@ -85,17 +85,17 @@ def make_lab_values(index):
 
     lab = (
         index
-        .loc[:, ['KontaktId', 'Vardkontakt_InskrivningDatum']]
+        .loc[:, ['KontaktId', 'admission_date']]
         .join(lab.set_index('KontaktId'), on='KontaktId')
     )
 
     lab['minutes'] = (
-        (lab.Analyssvar_ProvtagningDatum - lab.Vardkontakt_InskrivningDatum)
+        (lab.Analyssvar_ProvtagningDatum - lab.admission_date)
         .dt.total_seconds() // 60
     )
     return lab.drop(
         columns=[
-            'Vardkontakt_InskrivningDatum',
+            'admission_date',
             'Analyssvar_ProvtagningDatum'
         ]
     )
@@ -940,7 +940,7 @@ def lisa(index, bin_income=False):
             '44': 'physics',
             '46': 'mathematics',
             '48': 'computer_science',
-            '52': 'technoloy',
+            '52': 'technology',
             '54': 'manufacturing',
             '58': 'construction',
             '62': 'agriculture',
