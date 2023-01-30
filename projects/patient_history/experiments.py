@@ -13,7 +13,6 @@ from mim.experiments.hyper_experiments import HyperExperiment
 from mim.experiments.search_strategies import RandomSearch
 from mim.experiments import hyper_parameter as hp
 from mim.experiments.extractor import sklearn_process
-from mim.util.metrics import rule_out
 from projects.patient_history.extractor import Flat
 from projects.patient_history.models import mlp1, mlp2
 
@@ -76,34 +75,6 @@ class PatientHistory(Experiment, Enum):
             'lisa': {'processor': StandardScaler},
             'basic': {'processor': StandardScaler}
         },
-    )
-    TEMP_C = LR_BASIC._replace(
-        description='delete me',
-        model_kwargs={
-            'class_weight': 'balanced',
-            'max_iter': 300,
-            'C': 0.0001,
-        },
-        extractor_kwargs={
-            'features': {
-                'lisa': {},
-                'basic': ['age', 'sex'],
-                'history': {
-                    'intervals': {'periods': 1},
-                    'sources': ['SV', 'OV'],
-                    'num_icd': 1000,
-                    'num_kva': 100,
-                    'num_atc': 1000,
-                }
-            }
-        },
-        pre_processor_kwargs={
-            'history': {'processor': Binarizer},
-            'basic': {'processor': StandardScaler},
-            'lisa': {'processor': StandardScaler}
-        },
-        scoring=rule_out,
-        pre_processor=sklearn_process,
     )
     LR_LISA_FAM_BASIC = LR_LISA_BASIC._replace(
         description='Predicting ACS or death using data from LISA',
@@ -1183,6 +1154,47 @@ class PatientHistory(Experiment, Enum):
         },
     )
 
+    MLP_BASIC = Experiment(
+        description='',
+        model=mlp2,
+        model_kwargs={
+            'mlp_kwargs': {
+                'sizes': [5],
+                'dropout': [0.0],
+                'regularizer': [1e-3],
+            },
+        },
+        extractor=Flat,
+        extractor_kwargs={
+            'features': {
+                'basic': ['age', 'sex'],
+            }
+        },
+        building_model_requires_development_data=True,
+        batch_size=256,
+        epochs=100,
+        # ensemble=1,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-2}
+        },
+        loss="BinaryFocalCrossentropy",
+        loss_kwargs={},
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'basic': {'processor': StandardScaler},
+        },
+        cv=GroupShuffleSplit,
+        cv_kwargs={
+            'n_splits': 1,
+            'train_size': 2 / 3,
+            'random_state': 43,
+        },
+        scoring=roc_auc_score,
+        metrics=['accuracy', 'auc'],
+        rule_out_logger=True,
+    )
+
     MLP1_AC_SIC_OIC_BASIC = Experiment(
         description='ICD codes from SV grouped into chapters.',
         model=mlp1,
@@ -1539,13 +1551,13 @@ class PatientHistory(Experiment, Enum):
     # Best models after full random search (200 iterations each, except BAIK
     # which has only 157 iterations):
     MLP3_BLAIK = Experiment(
-        description='All the data. Model is xp_84 from the random search.',
+        description='All the data. Model is xp_142 from the random search.',
         model=mlp2,
         model_kwargs={
             'mlp_kwargs': {
-                'sizes': [500, 100, 50],
-                'dropout': [0.2, 0.5, 0.5],
-                'regularizer': [1e-3, 1e-4, 1e-4],
+                'sizes': [500, 50, 50],
+                'dropout': [0.5, 0.4, 0.1],
+                'regularizer': [1e-2, 1e-4, 1e-3],
             },
         },
         extractor=Flat,
@@ -1568,7 +1580,7 @@ class PatientHistory(Experiment, Enum):
         ensemble=10,
         optimizer={
             'name': Adam,
-            'kwargs': {'learning_rate': 1e-2}
+            'kwargs': {'learning_rate': 1e-3}
         },
         pre_processor=sklearn_process,
         pre_processor_kwargs={

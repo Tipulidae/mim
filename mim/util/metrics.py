@@ -125,6 +125,8 @@ def rule_out(targets, predictions, rule_out_sens=0.99, rule_out_npv=0.995):
         targets = targets.values.ravel()
     if isinstance(predictions, pd.DataFrame):
         predictions = predictions.values.ravel()
+    if len(predictions.shape) > 1:
+        predictions = predictions.ravel()
 
     results = rule_in_rule_out(
         targets,

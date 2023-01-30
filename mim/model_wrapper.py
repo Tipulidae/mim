@@ -15,6 +15,7 @@ from tensorflow.keras.callbacks import TensorBoard, ReduceLROnPlateau, \
 from mim.util.logs import get_logger
 from mim.util.util import keras_model_summary_as_string
 from mim.experiments.extractor import DataWrapper
+from mim.util.metrics import rule_out
 
 log = get_logger('Model Wrapper')
 
@@ -131,6 +132,21 @@ class PredictionLogger(keras.callbacks.Callback):
         log.info(f"PredictionCallback time: {time() - t0}")
 
 
+class RuleOutLogger(keras.callbacks.Callback):
+    def __init__(self, train, val):
+        super().__init__()
+        self.x_train = train.x(can_use_tf_dataset=True).batch(32)
+        self.x_val = val.x(can_use_tf_dataset=True).batch(32)
+        self.y_train = train.y
+        self.y_val = val.y
+
+    def on_epoch_end(self, epoch, logs=None):
+        pred_train = _fix_prediction(self.model.predict(self.x_train))
+        pred_val = _fix_prediction(self.model.predict(self.x_val))
+        logs['rule_out'] = rule_out(self.y_train, pred_train)
+        logs['val_rule_out'] = rule_out(self.y_val, pred_val)
+
+
 def _fix_prediction(prediction):
     if isinstance(prediction, list):
         return np.concatenate(prediction, axis=1)
@@ -149,6 +165,7 @@ class KerasWrapper(Model):
             loss='binary_crossentropy',
             loss_weights=None,
             metrics=None,
+            rule_out_logger=False,
             ignore_callbacks=False,
             save_prediction_history=False,
             save_model_checkpoints=False,
@@ -183,6 +200,7 @@ class KerasWrapper(Model):
         self.save_learning_rate = save_learning_rate
         self.class_weight = class_weight
         self.reduce_lr_on_plateau = reduce_lr_on_plateau
+        self.rule_out_logger = rule_out_logger
         log.info("\n\n" + keras_model_summary_as_string(model))
 
     def fit(self, training_data, validation_data=None, split_number=None,
@@ -237,6 +255,10 @@ class KerasWrapper(Model):
         if self.reduce_lr_on_plateau is not None:
             callbacks.append(
                 ReduceLROnPlateau(**self.reduce_lr_on_plateau)
+            )
+        if self.rule_out_logger:
+            callbacks.append(
+                RuleOutLogger(training_data, validation_data)
             )
         return callbacks
 

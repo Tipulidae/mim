@@ -50,6 +50,7 @@ class Experiment(NamedTuple):
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
     loss: Any = 'binary_crossentropy'
+    loss_kwargs: Any = None
     loss_weights: Any = None
     class_weight: Union[dict, hp.Param] = None
     epochs: Union[int, hp.Param] = None
@@ -73,6 +74,7 @@ class Experiment(NamedTuple):
     use_tensorboard: bool = False
     save_learning_rate: bool = False
     ensemble: int = 0
+    rule_out_logger: bool = False
 
     def run(self, action='train'):
         try:
@@ -264,6 +266,11 @@ class Experiment(NamedTuple):
             else:
                 optimizer = self.optimizer
 
+            if callable(self.loss):
+                loss = self.loss(**self.loss_kwargs)
+            else:
+                loss = self.loss
+
             return KerasWrapper(
                 model,
                 # TODO: Add data augmentation here maybe, and use in fit
@@ -274,7 +281,7 @@ class Experiment(NamedTuple):
                 epochs=self.epochs,
                 initial_epoch=self.initial_epoch,
                 optimizer=optimizer,
-                loss=self.loss,
+                loss=loss,
                 loss_weights=self.loss_weights,
                 class_weight=self.class_weight,
                 metrics=fix_metrics(self.metrics),
@@ -285,6 +292,7 @@ class Experiment(NamedTuple):
                 use_tensorboard=self.use_tensorboard,
                 save_learning_rate=self.save_learning_rate,
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
+                rule_out_logger=self.rule_out_logger
             )
         else:
             return Model(

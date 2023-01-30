@@ -299,6 +299,19 @@ class Presenter:
             columns=xp['feature_names']
         )
 
+    def loss_history(self, name, avg=False):
+        """
+        :param name:
+        :param avg: Whether or not to average the loss across the folds
+        :return:
+        """
+        xp = self.results[name]
+        loss = xp.training_history.loc[:, pd.IndexSlice[:, 'loss']]
+        if avg:
+            return loss.mean(axis=1)
+        else:
+            return loss
+
     def history(self, name, columns='all', folds='all'):
         xp = self.results[name]
         if xp['history'] is None:
