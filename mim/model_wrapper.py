@@ -8,8 +8,8 @@ from time import time
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import tensorflow.keras as keras
-from tensorflow.keras.callbacks import TensorBoard, ReduceLROnPlateau, \
+from tensorflow import keras
+from keras.callbacks import TensorBoard, ReduceLROnPlateau, \
     ModelCheckpoint
 
 from mim.util.logs import get_logger
@@ -66,6 +66,7 @@ class Model:
         if self.can_use_tf_dataset:
             train = training_data.as_dataset(**kwargs)
             val = validation_data.as_dataset(**kwargs)
+            print(f"{train=}, {val=}")
             return self.model.fit(train, validation_data=val, **kwargs).history
         else:
             self.model.fit(*training_data.as_numpy())
@@ -177,6 +178,7 @@ class KerasWrapper(Model):
             exp_base_path=None,
             class_weight=None,
             reduce_lr_on_plateau=None,
+            plot_model=True,
             **kwargs
     ):
         super().__init__(model, can_use_tf_dataset=True, **kwargs)
@@ -201,16 +203,18 @@ class KerasWrapper(Model):
         self.class_weight = class_weight
         self.reduce_lr_on_plateau = reduce_lr_on_plateau
         self.rule_out_logger = rule_out_logger
+        self.plot_model = plot_model
         log.info("\n\n" + keras_model_summary_as_string(model))
 
     def fit(self, training_data, validation_data=None, split_number=None,
             **kwargs):
-        keras.utils.plot_model(
-            self.model,
-            os.path.join(self.exp_base_path, "network-graph.png"),
-            True,
-            True
-        )
+        if self.plot_model:
+            keras.utils.plot_model(
+                self.model,
+                os.path.join(self.exp_base_path, "network-graph.png"),
+                True,
+                True
+            )
         if self.ignore_callbacks:
             callbacks = None
         else:

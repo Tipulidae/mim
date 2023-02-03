@@ -57,8 +57,12 @@ class ExperimentResult:
 
     @property
     def validation_targets(self):
+        folds_total = len(self.validation_results)
+        ensemble = self._ensemble()
+        folds = folds_total // ensemble
+
         return pd.concat(
-            [r.targets for r in self.validation_results], axis=1).mean(axis=1)
+            [r.targets for r in self.validation_results[:folds]], axis=0)
 
     @property
     def training_targets(self):
@@ -67,12 +71,39 @@ class ExperimentResult:
 
     @property
     def validation_predictions(self):
-        return pd.concat(
-            [r.predictions for r in self.validation_results],
-            axis=1).mean(axis=1)
+        # When using cross-validation I want to combine all predictions into
+        # a single vector. When using ensembles, I want to average the
+        # predictions across the ensembles. When using both, I first combine
+        # all the cross-validation predictions, then I average across
+        # ensembles. There are if-checks to avoid some unnecessary copying of
+        # data (concat will copy data), but when using both ensembles and
+        # cross-validation, there will be double-copying with this solution.
+        # It's not the prettiest, but at least there's a few tests for it.
+        def combine_cv_preds(start_id, stop_id):
+            if stop_id - start_id > 1:
+                return pd.concat(
+                    [r.predictions for r in
+                     self.validation_results[start_id:stop_id]],
+                    axis=0
+                )
+            else:
+                return self.validation_results[start_id].predictions
+
+        total_splits = len(self.validation_results)
+        ensemble_splits = self._ensemble()
+        cv_splits = total_splits // ensemble_splits
+
+        ensemble_preds = [
+            combine_cv_preds(cv_splits * i, cv_splits * (i + 1))
+            for i in range(ensemble_splits)
+        ]
+        if len(ensemble_preds) > 1:
+            return pd.DataFrame(pd.concat(ensemble_preds, axis=1).mean(axis=1))
+        else:
+            return ensemble_preds[0]
 
     @property
-    def train_predictions(self):
+    def training_predictions(self):
         return pd.concat(
             [r.predictions for r in self.training_results], axis=0)
 
@@ -91,6 +122,15 @@ class ExperimentResult:
             keys=range(self.num_splits),
             names=['split', 'epoch', 'target']
         )
+
+    def _ensemble(self):
+        if 'ensemble' in self.metadata:
+            return self.metadata['ensemble']
+        else:
+            return 1
+
+    def _is_ensemble(self):
+        return 'ensemble' in self.metadata and self.metadata['ensemble'] > 1
 
     @property
     def training_history(self):

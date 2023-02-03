@@ -17,8 +17,12 @@ class TestExperimentResult:
             path='',
             experiment_summary={},
         )
-
-        assert r.validation_predictions.equals(p.predictions)
+        expected = p.predictions
+        actual = r.validation_predictions
+        print(f"{expected=}")
+        print(f"{actual=}")
+        pd.testing.assert_frame_equal(expected, actual)
+        # assert r.validation_predictions.equals()
 
     def test_predictions_from_multiple_folds(self):
         p1 = Result(
@@ -51,6 +55,135 @@ class TestExperimentResult:
         )
         print(r.validation_predictions)
         assert r.validation_predictions.equals(expected_predictions)
+
+    def test_ensemble_targets_single_fold(self):
+        p1 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 0, 0, 1]),
+            predictions=pd.DataFrame([0.8, 0.2, 0.1, 0.6]),
+        )
+        p2 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 0, 0, 1]),
+            predictions=pd.DataFrame([0.7, 0.3, 0.1, 0.5]),
+        )
+        r = ExperimentResult(
+            validation_results=[p1, p2],
+            feature_names=['a', 'b'],
+            metadata={'ensemble': 2},
+            path='',
+            experiment_summary={},
+        )
+        assert r.validation_targets.equals(p1.targets)
+
+    def test_ensemble_targets_multiple_folds(self):
+        p1 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 0, 0, 1]),
+            predictions=pd.DataFrame([0.8, 0.2, 0.1, 0.6]),
+        )
+        p2 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 1, 0, 0]),
+            predictions=pd.DataFrame([0.7, 0.9, 0.1, 0.2]),
+        )
+        p3 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 0, 0, 1]),
+            predictions=pd.DataFrame([0.6, 0.3, 0.2, 0.9]),
+        )
+        p4 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 1, 0, 0]),
+            predictions=pd.DataFrame([0.8, 0.8, 0.2, 0.1]),
+        )
+        r = ExperimentResult(
+            validation_results=[p1, p2, p3, p4],
+            feature_names=['a', 'b'],
+            metadata={'ensemble': 2},
+            path='',
+            experiment_summary={},
+        )
+        expected = pd.concat([p1.targets, p2.targets], axis=0)
+        assert r.validation_targets.equals(expected)
+
+    def test_ensemble_predictions_single_fold(self):
+        p1 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 0, 0, 1]),
+            predictions=pd.DataFrame([0.8, 0.2, 0.1, 0.6]),
+        )
+        p2 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 0, 0, 1]),
+            predictions=pd.DataFrame([0.6, 0.4, 0.1, 0.4]),
+        )
+        r = ExperimentResult(
+            validation_results=[p1, p2],
+            feature_names=['a', 'b'],
+            metadata={'ensemble': 2},
+            path='',
+            experiment_summary={},
+        )
+        expected = pd.DataFrame(
+            [0.7, 0.3, 0.1, 0.5],
+
+            # columns=pd.Index([0], name='fold'),
+        )
+        actual = r.validation_predictions
+        print(f"{expected=}")
+        print(f"{actual=}")
+        # print(f"{actual.columns=}")
+        pd.testing.assert_frame_equal(expected, actual)
+
+    def test_ensemble_predictions_multiple_folds(self):
+        p1 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 0, 0, 1]),
+            predictions=pd.DataFrame(
+                [0.8, 0.2, 0.1, 0.6],
+                index=pd.Index(range(4), name='Alias')
+            ),
+        )
+        p2 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 1, 0, 0]),
+            predictions=pd.DataFrame(
+                [0.7, 0.9, 0.1, 0.2],
+                index=pd.Index(range(4, 8), name='Alias')
+            ),
+        )
+        p3 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 0, 0, 1]),
+            predictions=pd.DataFrame(
+                [0.6, 0.4, 0.3, 0.8],
+                index=pd.Index(range(4), name='Alias')
+            ),
+        )
+        p4 = Result(
+            time=0.1,
+            targets=pd.DataFrame([1, 1, 0, 0]),
+            predictions=pd.DataFrame(
+                [0.7, 0.7, 0.3, 0.0],
+                index=pd.Index(range(4, 8), name='Alias')
+            ),
+        )
+        r = ExperimentResult(
+            validation_results=[p1, p2, p3, p4],
+            feature_names=['a', 'b'],
+            metadata={'ensemble': 2},
+            path='',
+            experiment_summary={},
+        )
+        expected = pd.DataFrame(
+            [0.7, 0.3, 0.2, 0.7, 0.7, 0.8, 0.2, 0.1],
+            index=pd.Index(range(8), name='Alias')
+        )
+        actual = r.validation_predictions
+        print(f"{expected=}")
+        print(f"{actual=}")
+        pd.testing.assert_frame_equal(expected, r.validation_predictions)
 
     def test_single_split_validation_history(self):
         history = pd.DataFrame(

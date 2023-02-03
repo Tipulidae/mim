@@ -6,7 +6,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import Binarizer, StandardScaler
 from xgboost import XGBClassifier
-from tensorflow.keras.optimizers import Adam
+from keras.optimizers import Adam
+from keras.losses import BinaryFocalCrossentropy
 
 from mim.experiments.experiments import Experiment
 from mim.experiments.hyper_experiments import HyperExperiment
@@ -1178,7 +1179,8 @@ class PatientHistory(Experiment, Enum):
             'name': Adam,
             'kwargs': {'learning_rate': 1e-2}
         },
-        loss="BinaryFocalCrossentropy",
+        loss=BinaryFocalCrossentropy,
+        # loss='binary_cross_entropy',
         loss_kwargs={},
         pre_processor=sklearn_process,
         pre_processor_kwargs={
@@ -1192,7 +1194,7 @@ class PatientHistory(Experiment, Enum):
         },
         scoring=roc_auc_score,
         metrics=['accuracy', 'auc'],
-        rule_out_logger=True,
+        # rule_out_logger=True,
     )
 
     MLP1_AC_SIC_OIC_BASIC = Experiment(

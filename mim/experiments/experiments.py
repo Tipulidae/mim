@@ -73,7 +73,7 @@ class Experiment(NamedTuple):
     save_model_checkpoints: bool = False
     use_tensorboard: bool = False
     save_learning_rate: bool = False
-    ensemble: int = 0
+    ensemble: int = 1
     rule_out_logger: bool = False
 
     def run(self, action='train'):
@@ -220,7 +220,7 @@ class Experiment(NamedTuple):
             cv = self.cv
             cv_kwargs = self.cv_kwargs
 
-        if self.ensemble:
+        if self.ensemble > 1:
             cv_kwargs = {
                 'cv': cv,
                 'cv_kwargs': cv_kwargs,

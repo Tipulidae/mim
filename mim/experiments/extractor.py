@@ -356,7 +356,7 @@ class DataWrapper:
             columns = list(itertools.chain(*columns.values()))
         return pd.DataFrame(y, index=index, columns=columns)
 
-    def as_dataset(self, batch_size=1, prefetch=3, **kwargs):
+    def as_dataset(self, batch_size=1, prefetch=0, **kwargs):
         x = self.data['x'].as_dataset(shuffle=True)
         y = self.data['y'].as_dataset(shuffle=True)
         fixed_data = tf.data.Dataset.zip((x, y))

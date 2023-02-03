@@ -1,5 +1,5 @@
 from tensorflow import keras
-from tensorflow.keras.layers import (
+from keras.layers import (
     Input, Concatenate,
     Dense, LSTM, Dropout
 )

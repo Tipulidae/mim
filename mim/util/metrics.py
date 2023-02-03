@@ -74,10 +74,13 @@ def rule_in_rule_out(
         if rule_out_threshold is None:
             rule_out_threshold = out_th
 
-    rule_in = np.where(predictions >= rule_in_threshold, 1, 0)
-    rule_out = np.where(predictions < rule_out_threshold, 1, 0)
+    ruled_in = np.where(predictions >= rule_in_threshold, 1, 0)
+    ruled_out = np.where(predictions < rule_out_threshold, 1, 0)
     results = np.vstack(
-        [rule_in, np.ones_like(rule_out) - rule_out - rule_in, rule_out]).T
+        [ruled_in,
+         np.ones_like(ruled_out) - ruled_out - ruled_in,
+         ruled_out]
+    ).T
 
     return results
 
@@ -92,49 +95,59 @@ def find_rule_in_rule_out_thresholds(
     metrics = total_confusion(targets, predictions)
 
     # specificity == 1 - fpr
-    rule_in = metrics[
+    ruled_in = metrics[
         ((1 - metrics.fpr) >= rule_in_spec) & (metrics.ppv >= rule_in_ppv)]
-    if len(rule_in) > 0:
-        rule_in_threshold = rule_in.index[-1]
+    if len(ruled_in) > 0:
+        rule_in_threshold = ruled_in.index[-1]
     else:
         rule_in_threshold = 1.0
 
     # sensitivity == tpr
-    rule_out = metrics[
+    ruled_out = metrics[
         (metrics.tpr >= rule_out_sens) & (metrics.npv >= rule_out_npv)]
-    if len(rule_out) > 0:
-        rule_out_threshold = rule_out.index[0]
+    if len(ruled_out) > 0:
+        rule_out_threshold = ruled_out.index[0]
     else:
         rule_out_threshold = 0.0
 
     return rule_in_threshold, rule_out_threshold
 
 
-def rule_in(targets, predictions, rule_in_spec=0.90, rule_in_ppv=0.7):
+def rule_in(targets, predictions, rule_in_spec=0.90, rule_in_ppv=0.7,
+            threshold=None):
+    targets = _to_vector(targets)
+    predictions = _to_vector(predictions)
     results = rule_in_rule_out(
         targets,
         predictions,
         rule_in_spec=rule_in_spec,
-        rule_in_ppv=rule_in_ppv
+        rule_in_ppv=rule_in_ppv,
+        rule_in_threshold=threshold
     )
     return results.mean(axis=0)[0]
 
 
-def rule_out(targets, predictions, rule_out_sens=0.99, rule_out_npv=0.995):
-    if isinstance(targets, pd.DataFrame):
-        targets = targets.values.ravel()
-    if isinstance(predictions, pd.DataFrame):
-        predictions = predictions.values.ravel()
-    if len(predictions.shape) > 1:
-        predictions = predictions.ravel()
+def rule_out(targets, predictions, rule_out_sens=0.99, rule_out_npv=0.995,
+             threshold=None):
+    targets = _to_vector(targets)
+    predictions = _to_vector(predictions)
 
     results = rule_in_rule_out(
         targets,
         predictions,
         rule_out_sens=rule_out_sens,
-        rule_out_npv=rule_out_npv
+        rule_out_npv=rule_out_npv,
+        rule_out_threshold=threshold
     )
     return results.mean(axis=0)[-1]
+
+
+def _to_vector(data):
+    if isinstance(data, pd.DataFrame):
+        return data.values.ravel()
+    if len(data.shape) > 1:
+        return data.ravel()
+    return data
 
 
 def rule_in_rule_out_ab(

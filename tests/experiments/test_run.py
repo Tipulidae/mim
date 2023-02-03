@@ -1,6 +1,7 @@
 from enum import Enum
 
 import numpy as np
+from keras.optimizers import Adam
 
 from mim.fakes.fake_extractors import FakeExtractor
 from mim.models.simple_nn import basic_ff
@@ -24,7 +25,7 @@ class SmallTestExperiment(Experiment, Enum):
         extractor=FakeExtractor,
         extractor_kwargs={
             "index": {
-                'n_samples': 512,
+                'n_samples': 128,
                 'n_features': 128,
                 'n_informative': 100,
                 'n_classes': 2,
@@ -36,7 +37,10 @@ class SmallTestExperiment(Experiment, Enum):
         batch_size=32,
         ignore_callbacks=True,
         epochs=2,
-        optimizer='rmsprop',
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-2}
+        },
         loss='binary_crossentropy',
         metrics=['accuracy'],
         scoring=sparse_categorical_accuracy,

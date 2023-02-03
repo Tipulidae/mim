@@ -34,7 +34,7 @@ def public_methods(obj):
     An attribute of obj is considered a public method if it's callable and
     doesn't start with _.
 
-    :param obj: The object who's methods we want
+    :param obj: The object whose methods we want
     :return: Iterator over all methods, as a (method, method_name)-tuple.
     """
     for name in dir(obj):
@@ -99,7 +99,7 @@ def callable_to_string(x):
     Works recursively, so that if the input is a dict or list, all the items
     are checked for callables to stringify.
 
-    A callable is converted to it's module-name followed by it's name, e.g.
+    A callable is converted to it's module-name followed by its name, e.g.
     this function is converted to "mim.util.util.callable_to_string"
 
     :param x: Anything
@@ -118,7 +118,7 @@ def callable_to_string(x):
 
 def insensitive_iglob(pattern, recursive=True):
     """
-    Case insensitive version of iglob. Modified slightly from
+    Case-insensitive version of iglob. Modified slightly from
     stack overflow: https://stackoverflow.com/a/10886685/5693369
     """
     def either(c):
