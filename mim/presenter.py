@@ -314,25 +314,26 @@ class Presenter:
 
     def history(self, name, columns='all', folds='all'):
         xp = self.results[name]
-        if xp['history'] is None:
-            print(f"Experiment {name} has no history.")
-            return
-
-        history = pd.concat(
-            [pd.DataFrame(h) for h in xp['history']],
-            axis=1,
-            keys=[f'fold {i}' for i in range(len(xp['history']))]
-        )
-
-        if isinstance(columns, list):
-            history = history.loc[:, pd.IndexSlice[:, columns]]
-        if isinstance(folds, list):
-            fold_names = [f'fold {i}' for i in folds]
-            history = history.loc[:, pd.IndexSlice[fold_names, :]]
-        if folds == 'first':
-            history = history.loc[:, 'fold 0']
-
-        return history
+        return xp.validation_history
+        # if xp['history'] is None:
+        #     print(f"Experiment {name} has no history.")
+        #     return
+        #
+        # history = pd.concat(
+        #     [pd.DataFrame(h) for h in xp['history']],
+        #     axis=1,
+        #     keys=[f'fold {i}' for i in range(len(xp['history']))]
+        # )
+        #
+        # if isinstance(columns, list):
+        #     history = history.loc[:, pd.IndexSlice[:, columns]]
+        # if isinstance(folds, list):
+        #     fold_names = [f'fold {i}' for i in folds]
+        #     history = history.loc[:, pd.IndexSlice[fold_names, :]]
+        # if folds == 'first':
+        #     history = history.loc[:, 'fold 0']
+        #
+        # return history
 
     def max_auc(self):
         def get_max_auc(xp):
@@ -472,7 +473,9 @@ def calculate_regression_scores(targets, predictions):
     return results
 
 
-def plot_calibration_curve(targets, predictions, bins=25, strategy='quantile'):
+def plot_calibration_curve(
+        targets, predictions, bins=25, strategy='quantile',
+        xlim=(-0.05, 1.05), ylim=(-0.05, 1.05)):
     plt.figure(figsize=(10, 10))
     ax1 = plt.subplot2grid((3, 1), (0, 0), rowspan=2)
     ax2 = plt.subplot2grid((3, 1), (2, 0))
@@ -487,7 +490,8 @@ def plot_calibration_curve(targets, predictions, bins=25, strategy='quantile'):
              histtype="step", lw=2)
 
     ax1.set_ylabel("Fraction of positives")
-    ax1.set_ylim([-0.05, 1.05])
+    ax1.set_ylim(ylim)
+    ax1.set_xlim(xlim)
     ax1.legend(loc="lower right")
     ax1.set_title('Calibration plots  (reliability curve)')
 

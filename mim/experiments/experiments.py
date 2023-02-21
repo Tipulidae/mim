@@ -23,7 +23,7 @@ from mim.cross_validation import CrossValidationWrapper, \
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
-from mim.util.metadata import Metadata
+from mim.util.metadata import Metadata, Validator
 from mim.util.util import callable_to_string
 from mim.experiments.results import ExperimentResult, TestResult, Result
 import mim.experiments.hyper_parameter as hp
@@ -76,12 +76,13 @@ class Experiment(NamedTuple):
     ensemble: int = 1
     rule_out_logger: bool = False
 
-    def run(self, action='train'):
+    def run(self, action='train', restart=False, splits_to_do=-1):
         try:
             # Wipe all old results here!
             if action == 'train':
-                self.clear_old_results()
-                results = self._train_and_validate()
+                if restart:
+                    self.clear_old_results()
+                results = self._train_and_validate(splits_to_do)
                 path = self.train_result_path
             elif action == 'test':
                 results = self._evaluate()
@@ -155,7 +156,7 @@ class Experiment(NamedTuple):
     def _model_paths(self):
         return glob(os.path.join(self.base_path, 'split*/model.*'))
 
-    def _train_and_validate(self) -> ExperimentResult:
+    def _train_and_validate(self, splits_to_do=-1) -> ExperimentResult:
         """
         Load all the necessary data, split according to the specified
         cross-validation function. Build the model, then train using the
@@ -165,15 +166,35 @@ class Experiment(NamedTuple):
         t = time()
 
         data = self.get_extractor().get_development_data()
-        results = ExperimentResult(
-            feature_names=data.feature_names,
-            metadata=Metadata().report(conda=self.log_conda_env),
-            experiment_summary=self.asdict(),
-            path=self.base_path
-        )
         cv = self.get_cross_validation(data.predefined_splits)
 
+        if self.has_train_results:
+            results = pd.read_pickle(self.train_result_path)
+            md = Metadata().report(conda=self.log_conda_env)
+            Validator(
+                allow_uncommitted=False,
+                allow_different_commits=False,
+                allow_different_branches=False,
+                allow_different_environments=False
+            ).validate_consistency([md, results.metadata])
+        else:
+            results = ExperimentResult(
+                feature_names=data.feature_names,
+                metadata=Metadata().report(conda=self.log_conda_env),
+                experiment_summary=self.asdict(),
+                path=self.base_path,
+                total_splits=cv.get_n_splits()
+            )
+
+        splits_so_far = results.num_splits_done
+        splits_total = cv.get_n_splits()
+        if splits_to_do == -1:
+            splits_to_do = splits_total - splits_so_far
+
         for i, (train, validation) in enumerate(cv.split(data)):
+            if i < splits_so_far or i >= splits_to_do + splits_so_far:
+                continue
+
             pre_process = self.get_pre_processor(i)
             train, validation = pre_process(train, validation)
             model = self.build_model(train, validation, split_number=i)
@@ -184,6 +205,7 @@ class Experiment(NamedTuple):
                 model,
                 self.scoring,
                 split_number=i,
+                total_splits=splits_total,
                 save_model=self.save_model
             )
             results.add(train_result, validation_result)
@@ -347,6 +369,10 @@ class Experiment(NamedTuple):
 
     @property
     def is_trained(self):
+        return self.has_train_results and not self.is_partial
+
+    @property
+    def has_train_results(self):
         file = Path(self.train_result_path)
         return file.is_file()
 
@@ -356,8 +382,24 @@ class Experiment(NamedTuple):
         return file.is_file()
 
     @property
+    def is_partial(self):
+        if not self.has_train_results:
+            return False
+
+        results = pd.read_pickle(self.train_result_path)
+        return results.num_splits_done < results.total_splits
+
+    @property
+    def num_splits_done(self):
+        if not self.has_train_results:
+            return 0
+
+        results = pd.read_pickle(self.train_result_path)
+        return results.num_splits_done
+
+    @property
     def validation_scores(self):
-        if self.is_trained:
+        if self.has_train_results:
             results = pd.read_pickle(self.train_result_path)
             return results.validation_scores
         else:
@@ -408,9 +450,10 @@ def _split_history(history_dict):
 
 
 def train_model(training_data, validation_data, model, scoring,
-                split_number=None, save_model=True) -> Tuple[Result, Result]:
+                split_number=None, total_splits=None, save_model=True
+                ) -> Tuple[Result, Result]:
     t0 = time()
-    log.info(f'\n\nFitting classifier, split {split_number}')
+    log.info(f'\n\nFitting classifier, split {split_number} of {total_splits}')
 
     history = model.fit(
         training_data,

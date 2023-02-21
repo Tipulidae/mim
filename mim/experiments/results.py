@@ -28,6 +28,7 @@ class ExperimentResult:
     experiment_summary: dict
     path: str
     model_summary: str = ''
+    total_splits: int = 1
     training_results: List[Result] = field(default_factory=list)
     validation_results: List[Result] = field(default_factory=list)
 
@@ -36,7 +37,7 @@ class ExperimentResult:
         self.validation_results.append(validation_result)
 
     @property
-    def num_splits(self):
+    def num_splits_done(self):
         return len(self.training_results)
 
     @property
@@ -66,8 +67,15 @@ class ExperimentResult:
 
     @property
     def training_targets(self):
+        folds_total = len(self.training_results)
+        ensemble = self._ensemble()
+        folds = folds_total // ensemble
+
         return pd.concat(
-            [r.targets for r in self.training_results], axis=0)
+            [r.targets for r in self.training_results[:folds]], axis=0)
+        #
+        # return pd.concat(
+        #     [r.targets for r in self.training_results], axis=0)
 
     @property
     def validation_predictions(self):
@@ -119,7 +127,7 @@ class ExperimentResult:
         return pd.concat(
             [r.prediction_history for r in results],
             axis=1,
-            keys=range(self.num_splits),
+            keys=range(self.num_splits_done),
             names=['split', 'epoch', 'target']
         )
 
@@ -146,7 +154,7 @@ class ExperimentResult:
 
         return pd.concat(
             [pd.DataFrame(r.history) for r in results],
-            keys=range(self.num_splits),
+            keys=range(self.num_splits_done),
             names=['split', 'epoch'],
             axis=1
         )

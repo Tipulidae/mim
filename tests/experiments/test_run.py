@@ -54,7 +54,7 @@ class TestRunOneExperiment:
     def test_fake_experiment(self):
         result = SmallTestExperiment.test_fake_data.run(action='train')
         assert isinstance(result, ExperimentResult)
-        assert result.num_splits == 5
+        assert result.num_splits_done == 5
         assert np.mean(result.validation_scores) > 0.8
 
     def test_keras(self):

@@ -34,8 +34,10 @@ class Searcher:
                 break
 
         if args is None:
-            raise Exception('No valid experiment settings were found in '
-                            '100 iterations!')
+            raise Exception(
+                f'No valid experiment settings were found in '
+                f'{self.max_iterations} iterations!'
+            )
         return args
 
     def search(self):
@@ -255,3 +257,42 @@ class RandomSearch(Searcher):
             args['parent_name'] = self.parent_name
             args['alias'] = f"xp_{i}"
             yield Experiment(**args)
+
+
+class EnsembleRandomSearch(Searcher):
+    def __init__(
+            self, iterations_per_bracket=None, models_per_bracket=None,
+            random_seed=123, **kwargs):
+        super().__init__(**kwargs)
+        self.random_seed = random_seed
+        self.iterations_per_bracket = iterations_per_bracket
+        self.models_per_bracket = models_per_bracket
+
+    def search(self):
+        experiments = ...
+        for bracket, (splits, num_models) in enumerate(zip(
+                range(self.iterations_per_bracket),
+                range(self.models_per_bracket))):
+
+            scores = {}
+            for name, experiment in experiments.items():
+                num_splits_done = experiment.num_splits_done
+                if num_splits_done < splits:
+                    experiment.run(
+                        action='train',
+                        restart=False,
+                        splits_to_do=splits-num_splits_done
+                    )
+                scores[name] = self.calculate_xp_score(experiment)
+
+            experiments = self.top_k(num_models, experiments, scores)
+
+    def calculate_xp_score(self, experiment):
+        # Some metric that depends on how jagged the loss history is and how
+        # well the model performed on the validation set
+        return 0
+
+    def top_k(self, num_models, experiments, scores):
+        # Sort the scores and find the best num_models. Or something.
+        #
+        pass

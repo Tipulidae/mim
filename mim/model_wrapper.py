@@ -142,8 +142,10 @@ class RuleOutLogger(keras.callbacks.Callback):
         self.y_val = val.y
 
     def on_epoch_end(self, epoch, logs=None):
-        pred_train = _fix_prediction(self.model.predict(self.x_train))
-        pred_val = _fix_prediction(self.model.predict(self.x_val))
+        pred_train = _fix_prediction(
+            self.model.predict(self.x_train, verbose=0))
+        pred_val = _fix_prediction(
+            self.model.predict(self.x_val, verbose=0))
         logs['rule_out'] = rule_out(self.y_train, pred_train)
         logs['val_rule_out'] = rule_out(self.y_val, pred_val)
 

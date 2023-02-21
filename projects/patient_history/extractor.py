@@ -181,6 +181,8 @@ class Base(Extractor):
         # Load the index data
         # brsm = sk1718.load_outcomes_from_ab_brsm()
         brsm = make_brsm()
+        if 'age_threshold' in self.index:
+            brsm = brsm.loc[brsm.age >= self.index['age_threshold'], :]
 
         # Create the whole dataset
         data = self.get_data(brsm)

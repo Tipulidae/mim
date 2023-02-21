@@ -17,7 +17,8 @@ def experiment_from_name(name):
     return getattr(import_module(module_name), class_name)
 
 
-def run_experiments(experiments, continue_on_error=False, action='train'):
+def run_experiments(experiments, continue_on_error=False, action='train',
+                    restart=False):
     """
     Run all experiments and save the results to disk.
 
@@ -29,7 +30,7 @@ def run_experiments(experiments, continue_on_error=False, action='train'):
     """
     for experiment in experiments:
         try:
-            experiment.run(action=action)
+            experiment.run(action=action, restart=restart)
         except Exception as e:
             log.error(
                 f'Something went wrong with task {experiment.name}! '
@@ -73,7 +74,8 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '-r', '--rerun',
-        help='rerun experiments that already have a result',
+        help='rerun experiments that already have a result. Partially '
+             'completed experiments will restart from scratch.',
         action='store_true'
     )
     parser.add_argument(
@@ -113,6 +115,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     xps_done = []
+    xps_to_continue = []
     xps_to_run = []
     xps_to_rerun = []
     xps_not_conducted = []
@@ -135,6 +138,8 @@ if __name__ == '__main__':
         for xp in xps_to_consider:
             if xp.is_trained:
                 xps_done.append(xp)
+            elif xp.is_partial:
+                xps_to_continue.append(xp)
             else:
                 xps_to_run.append(xp)
     elif args.action == 'test':
@@ -148,6 +153,8 @@ if __name__ == '__main__':
 
     if args.rerun:
         xps_to_rerun = xps_done
+        xps_to_rerun.extend(xps_to_continue)
+        xps_to_continue = []
         xps_done = []
 
     for xp in xps_done:
@@ -156,11 +163,14 @@ if __name__ == '__main__':
         log.info(f'{xp.name} has status NOT CONDUCTED')
     for xp in xps_to_run:
         log.info(f'{xp.name} has status RUN')
+    for xp in xps_to_continue:
+        log.info(f'{xp.name} has status CONTINUE')
     for xp in xps_to_rerun:
         log.info(f'{xp.name} has status RE-RUN')
 
     log.info(f'{len(xps_done)} experiments has status DONE')
     log.info(f'{len(xps_to_run)} experiments has status RUN')
+    log.info(f'{len(xps_to_continue)} experiments has status CONTINUE')
     log.info(f'{len(xps_to_rerun)} experiments has status RE-RUN')
     if xps_not_conducted:
         log.info(f"{len(xps_not_conducted)} experiments has status "
@@ -184,4 +194,4 @@ if __name__ == '__main__':
             exit(0)
 
     run_experiments(all_xps_to_run, continue_on_error=args.force,
-                    action=args.action)
+                    action=args.action, restart=args.rerun)

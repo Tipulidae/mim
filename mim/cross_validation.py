@@ -60,6 +60,9 @@ class ChronologicalSplit:
         test = list(range(k, n))
         yield train, test
 
+    def get_n_splits(self, X=None, y=None, groups=None):
+        return 1
+
 
 class PredefinedSplitsRepeated:
     def __init__(self, predefined_splits, repeats=5):
@@ -71,6 +74,10 @@ class PredefinedSplitsRepeated:
             ps = PredefinedSplit(self.predefined_splits)
             for train, test in ps.split(x, y, groups):
                 yield train, test
+
+    def get_n_splits(self, X=None, y=None, groups=None):
+        ps = PredefinedSplit(self.predefined_splits)
+        return self.repeats * ps.get_n_splits()
 
 
 class RepeatingCrossValidator:
@@ -84,3 +91,7 @@ class RepeatingCrossValidator:
             cv = self.cv(**self.cv_kwargs)
             for train, test in cv.split(x, y, groups):
                 yield train, test
+
+    def get_n_splits(self, X=None, y=None, groups=None):
+        cv = self.cv(**self.cv_kwargs)
+        return self.repeats * cv.get_n_splits()

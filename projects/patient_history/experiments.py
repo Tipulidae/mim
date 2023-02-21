@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import Binarizer, StandardScaler
 from xgboost import XGBClassifier
 from keras.optimizers import Adam
-from keras.losses import BinaryFocalCrossentropy
+from keras.losses import BinaryFocalCrossentropy, BinaryCrossentropy
 
 from mim.experiments.experiments import Experiment
 from mim.experiments.hyper_experiments import HyperExperiment
@@ -1033,6 +1033,32 @@ class PatientHistory(Experiment, Enum):
             'basic': {'processor': StandardScaler}
         },
     )
+    LR_AIK_BASIC_50 = LR_A1000_I1000_K100._replace(
+        description="AIK refers to the best combination of ATC, ICD and KVÅ "
+                    "codes found so far. Only patients over 50 years.",
+        model_kwargs={
+            'class_weight': 'balanced',
+            'max_iter': 300,
+            'C': 0.001
+        },
+        extractor_kwargs={
+            'index': {'age_threshold': 50},
+            'features': {
+                'basic': ['age', 'sex'],
+                'history': {
+                    'intervals': {'periods': 1},
+                    'sources': ['SV', 'OV'],
+                    'num_icd': 1000,
+                    'num_kva': 100,
+                    'num_atc': 1000,
+                }
+            }
+        },
+        pre_processor_kwargs={
+            'history': {'processor': Binarizer},
+            'basic': {'processor': StandardScaler}
+        },
+    )
     LR_AIK_LISA = LR_A1000_I1000_K100._replace(
         description="",
         model_kwargs={
@@ -1156,13 +1182,17 @@ class PatientHistory(Experiment, Enum):
     )
 
     MLP_BASIC = Experiment(
-        description='',
+        description='Basic experiment with only age and sex as features.',
         model=mlp2,
         model_kwargs={
             'mlp_kwargs': {
-                'sizes': [5],
-                'dropout': [0.0],
-                'regularizer': [1e-3],
+                'sizes': [10, 5],
+                'dropout': [0.0, 0.0],
+                'regularizer': {
+                    'kernel': 1e-2,
+                    'activity': 0.0,
+                    'bias': 0.0,
+                }
             },
         },
         extractor=Flat,
@@ -1174,13 +1204,11 @@ class PatientHistory(Experiment, Enum):
         building_model_requires_development_data=True,
         batch_size=256,
         epochs=100,
-        # ensemble=1,
         optimizer={
             'name': Adam,
             'kwargs': {'learning_rate': 1e-2}
         },
-        loss=BinaryFocalCrossentropy,
-        # loss='binary_cross_entropy',
+        loss=BinaryCrossentropy,
         loss_kwargs={},
         pre_processor=sklearn_process,
         pre_processor_kwargs={
@@ -1194,8 +1222,116 @@ class PatientHistory(Experiment, Enum):
         },
         scoring=roc_auc_score,
         metrics=['accuracy', 'auc'],
-        # rule_out_logger=True,
+        rule_out_logger=True,
     )
+    MLP_BASIC_W1 = MLP_BASIC._replace(
+        description='Cross-entropy, but with class weights.',
+        batch_size=256,
+        epochs=100,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-2}
+        },
+        loss=BinaryCrossentropy,
+        loss_kwargs={},
+        class_weight={1: 10.0, 0: 1.0}
+    )
+    MLP_BASIC_W2 = MLP_BASIC._replace(
+        description='Cross-entropy, but with more skewed class weights.',
+        batch_size=256,
+        epochs=100,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-2}
+        },
+        loss=BinaryCrossentropy,
+        loss_kwargs={},
+        class_weight={1: 100.0, 0: 1.0}
+    )
+    MLP_BASIC_W3 = MLP_BASIC._replace(
+        description='Cross-entropy, but with class weights inverted.',
+        batch_size=256,
+        epochs=100,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-2}
+        },
+        loss=BinaryCrossentropy,
+        loss_kwargs={},
+        class_weight={1: 1.0, 0: 100.0}
+    )
+    MLP_BASIC_BFE1 = MLP_BASIC._replace(
+        description='Binary focal cross-entropy, default parameters. Seems '
+                    'like I need lower learning-rate for this to work at all.',
+        batch_size=256,
+        epochs=100,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-3}
+        },
+        loss=BinaryFocalCrossentropy,
+        loss_kwargs={
+            'apply_class_balancing': False,
+            'alpha': 0.25,
+            'gamma': 2.0
+        },
+    )
+    MLP_BASIC_BFE2 = MLP_BASIC._replace(
+        description='Binary focal cross-entropy, higher alpha.',
+        batch_size=256,
+        epochs=100,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-3}
+        },
+        loss=BinaryFocalCrossentropy,
+        loss_kwargs={
+            'apply_class_balancing': False,
+            'alpha': 0.50,
+            'gamma': 2.0
+        },
+    )
+    MLP_BASIC_BFE3 = MLP_BASIC._replace(
+        description='Binary focal cross-entropy, higher gamma.',
+        batch_size=256,
+        epochs=100,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-3}
+        },
+        loss=BinaryFocalCrossentropy,
+        loss_kwargs={
+            'apply_class_balancing': False,
+            'alpha': 0.25,
+            'gamma': 4.0
+        },
+    )
+    MLP_BASIC_BFE4 = MLP_BASIC._replace(
+        description='Binary focal cross-entropy, class-balancing.',
+        batch_size=256,
+        epochs=100,
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 1e-3}
+        },
+        loss=BinaryFocalCrossentropy,
+        loss_kwargs={
+            'apply_class_balancing': True,
+            'alpha': 0.25,
+            'gamma': 2.0
+        },
+    )
+    # MLP_BASIC_BFC_V1 = MLP_BASIC._replace(
+    #     description='Binary focal cross-entropy, version 1.',
+    #     batch_size=256,
+    #     epochs=100,
+    #     optimizer={
+    #         'name': Adam,
+    #         'kwargs': {'learning_rate': 1e-2}
+    #     },
+    #     loss=BinaryFocalCrossentropy,
+    #     loss_kwargs={},
+    # )
 
     MLP1_AC_SIC_OIC_BASIC = Experiment(
         description='ICD codes from SV grouped into chapters.',
@@ -1992,6 +2128,72 @@ class HyperSearch(HyperExperiment, Enum):
             pre_processor_kwargs={
                 'history': {'processor': Binarizer},
                 'lisa': {'processor': StandardScaler},
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        1e-2, 3e-3, 1e-3, 3e-4, 1e-4
+                    ])
+                }
+            },
+            batch_size=256,
+            epochs=200,
+            ensemble=10,
+            cv=GroupShuffleSplit,
+            cv_kwargs={
+                'n_splits': 1,
+                'train_size': 2 / 3,
+                'random_state': 43,
+            },
+            scoring=roc_auc_score,
+            metrics=['accuracy', 'auc'],
+            building_model_requires_development_data=True,
+            save_model=False,
+            random_state=hp.Int(0, 1000000000)
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 200
+        }
+    )
+
+    MLP2_BLAIK_OVER50 = HyperExperiment(
+        template=Experiment(
+            description='LISA + age + sex to predict ACS for patients '
+                        '50 years or older.',
+            model=mlp2,
+            model_kwargs={
+                'mlp_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [500, 100, 50, 10],
+                            k=num_layers,
+                            ascending=False
+                        ),
+                        'dropout': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers
+                        ),
+                        'regularizer': hp.Choices(
+                            [1e-2, 1e-3, 1e-4, 0.0],
+                            k=num_layers
+                        )
+                    } for num_layers in [1, 2, 3]
+                ]),
+            },
+            extractor=Flat,
+            extractor_kwargs={
+                'features': {
+                    'basic': ['age', 'sex'],
+                    'lisa': {},
+                }
+            },
+            pre_processor=sklearn_process,
+            pre_processor_kwargs={
+                'lisa': {'processor': StandardScaler},
+                'basic': {'processor': StandardScaler},
             },
             optimizer={
                 'name': Adam,
