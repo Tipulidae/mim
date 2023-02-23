@@ -5,7 +5,7 @@ from importlib import import_module
 import silence_tensorflow.auto  # noqa: F401
 
 from mim.util.logs import get_logger
-from mim import cache
+from mim.cache import settings
 
 log = get_logger("Run")
 
@@ -179,11 +179,11 @@ if __name__ == '__main__':
     all_xps_to_run = xps_to_run + xps_to_rerun
 
     if args.cache == 'off':
-        cache.settings.enabled = False
+        settings.enabled = False
         log.info("Cache setting: off")
     else:
-        cache.settings.enabled = True
-        cache.settings.set_level(args.cache)
+        settings.enabled = True
+        settings.set_level(args.cache)
         log.info(f"Cache setting: {args.cache}")
 
     if not args.suppress:
