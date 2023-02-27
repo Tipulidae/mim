@@ -1,9 +1,18 @@
+import numpy as np
 from keras import layers, losses, optimizers
+from keras.layers import Concatenate
 from keras.models import Model
-from keras import backend as K
-import tensorflow as tf
+
+from mim.models.util import mlp_helper
 
 
+def _make_input(shape):
+    if isinstance(shape, dict):
+        return {key: _make_input(value) for key, value in shape.items()}
+    else:
+        return layers.Input(shape=shape)
+
+"""
 class AnomalyDetector(Model):
     def __init__(self, dropout=0.0, latent_dim=60, num_layers=3):
         super(AnomalyDetector, self).__init__()
@@ -34,9 +43,23 @@ class AnomalyDetector(Model):
 
 def autoencoder(train, validation=None, **kwargs):
     return AnomalyDetector(**kwargs)
+"""
 
 
-def anomaly_detector():
-    ae = load_trained_model(...)
-    new_model = ...
+def autoencoder_functional(
+        train,
+        validation=None,
+        mlp_kwargs=None, **kwargs
+):
+    inp = _make_input(train.feature_tensor_shape)
 
+    x = inp
+    if mlp_kwargs:
+        x = mlp_helper(x, **mlp_kwargs)
+
+    # {'x': ..., 'y': {'y1': ..., 'y2': ...}}
+
+    med_output = layers.Dense(units=train.feature_tensor_shape.as_list()[0]-3, activation="sigmoid", name='Med')(x)
+    age_output = layers.Dense(1, activation="sigmoid", name='Age')(x)
+    gender_output = layers.Dense(2, activation="softmax", name='Gender')(x)
+    return Model(inp, {'Med': med_output, 'Age': age_output, 'Gender': gender_output})

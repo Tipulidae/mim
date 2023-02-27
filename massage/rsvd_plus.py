@@ -522,6 +522,20 @@ def merge_data(befo_data, vaccination_data, med_data):
     return all_data
 
 
+def make_data_samples(days, samples):
+    befo_alias = make_befo_data()["Alias"].sample(n=samples)
+    vaccination_data = make_vaccination_data(befo_alias)
+    rsvd_data = make_rsvd_data(befo_alias)
+    lab_data = make_lab_data(befo_alias)
+    relevant_data = get_relevant_data(vaccination_data, rsvd_data, lab_data, days=days)
+    med_data = make_med_data(make_index(vaccination_data), make_lab_samples(relevant_data),
+                             make_diag_samples(relevant_data), make_kva_samples(relevant_data),
+                             make_contact_samples(relevant_data),
+                             make_history_diag_samples(rsvd_data, vaccination_data))
+
+    return merge_data(make_befo_data(), vaccination_data, med_data)
+
+
 def make_data(days):
     befo_alias = make_befo_data()["Alias"]
     vaccination_data = make_vaccination_data(befo_alias)
