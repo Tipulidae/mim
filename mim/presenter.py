@@ -49,10 +49,14 @@ regression_scores = {
 
 
 class Presenter:
-    def __init__(self, name, verbose=2):
+    def __init__(self, name, verbose=2, legacy_path=False):
         self.results = dict()
+        if legacy_path:
+            result_name = 'results'
+        else:
+            result_name = 'train_val_results'
         paths = insensitive_iglob(
-            f"{PATH_TO_TEST_RESULTS}/{name}/**/train_val_results.pickle",
+            f"{PATH_TO_TEST_RESULTS}/{name}/**/{result_name}.pickle",
             recursive=True
         )
 
@@ -111,11 +115,16 @@ class Presenter:
             index=['train', 'test']
         )
 
-    def scores(self, like='.*', auc=True, rule_in_out=False):
+    def scores(self, like='.*', auc=True, rule_in_out=False, legacy=False):
         results = []
         for name, xp in list(self._results_that_match_pattern(like)):
-            targets = xp.validation_targets.values.ravel()
-            predictions = xp.validation_predictions.values.ravel()
+            if legacy:
+                targets, predictions = self._target_predictions(name)
+                targets = targets.values.ravel()
+                predictions = predictions.values.ravel()
+            else:
+                targets = xp.validation_targets.values.ravel()
+                predictions = xp.validation_predictions.values.ravel()
 
             data = []
             index = []

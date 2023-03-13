@@ -47,6 +47,26 @@ def total_confusion(targets, predictions):
     return metrics
 
 
+def total_confusion_all_thresholds(targets, predictions):
+    # The original total_confusion cleverly discards some of the thresholds
+    # that don't matter for fpr and tpr calculations. This functions creates
+    # a similar table of tp, fp, tn, fn columns, but for all the predictions,
+    # including 0 and 1.
+    cm = pd.DataFrame(
+        np.concatenate([[0], _to_vector(targets), [0]]),
+        index=pd.Index(
+            np.concatenate([[0.0], _to_vector(predictions), [1.0]]),
+            name='threshold'),
+        columns=['y']
+    ).sort_index()
+    cm['tn'] = (1 - cm.y).cumsum() - 1
+    cm.tn.iloc[-1] -= 1
+    cm['fn'] = cm.y.cumsum()
+    cm['tp'] = cm.y.sum() - cm.fn
+    cm['fp'] = len(cm) - 2 - cm.y.sum() - cm.tn
+    return cm[['tn', 'fn', 'tp', 'fp']]
+
+
 def rule_in_rule_out(
         targets,
         predictions,
@@ -145,6 +165,8 @@ def rule_out(targets, predictions, rule_out_sens=0.99, rule_out_npv=0.995,
 def _to_vector(data):
     if isinstance(data, pd.DataFrame):
         return data.values.ravel()
+    if isinstance(data, pd.Series):
+        return data.values
     if len(data.shape) > 1:
         return data.ravel()
     return data

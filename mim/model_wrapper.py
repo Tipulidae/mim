@@ -150,11 +150,93 @@ class RuleOutLogger(keras.callbacks.Callback):
         logs['val_rule_out'] = rule_out(self.y_val, pred_val)
 
 
+def precision_at_recall_threshold(targets, predictions, target_recall):
+    tp = predictions[targets.values == 1.0]
+    threshold = np.percentile(tp, 100 - target_recall*100)
+    return threshold
+
+
+class Foobar(keras.callbacks.Callback):
+    def __init__(self, train):
+        super().__init__()
+        self.x = train.x(can_use_tf_dataset=True).batch(32)
+        self.targets = train.y
+
+    def on_epoch_end(self, epoch, logs=None):
+        # log.debug(f"{self.data_shape=}")
+        # self.model.sample_weights = 2 * np.ones((self.data_shape,))
+        predictions = _fix_prediction(self.model.predict(self.x, verbose=0))
+        threshold = precision_at_recall_threshold(
+            self.targets, predictions, target_recall=0.95
+        )
+        log.debug(f"{threshold=}")
+        # y = np.where(
+        # np.abs(predictions - threshold) < 0.1, 10.0, 1.0).ravel()
+        y = np.where(predictions < threshold + 0.05, 3.0, 1.0).ravel()
+        # y2 = (2.0 - np.abs(predictions - threshold)).ravel()
+        # y = (1.0 + np.power(predictions - threshold, 2)).ravel()
+        # y = y * self.model.sample_weights
+        # y = len(y) * y / sum(y)
+        # y = np.ones((len(self.targets),))
+        # y[0] = 2.0
+        log.debug(f"{y=}")
+        self.model.sample_weights.assign(y)
+        # self.model.sample_weights.assign(y * self.model.sample_weights)
+        # self.model.sample_weights.assign(self.model.sample_weights)
+
+        # np.power(predictions - threshold, 2)
+
+        # self.model.sample_weights.assign(
+        # (epoch + 1) * 0.1 * np.ones((self.data_shape, )))
+
+        # theta = 2 + epoch / 100
+        # # self.model.compiled_loss.regularization_factor = theta
+        # log.debug(f'{theta=}, {self.model.compiled_loss=}')
+        # logs['theta'] = 2 + epoch / 100
+
+        # pred_train = _fix_prediction(
+        #     self.model.predict(self.x_train, verbose=0))
+        # pred_val = _fix_prediction(
+        #     self.model.predict(self.x_val, verbose=0))
+        # logs['rule_out'] = rule_out(self.y_train, pred_train)
+        # logs['val_rule_out'] = rule_out(self.y_val, pred_val)
+
+
 def _fix_prediction(prediction):
     if isinstance(prediction, list):
         return np.concatenate(prediction, axis=1)
     else:
         return prediction
+
+
+# class LossModel(tf.keras.Model):
+#     def __init__(self, model, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self.model = model
+#         self.sample_weights = None
+#
+#     def call(self, *args, **kwargs):
+#         return self.model.call(*args, **kwargs)
+#
+#     def compile(self, *args, **kwargs):
+#         return self.model.compile(*args, **kwargs)
+#
+#     def summary(self, *args, **kwargs):
+#         return self.model.summary(*args, **kwargs)
+#
+#     def save(self, *args, **kwargs):
+#         return self.model.save(*args, **kwargs)
+#
+#     def predict(self, *args, **kwargs):
+#         return self.model.predict(*args, **kwargs)
+#
+#     def fit(self, *args, **kwargs):
+#         return self.model.fit(*args, **kwargs)
+#
+#     def train_step(self, data):
+#         x, y, _ = data_adapter.unpack_x_y_sample_weight(data)
+#         log.debug(f"{self.sample_weights=}")
+#         return self.model.train_step((x, y, self.sample_weights))
 
 
 class KerasWrapper(Model):
@@ -183,6 +265,7 @@ class KerasWrapper(Model):
             plot_model=True,
             **kwargs
     ):
+        # model = LossModel(model)
         super().__init__(model, can_use_tf_dataset=True, **kwargs)
         if not skip_compile:
             self.model.compile(
@@ -191,6 +274,7 @@ class KerasWrapper(Model):
                 loss_weights=loss_weights,
                 metrics=metrics
             )
+
         self.checkpoint_path = checkpoint_path
         self.tensorboard_path = tensorboard_path
         self.exp_base_path = exp_base_path
@@ -210,6 +294,7 @@ class KerasWrapper(Model):
 
     def fit(self, training_data, validation_data=None, split_number=None,
             **kwargs):
+
         if self.plot_model:
             keras.utils.plot_model(
                 self.model,
@@ -266,6 +351,10 @@ class KerasWrapper(Model):
             callbacks.append(
                 RuleOutLogger(training_data, validation_data)
             )
+
+        callbacks.append(
+            Foobar(training_data)
+        )
         return callbacks
 
     @property

@@ -356,15 +356,16 @@ class DataWrapper:
             columns = list(itertools.chain(*columns.values()))
         return pd.DataFrame(y, index=index, columns=columns)
 
-    def as_dataset(self, batch_size=1, prefetch=0, **kwargs):
-        x = self.data['x'].as_dataset(shuffle=True)
-        y = self.data['y'].as_dataset(shuffle=True)
-        fixed_data = tf.data.Dataset.zip((x, y))
+    def as_dataset(self, batch_size=1, prefetch=0, shuffle=True, **kwargs):
+        x = self.data['x'].as_dataset(shuffle=shuffle)
+        y = self.data['y'].as_dataset(shuffle=shuffle)
+        index = tf.data.Dataset.from_tensors(list(range(len(y))))
+        fixed_data = tf.data.Dataset.zip((x, y, index))
 
         # If the data _does_ fit in memory, we can use the tf shuffling
         # instead. This would be bad if data doesn't fit in memory though,
         # because tf will load the entire dataset in memory before shuffling.
-        if self.data.fits_in_memory:
+        if shuffle and self.data.fits_in_memory:
             fixed_data = fixed_data.shuffle(len(self.data))
 
         fixed_data = fixed_data.batch(batch_size)
@@ -377,6 +378,27 @@ class DataWrapper:
     def as_numpy(self):
         x = self.data['x'].as_flat_numpy()
         y = self.data['y'].as_numpy().ravel()
+        return x, y
+
+    def as_dataframe(self):
+        x = self.data['x'].as_flat_numpy()
+        y = self.data['y'].as_numpy()
+
+        index = pd.Index(
+            self.data['index'].as_numpy(),
+            name=self.data['index'].columns[0]
+        )
+        x_columns = self.data['x'].columns
+        if isinstance(x_columns, dict):
+            x_columns = list(itertools.chain(*x_columns.values()))
+
+        y_columns = self.data['y'].columns
+        if isinstance(y_columns, dict):
+            y_columns = list(itertools.chain(*y_columns.values()))
+
+        x = pd.DataFrame(x, index=index, columns=x_columns)
+        y = pd.DataFrame(y, index=index, columns=y_columns)
+
         return x, y
 
     def split(self, index_a, index_b):
