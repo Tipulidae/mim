@@ -1,11 +1,11 @@
 import math
 from typing import Union, List
 
-from tensorflow.keras.layers import (
+from keras.layers import (
     AveragePooling1D, Conv1D, BatchNormalization, ReLU, MaxPooling1D,
     Dropout, Flatten, Dense
 )
-from tensorflow.keras.regularizers import l2
+from keras.regularizers import l2
 
 from mim.util.util import interpolate
 

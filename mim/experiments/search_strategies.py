@@ -231,7 +231,6 @@ class RandomSearch(Searcher):
 
     def search(self):
         for xp in self.experiments():
-            print(xp)
             if xp.is_trained:
                 continue
 
