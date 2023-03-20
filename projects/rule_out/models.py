@@ -13,8 +13,9 @@ log = get_logger('Rule out models')
 def single_layer_perceptron(train, validation=None):
     inp = Input(shape=train.feature_tensor_shape)
     output = Dense(1, activation='sigmoid', kernel_regularizer=None)(inp)
-    model = LossModel(inp, output, sample_weights_shape=len(train.data['y']))
-    return model
+    return Model(inp, output)
+    # model = LossModel(inp, output, sample_weights_shape=len(train.data['y']))
+    # return model
 
 
 class LossModel(Model):

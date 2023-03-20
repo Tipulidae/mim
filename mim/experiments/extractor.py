@@ -359,8 +359,8 @@ class DataWrapper:
     def as_dataset(self, batch_size=1, prefetch=0, shuffle=True, **kwargs):
         x = self.data['x'].as_dataset(shuffle=shuffle)
         y = self.data['y'].as_dataset(shuffle=shuffle)
-        index = tf.data.Dataset.from_tensors(list(range(len(y))))
-        fixed_data = tf.data.Dataset.zip((x, y, index))
+        # index = tf.data.Dataset.from_tensors(list(range(len(y))))
+        fixed_data = tf.data.Dataset.zip((x, y))
 
         # If the data _does_ fit in memory, we can use the tf shuffling
         # instead. This would be bad if data doesn't fit in memory though,

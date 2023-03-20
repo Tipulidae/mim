@@ -352,9 +352,9 @@ class KerasWrapper(Model):
                 RuleOutLogger(training_data, validation_data)
             )
 
-        callbacks.append(
-            Foobar(training_data)
-        )
+        # callbacks.append(
+        #     Foobar(training_data)
+        # )
         return callbacks
 
     @property

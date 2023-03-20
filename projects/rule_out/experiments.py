@@ -7,6 +7,7 @@ from keras.optimizers import SGD
 from keras.losses import BinaryCrossentropy
 
 from mim.experiments.experiments import Experiment
+from mim.losses.dynamic_weights import MyBinaryCrossentropy
 from projects.rule_out.extractor import Blobs
 from projects.rule_out.models import single_layer_perceptron
 
@@ -128,6 +129,39 @@ class RuleOut(Experiment, Enum):
             'kwargs': {'learning_rate': 1.0}
         },
         loss=BinaryCrossentropy,
+        loss_kwargs={},
+        epochs=100,
+        batch_size=-1,
+        building_model_requires_development_data=True,
+        extractor=Blobs,
+        extractor_kwargs={
+            'features': {
+                'positives_counts': [100, 100, 1800],
+                'negatives_counts': [2000],
+                'positives_centers': [(-1.0, 2.0), (1.0, 2.0), (0.0, -2.0)],
+                'negatives_centers': [(0.0, 0.0)],
+                'positives_std': [0.1, 0.1, 0.3],
+                'negatives_std': [0.5],
+            },
+        },
+        cv=StratifiedShuffleSplit,
+        cv_kwargs={
+            'n_splits': 1,
+            'train_size': 0.5,
+            'random_state': 43,
+        },
+        scoring=roc_auc_score,
+    )
+    CUSTOM_LOSS = Experiment(
+        description='The 2D 4-blobs data, but with a single-layer-perceptron '
+                    'instead of LR.',
+        model=single_layer_perceptron,
+        model_kwargs={},
+        optimizer={
+            'name': SGD,
+            'kwargs': {'learning_rate': 1.0}
+        },
+        loss=MyBinaryCrossentropy,
         loss_kwargs={},
         epochs=100,
         batch_size=-1,
