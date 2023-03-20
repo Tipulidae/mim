@@ -3,7 +3,7 @@ from typing import Union, List
 
 from keras.layers import (
     AveragePooling1D, Conv1D, BatchNormalization, ReLU, MaxPooling1D,
-    Dropout, Flatten, Dense
+    Dropout, Flatten, Dense, Input
 )
 from keras.regularizers import l2
 
@@ -191,3 +191,10 @@ def _calculate_appropriate_pool_size(
     :return:
     """
     return math.floor((input_size / minimum_output_size) ** (1 / num_pools))
+
+
+def make_input(shape):
+    if isinstance(shape, dict):
+        return {key: make_input(value) for key, value in shape.items()}
+    else:
+        return Input(shape=shape)

@@ -66,7 +66,7 @@ class Model:
         if self.can_use_tf_dataset:
             train = training_data.as_dataset(**kwargs)
             val = validation_data.as_dataset(**kwargs)
-            print(f"{train=}, {val=}")
+            # print(f"{train=}, {val=}")
             return self.model.fit(train, validation_data=val, **kwargs).history
         else:
             self.model.fit(*training_data.as_numpy())
