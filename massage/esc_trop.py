@@ -13,6 +13,7 @@ from massage.carlson_ecg import (
     glasgow_scalar_names,
     glasgow_diagnoses
 )
+from mim.cache.decorator import cache
 from mim.util.logs import get_logger
 
 
@@ -182,19 +183,16 @@ def make_ecg_table():
     ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
     with h5py.File(ecg_path, 'r') as ecg:
         table = pd.DataFrame(
-            pd.to_datetime(
-                ecg['meta']['date'][:],
-                format="%Y-%m-%d %H:%M:%S"
-            ),
+            pd.to_datetime(ecg['meta']['date'][:].astype(str)),
             columns=['ecg_date']
         )
         table['Alias'] = '{' + pd.Series(
-            ecg['meta']['alias'][:]
+            ecg['meta']['alias'][:].astype(str)
         ).str.upper() + '}'
 
         status = pd.DataFrame(
             ecg['meta']['status'][:],
-            columns=ecg['meta']['status_keys'][:]
+            columns=ecg['meta']['status_keys'][:].astype(str)
         )
         status['USABLE'] = ~status[list(map(
             lambda s: s.name, important_status_labels))].any(axis=1)
@@ -243,8 +241,8 @@ def make_forberg_features(ecg_ids):
         for x in tqdm(ecg_ids, desc='Extracting Glasgow vectors'):
             glasgow_features.append(ecg['glasgow']['vectors'][x])
 
-        vector_names = list(ecg['meta']['glasgow_vector_names'][:])
-        lead_names = ecg['meta']['lead_names'][:]
+        vector_names = list(ecg['meta']['glasgow_vector_names'][:].astype(str))
+        lead_names = ecg['meta']['lead_names'][:].astype(str)
 
     cols = [
         'Qamplitude',
@@ -278,6 +276,91 @@ def make_forberg_features(ecg_ids):
     )
 
     columns = [f"{col}_{lead}" for col in new_cols for lead in lead_names]
+    df = pd.DataFrame(glasgow_features, index=ecg_ids.index, columns=columns)
+    return df
+
+
+@cache
+def make_johansson_features(ecg_ids):
+    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    with h5py.File(ecg_path, 'r') as ecg:
+        glasgow_features = []
+        glasgow_scalars = []
+        for x in tqdm(ecg_ids, desc='Extracting Glasgow vectors'):
+            glasgow_features.append(ecg['glasgow']['vectors'][x])
+            glasgow_scalars.append(ecg['glasgow']['scalars'][x])
+
+        vector_names = list(ecg['meta']['glasgow_vector_names'][:].astype(str))
+        scalar_names = list(ecg['meta']['glasgow_scalar_names'][:].astype(str))
+        lead_names = ecg['meta']['lead_names'][:].astype(str)
+
+    vector_cols = [
+        'EndQRSnotch_amp',
+        'QRSarea',
+        'Qamplitude',
+        'Ramplitude',
+        'ST60_amp',
+        'ST80amplitude',
+        'STM_amp',
+        'STT28_amp',
+        'STT38_amp',
+        'STTmid_amp',
+        'ST_amp',
+        'Samplitude',
+        'Tarea',
+        'Tduration',
+        'Tneg_amp',
+        'Tpos_amp',
+        'Tpos_dur'
+    ]
+    vector_index = [vector_names.index(name) for name in vector_cols]
+
+    # Mapping -32768 to 0 for EndQRSnotch_amp
+    glasgow_features = np.stack(glasgow_features)[:, vector_index, :]
+    glasgow_features[:, 0, :] = np.where(
+        glasgow_features[:, 0, :] == -32768.0,
+        np.zeros_like(glasgow_features[:, 0, :]),
+        glasgow_features[:, 0, :],
+    )
+
+    # New feature: qrst-fraction := qrs area divided by t area
+    qrs_area = glasgow_features[:, 1, :]
+    t_area = glasgow_features[:, 12, :]
+    qrst_fraction = np.divide(
+        qrs_area, t_area, out=np.ones_like(qrs_area), where=t_area != 0.0)
+    vector_cols.append('QRST_fraction')
+    glasgow_features = np.append(
+        glasgow_features,
+        np.expand_dims(qrst_fraction, axis=1),
+        axis=1
+    )
+
+    # Flatten all the vector-valued glasgow features
+    glasgow_features = glasgow_features.reshape((len(ecg_ids), -1))
+    columns = [f"{col}_{lead}" for col in vector_cols for lead in lead_names]
+
+    # Glasgow scalar variables
+    scalar_cols = [
+        'HeartRate',
+        'HeartRateVariability',
+        'LVstrain'
+    ]
+    scalar_index = [scalar_names.index(name) for name in scalar_cols]
+    glasgow_scalars = np.stack(glasgow_scalars)[:, scalar_index]
+
+    # Map -32768 to 2 for LVstrain
+    glasgow_scalars[:, 2] = np.where(
+        glasgow_scalars[:, 2] == -32768.0,
+        2 * np.ones_like(glasgow_scalars[:, 2]),
+        glasgow_scalars[:, 2],
+    )
+
+    # Combine scalar and vector features
+    glasgow_features = np.concatenate(
+        (glasgow_features, glasgow_scalars), axis=1)
+    columns.extend(scalar_cols)
+
+    # Build dataframe and return
     df = pd.DataFrame(glasgow_features, index=ecg_ids.index, columns=columns)
     return df
 

@@ -1,7 +1,7 @@
 from enum import Enum
 
-from tensorflow.keras.optimizers import Adam, SGD
-from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
+import tensorflow as tf
+from keras.optimizers import Adam, SGD
 from sklearn.metrics import roc_auc_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
@@ -22,6 +22,9 @@ from projects.serial_ecgs.models import (
     logistic_regression_ab,
     pretrained_resnet
 )
+
+
+PiecewiseConstantDecay = tf.keras.optimizers.schedules.PiecewiseConstantDecay
 
 
 class ESCT(Experiment, Enum):
@@ -622,6 +625,54 @@ class ESCT(Experiment, Enum):
                 'batch_norms': [False]
             }
         },
+    )
+    M_R1_CNN1c = Experiment(
+        description='Same as M_R1_CNN1, just to test if it works.',
+        model=ecg_cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'down_sample': True,
+                'dropouts': [0.5, 0.4],
+                'pool_size': 15,
+                'filter_first': 28,
+                'filter_last': 8,
+                'kernel_first': 61,
+                'kernel_last': 17,
+                'batch_norms': [False, False],
+                'weight_decays': [0.0, 0.01],
+            },
+            'ecg_ffnn_kwargs': {
+                'sizes': [10],
+                'dropout': [0.4],
+                'batch_norm': [False]
+            },
+            'ecg_comb_ffnn_kwargs': None,
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': {
+                'sizes': [100],
+                'dropout': [0.3],
+                'batch_norm': [False]
+            }
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'ecg_mode': 'raw',
+                'ecgs': ['ecg_0'],
+            },
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {'learning_rate': 0.0001}
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={'test_size': 1 / 3},
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
     )
     # CNN2, best random-search model for 2 ECGs
     M_R2_CNN2 = Experiment(
@@ -3284,6 +3335,141 @@ class ESCT(Experiment, Enum):
         random_state=1119,
     )
 
+    # New experiments!
+    M_F1_MLP = Experiment(
+        description='Best iteration (xp_324) from M_F2_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [200],
+                'dropout': [0.3],
+                'batch_norm': [False],
+                'regularizer': {
+                    'activity': [0.00001],
+                    'kernel': [0.0001],
+                    'bias': [0.01]
+                },
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropout': [0.0],
+                'batch_norm': [False],
+                'regularizer': {
+                    'activity': [0.001],
+                    'kernel': [0.1],
+                    'bias': [0.0]
+                }
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'forberg': ['ecg_0']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'forberg_ecg_0': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0001,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_F2_MLP = Experiment(
+        description='Best iteration (xp_324) from M_F2_NN_RS',
+        model=ffnn,
+        model_kwargs={
+            'ecg_ffnn_kwargs': {
+                'sizes': [200],
+                'dropout': [0.3],
+                'batch_norm': [False],
+                'regularizer': {
+                    'activity': [0.00001],
+                    'kernel': [0.0001],
+                    'bias': [0.01]
+                },
+            },
+            'ecg_combiner': 'concatenate',
+            'ecg_comb_ffnn_kwargs': {
+                'sizes': [6],
+                'dropout': [0.0],
+                'batch_norm': [False],
+                'regularizer': {
+                    'activity': [0.001],
+                    'kernel': [0.1],
+                    'bias': [0.0]
+                }
+            },
+            'flat_ffnn_kwargs': None,
+            'final_ffnn_kwargs': None,
+        },
+        extractor=EscTrop,
+        extractor_kwargs={
+            'features': {
+                'forberg': ['ecg_0', 'ecg_1']
+            },
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'forberg_ecg_0': {'processor': StandardScaler},
+            'forberg_ecg_1': {'processor': StandardScaler},
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': 0.0001,
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        cv=ChronologicalSplit,
+        cv_kwargs={
+            'test_size': 1 / 3
+        },
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+    )
+    M_J1_MLP = M_F1_MLP._replace(
+        description='First test with Johansson features!',
+        extractor_kwargs={
+            'features': {
+                'johansson': ['ecg_0']
+            },
+        },
+        pre_processor_kwargs={
+            'johansson_ecg_0': {'processor': StandardScaler},
+        },
+    )
+    M_J2_MLP = M_F2_MLP._replace(
+        description='First test with Johansson features!',
+        extractor_kwargs={
+            'features': {
+                'johansson': ['ecg_0', 'ecg_1', 'diff']
+            },
+        },
+        pre_processor_kwargs={
+            'johansson_ecg_0': {'processor': StandardScaler},
+            'johansson_ecg_1': {'processor': StandardScaler},
+            'johansson_diff': {'processor': StandardScaler},
+        },
+    )
+
 
 class HyperSearch(HyperExperiment, Enum):
     AMI_R1_CNN_RS = HyperExperiment(
@@ -4654,6 +4840,136 @@ class HyperSearch(HyperExperiment, Enum):
             random_state=hp.Int(0, 1000000000),
         ),
         random_seed=45,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 400
+        },
+    )
+
+    M_J1_MLP_RS = HyperExperiment(
+        template=Experiment(
+            description="Random search over simple MLP using Johansson "
+                        "features from 1 ECG",
+            model=ffnn,
+            model_kwargs={
+                'final_ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [10, 25, 50, 100, 200],
+                            ascending=False,
+                            k=num_layers
+                        ),
+                        'dropout': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers
+                        ),
+                        'batch_norm': False,
+                        'regularizer': {
+                            'kernel': 0.0,
+                            'bias': 0.0,
+                            'activity': hp.Choices(
+                                [0.01, 0.001, 0.0001, 0.00001, 0.0],
+                                k=num_layers
+                            )
+                        },
+                    } for num_layers in [1, 2, 3]
+                ])
+            },
+            extractor=EscTrop,
+            extractor_kwargs={
+                'features': {
+                    'johansson': ['ecg_0']
+                },
+            },
+            pre_processor=sklearn_process,
+            pre_processor_kwargs={
+                'johansson_ecg_0': {'processor': StandardScaler},
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5
+                    ])
+                }
+            },
+            epochs=200,
+            batch_size=512,
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 1 / 3
+            },
+            building_model_requires_development_data=True,
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            random_state=hp.Int(0, 1000000000),
+        ),
+        random_seed=42,
+        strategy=RandomSearch,
+        strategy_kwargs={
+            'iterations': 400
+        },
+    )
+    M_J2_MLP_RS = HyperExperiment(
+        template=Experiment(
+            description="Random search over simple MLP using Johansson "
+                        "features from 2 ECGs",
+            model=ffnn,
+            model_kwargs={
+                'final_ffnn_kwargs': hp.Choice([
+                    {
+                        'sizes': hp.SortedChoices(
+                            [10, 25, 50, 100, 200],
+                            ascending=False,
+                            k=num_layers
+                        ),
+                        'dropout': hp.Choices(
+                            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+                            k=num_layers
+                        ),
+                        'batch_norm': False,
+                        'regularizer': {
+                            'kernel': 0.0,
+                            'bias': 0.0,
+                            'activity': hp.Choices(
+                                [0.01, 0.001, 0.0001, 0.00001, 0.0],
+                                k=num_layers
+                            )
+                        },
+                    } for num_layers in [1, 2, 3]
+                ])
+            },
+            extractor=EscTrop,
+            extractor_kwargs={
+                'features': {
+                    'johansson': ['ecg_0', 'ecg_1']
+                },
+            },
+            pre_processor=sklearn_process,
+            pre_processor_kwargs={
+                'johansson_ecg_0': {'processor': StandardScaler},
+                'johansson_ecg_1': {'processor': StandardScaler},
+            },
+            optimizer={
+                'name': Adam,
+                'kwargs': {
+                    'learning_rate': hp.Choice([
+                        3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5
+                    ])
+                }
+            },
+            epochs=200,
+            batch_size=512,
+            cv=ChronologicalSplit,
+            cv_kwargs={
+                'test_size': 1 / 3
+            },
+            building_model_requires_development_data=True,
+            loss='binary_crossentropy',
+            metrics=['accuracy', 'auc'],
+            random_state=hp.Int(0, 1000000000),
+        ),
+        random_seed=42,
         strategy=RandomSearch,
         strategy_kwargs={
             'iterations': 400

@@ -82,6 +82,10 @@ class Experiment(NamedTuple):
             if action == 'train':
                 if restart:
                     self.clear_old_results()
+                    self.make_results_folder()
+                elif not os.path.exists(self.base_path):
+                    self.make_results_folder()
+
                 results = self._train_and_validate(splits_to_do)
                 path = self.train_result_path
             elif action == 'test':
@@ -109,6 +113,7 @@ class Experiment(NamedTuple):
         else:
             log.debug('No old experiment results found.')
 
+    def make_results_folder(self):
         os.makedirs(self.base_path, exist_ok=True)
 
     def _evaluate(self) -> TestResult:
