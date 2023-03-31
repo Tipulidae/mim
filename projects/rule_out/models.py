@@ -14,8 +14,13 @@ def single_layer_perceptron(train, validation=None):
     inp = Input(shape=train.feature_tensor_shape)
     output = Dense(1, activation='sigmoid', kernel_regularizer=None)(inp)
     return Model(inp, output)
-    # model = LossModel(inp, output, sample_weights_shape=len(train.data['y']))
-    # return model
+
+
+def multi_layer_perceptron(train, validation=None):
+    inp = Input(shape=train.feature_tensor_shape)
+    x = Dense(20, activation='relu')(inp)
+    output = Dense(1, activation='sigmoid', kernel_regularizer=None)(x)
+    return Model(inp, output)
 
 
 class LossModel(Model):

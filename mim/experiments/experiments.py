@@ -75,6 +75,7 @@ class Experiment(NamedTuple):
     save_learning_rate: bool = False
     ensemble: int = 1
     rule_out_logger: bool = False
+    verbose: int = 1
 
     def run(self, action='train', restart=False, splits_to_do=-1):
         try:
@@ -211,7 +212,8 @@ class Experiment(NamedTuple):
                 self.scoring,
                 split_number=i,
                 total_splits=splits_total,
-                save_model=self.save_model
+                save_model=self.save_model,
+                verbose=self.verbose
             )
             results.add(train_result, validation_result)
 
@@ -455,7 +457,8 @@ def _split_history(history_dict):
 
 
 def train_model(training_data, validation_data, model, scoring,
-                split_number=None, total_splits=None, save_model=True
+                split_number=None, total_splits=None, save_model=True,
+                verbose=1,
                 ) -> Tuple[Result, Result]:
     t0 = time()
     log.info(f'\n\nFitting classifier, split {split_number} of {total_splits}')
@@ -463,7 +466,8 @@ def train_model(training_data, validation_data, model, scoring,
     history = model.fit(
         training_data,
         validation_data=validation_data,
-        split_number=split_number
+        split_number=split_number,
+        verbose=verbose,
     )
     train_history, val_history = _split_history(history)
     train_result = gather_results(model, train_history, training_data)

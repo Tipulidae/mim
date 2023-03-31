@@ -1137,7 +1137,3 @@ def read_lisa(year):
         })
 
     return df
-
-
-def do_smart_things():
-    return 125
