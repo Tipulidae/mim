@@ -29,8 +29,8 @@ class RuleOut(Experiment, Enum):
             'features': {
                 'negatives_counts': [1000],
                 'positives_counts': [1000],
-                'negatives_centers': [[-1.0]],
-                'positives_centers': [[1.0]],
+                'negatives_centers': [(-1.0,)],
+                'positives_centers': [(1.0,)],
                 'negatives_std': [1.0],
                 'positives_std': [1.0]
             },
@@ -53,8 +53,8 @@ class RuleOut(Experiment, Enum):
             'features': {
                 'negatives_counts': [36000],
                 'positives_counts': [4000],
-                'negatives_centers': [0.0],
-                'positives_centers': [2.0],
+                'negatives_centers': [(0.0,)],
+                'positives_centers': [(2.0,)],
                 'negatives_std': [2.0],
                 'positives_std': [1.5]
             },
