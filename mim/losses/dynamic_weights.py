@@ -90,8 +90,7 @@ def eden_loss_v1(y_true, y_pred, target_tpr=0.95, tpr_weight=1.0):
     F = tf.math.reduce_mean(R_plus)
     L = tf.math.reduce_mean(R_minus)
 
-    L_F = (L + tpr_weight * tf.math.maximum(0.0, target_tpr - F)) / \
-          (1 + tpr_weight)
+    L_F = (L + tpr_weight * tf.math.maximum(0.0, target_tpr - F))
 
     tf.print("F: ", F, "L: ", L, "L_F: ", L_F, output_stream=sys.stdout)
 

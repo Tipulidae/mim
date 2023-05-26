@@ -24,7 +24,7 @@ from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
 from mim.util.metadata import Metadata, Validator
-from mim.util.util import callable_to_string
+from mim.util.util import callable_to_string, keras_model_summary_as_string
 from mim.experiments.results import ExperimentResult, TestResult, Result
 import mim.experiments.hyper_parameter as hp
 
@@ -280,7 +280,7 @@ class Experiment(NamedTuple):
         model = self.model(**model_kwargs)
         return self._wrap_model(model)
 
-    def _wrap_model(self, model):
+    def _wrap_model(self, model, verbose=1):
         if isinstance(model, tf.keras.Model):
             # TODO: refactor this! :(
             if isinstance(self.optimizer, dict):
@@ -300,7 +300,7 @@ class Experiment(NamedTuple):
             else:
                 loss = self.loss
 
-            return KerasWrapper(
+            wrapped_model = KerasWrapper(
                 model,
                 # TODO: Add data augmentation here maybe, and use in fit
                 checkpoint_path=self.base_path,
@@ -323,6 +323,11 @@ class Experiment(NamedTuple):
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
                 rule_out_logger=self.rule_out_logger
             )
+
+            if verbose:
+                log.info("\n\n" + keras_model_summary_as_string(model))
+
+            return wrapped_model
         else:
             return Model(
                 model,
@@ -339,7 +344,7 @@ class Experiment(NamedTuple):
                 return keras.models.load_model(filepath=path)
             raise TypeError(f'Unexpected model type {model_type}')
 
-        return self._wrap_model(_load())
+        return self._wrap_model(_load(), verbose=0)
 
     def asdict(self):
         return callable_to_string(self._asdict())

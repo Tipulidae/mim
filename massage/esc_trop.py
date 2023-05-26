@@ -879,12 +879,16 @@ def _make_mace_deaths(index_visits):
     return deaths[['death']]
 
 
-def _make_diagnoses_from_dors():
+def _make_diagnoses_from_dors(include_secondary=True):
     deaths = read_csv('ESC_TROP_SOS_R_DORS__14204_2019.csv')
+    causes = '(ULORSAK)'
+    if include_secondary:
+        causes += '|(MORSAK)'
+
     diagnoses = (
         deaths
         .set_index('Alias')
-        .filter(regex='(ULORSAK)|(MORSAK)', axis=1)
+        .filter(regex=causes, axis=1)
         .stack()
         .reset_index(level=1, drop=True)
     )

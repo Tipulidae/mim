@@ -132,7 +132,7 @@ class RuleOut(Experiment, Enum):
             'name': SGD,
             'kwargs': {'learning_rate': 1.0}
         },
-        loss=Hinge,
+        loss=BinaryCrossentropy,
         loss_kwargs={},
         epochs=200,
         batch_size=-1,
@@ -155,6 +155,15 @@ class RuleOut(Experiment, Enum):
             'random_state': 43,
         },
         scoring=roc_auc_score,
+    )
+    SLP_EBAN_HINGE = SLP_EBAN_BCE._replace(
+        description='Eban dataset',
+        loss=Hinge,
+        optimizer={
+            'name': SGD,
+            'kwargs': {'learning_rate': 1.0}
+        },
+        epochs=1000,
     )
     SLP_EBAN_EDEN = SLP_EBAN_BCE._replace(
         description='Eden loss',
@@ -267,10 +276,13 @@ class RuleOut(Experiment, Enum):
         description='Trying to get EdenLoss to behave',
         optimizer={
             'name': SGD,
-            'kwargs': {'learning_rate': 1}
+            'kwargs': {'learning_rate': 0.1}
         },
         loss=EdenLoss,
-        loss_kwargs={'target_tpr': 0.95},
+        loss_kwargs={
+            'target_tpr': 0.94,
+            'tpr_weight': 10.0
+        },
         epochs=200,
         verbose=0,
     )
@@ -332,4 +344,5 @@ class RuleOut(Experiment, Enum):
         loss_kwargs={'target_tpr': 0.95},
         epochs=200,
         batch_size=1024,
+        verbose=0,
     )

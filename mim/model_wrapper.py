@@ -232,7 +232,6 @@ class KerasWrapper(Model):
         self.reduce_lr_on_plateau = reduce_lr_on_plateau
         self.rule_out_logger = rule_out_logger
         self.plot_model = plot_model
-        log.info("\n\n" + keras_model_summary_as_string(model))
 
     def fit(self, training_data, validation_data=None, split_number=None,
             **kwargs):
