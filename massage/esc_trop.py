@@ -234,6 +234,41 @@ def _make_double_ecg(index, min_age_seconds=-3600, max_age_seconds=7200):
     return ecg_0.join(ecg_1, how='outer', lsuffix='_0', rsuffix='_1')
 
 
+def make_ed_ecgs(index, min_age_seconds=-3600, max_age_seconds=7200,
+                 pivot=False):
+    ecg = (
+        make_ecg_table()
+        .rename_axis('ecg')
+        .reset_index()
+        .set_index('Alias')
+    )
+    ecg = index.join(ecg, how='inner').reset_index()
+
+    dt = (ecg.ecg_date - ecg.admission_date).dt.total_seconds()
+    ecg.loc[:, 'dt'] = dt
+    ecg.loc[:, 'abs_dt'] = dt.abs()
+    ecg = ecg.loc[(dt >= min_age_seconds) & (dt < max_age_seconds), :]
+
+    # I want to use the ECGs taken at the ED first, and only consider
+    # pre-hospital ECGs after that.
+    ecg.loc[:, 'priority'] = ecg.dt
+    ecg.loc[ecg.dt < 0, 'priority'] = (
+            max_age_seconds - ecg.loc[ecg.dt < 0, 'priority'])
+
+    ecg = ecg.sort_values(by=['Alias', 'priority'])
+    ecg.loc[:, 'n'] = 1
+    ecg.loc[:, 'n'] = ecg.groupby('id')['n'].cumsum().astype(str)
+
+    # I can now pivot to get a table with one column per ECG:
+    if pivot:
+        ecg8 = ecg.reset_index()[['Alias', 'ecg', 'dt', 'n']].pivot(
+            index='Alias', columns='n', values=['ecg', 'dt'])
+        ecg8.columns = ecg8.columns.map('_'.join)
+        return ecg8
+
+    return ecg
+
+
 def make_forberg_features(ecg_ids):
     ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
     with h5py.File(ecg_path, 'r') as ecg:
@@ -389,36 +424,14 @@ def make_lab_features(index):
 
 
 def make_troponin_table():
-    col_map = {
-        'KontaktId': 'ed_id',
-        'Analyssvar_ProvtagningDatum': 'tnt_date',
-        'Labanalys_Namn': 'name',
-        'Analyssvar_Varde': 'tnt'
-    }
-    lab = read_csv(
-        'ESC_TROP_LabAnalysSvar_InkluderadeIndexBesök_2017_2018.csv'
-    )
-    lab = lab.loc[:, list(col_map)].rename(columns=col_map)
-    lab.tnt_date = pd.to_datetime(lab.tnt_date, format="%Y-%m-%d %H:%M:%S.%f")
+    tnt = load_tnt()
 
-    tnt = (
-        lab.loc[
-            lab.name.str.match('P-Troponin'),
-            ['ed_id', 'tnt', 'tnt_date']]
-        .dropna()
-        .sort_values(by=['ed_id', 'tnt_date'])
-    )
-
-    tnt.loc[tnt.tnt.str.match('<5'), 'tnt'] = 4
-    tnt.tnt = pd.to_numeric(tnt.tnt, errors='coerce')
-    tnt = tnt.dropna()
-
-    first_tnt = tnt.drop_duplicates(subset=['ed_id'], keep='first')
+    first_tnt = tnt.drop_duplicates(subset=['id'], keep='first')
     second_tnt = tnt[~tnt.index.isin(first_tnt.index)].drop_duplicates(
-        subset=['ed_id'], keep='first')
+        subset=['id'], keep='first')
 
-    r = first_tnt.set_index('ed_id').join(
-            second_tnt.set_index('ed_id'),
+    r = first_tnt.set_index('id').join(
+            second_tnt.set_index('id'),
             lsuffix='_1',
             rsuffix='_2'
         )
@@ -1314,3 +1327,263 @@ def _make_lab_value(
         .rename(new_name)
     )
     return lab_values
+
+
+def _make_scaar_index(index, days_before=1, days_after=7):
+    scaar = (
+        read_csv(
+            'ESC_TROP_SWEDEHEART_DAT221_sc_angiopci_pop1.csv',
+            parse_dates=['INTERDAT'],
+            usecols=['INTERDAT', 'SID_pseudo', 'MCEID_pseudo', 'Alias'])
+        .rename(columns={'INTERDAT': 'angio_date'})
+        .dropna(how='all')
+    )
+
+    scaar_index = scaar.join(index.admission_date, how='inner', on='Alias')
+    dt = (scaar_index.angio_date - scaar_index.admission_date.dt.floor('D')
+          ).dt.total_seconds() / (3600*24)
+    scaar_index['distance'] = dt.abs()
+    scaar_index = (
+        scaar_index[(dt <= days_after) & (dt >= -days_before)]
+        .sort_values(by=['Alias', 'distance'])
+        .groupby('Alias')
+        .first()
+        .drop(columns=['distance'])
+    )
+    return scaar_index
+
+
+def _make_occlusion_and_presentation(index):
+    log.debug('Gathering data on occlusion')
+    sc_segment = read_csv(
+        'ESC_TROP_SWEDEHEART_DAT221_sc_segment_pop1.csv',
+        usecols=['SID_pseudo', 'OCKL', 'OCKLUSION']
+    )
+    sc_segment['occlusion_within_3_months'] = sc_segment.OCKL == 'Ja, <3 mån'
+    sc_segment['acute_presentation'] = (
+            sc_segment.OCKLUSION == 'Ja, akut presentation (t.ex. SAT)')
+
+    # Both OCKL and OCKLUSION columns sometimes have conflicting entries.
+    # Here I only require that one of the entries satisfies the condition.
+    sc_segment = sc_segment.groupby('SID_pseudo')[
+        ['occlusion_within_3_months', 'acute_presentation']].any()
+
+    return (
+        index[['SID_pseudo']]
+        .join(sc_segment, on='SID_pseudo')
+        .fillna(False)
+        .drop(columns=['SID_pseudo'])
+    )
+
+
+def _make_stenosis(index):
+    log.debug('Gathering data on stenosis')
+
+    def collate_degrees_of_stenosis(s):
+        return (
+            pd.concat([(s == x).rename(x) for x in ['90-99%', '100%']], axis=1)
+            .groupby(level='SID_pseudo')
+            .any()
+        )
+
+    angiopci = (
+        read_csv('ESC_TROP_SWEDEHEART_DAT221_sc_angiopci_pop1.csv')
+        .dropna(how='all')
+        .filter(regex='SEGMENT(\\d+)|(SID_pseudo)')
+    )
+    angiopci = pd.wide_to_long(
+        angiopci, stubnames=['SEGMENT'], i='SID_pseudo', j='segment')
+
+    finding = (
+        read_csv('ESC_TROP_SWEDEHEART_DAT221_sc_finding_pop1.csv',
+                 usecols=['SID_pseudo', 'STENOSGRAD'])
+        .dropna(how='all')
+        .set_index('SID_pseudo')
+    )
+
+    stenosis = (
+        pd.concat(
+            map(collate_degrees_of_stenosis,
+                [angiopci.SEGMENT, finding.STENOSGRAD]),
+            axis=1,
+            keys=['angio', 'finding'],
+            names=['source', 'stenosis'],
+            join='outer')
+        .fillna(False)
+        .groupby(axis='columns', level='stenosis')
+        .any()
+        .rename(columns={'100%': 'stenosis_100%', '90-99%': 'stenosis_90-99%'})
+    )
+
+    return (
+        index[['SID_pseudo']]
+        .join(stenosis, on='SID_pseudo')
+        .fillna(False)
+        .drop(columns=['SID_pseudo'])
+    )
+
+
+def _make_acs_indication(index):
+    log.debug('Gathering data on ACS indications')
+    angiopci = (
+        read_csv('ESC_TROP_SWEDEHEART_DAT221_sc_angiopci_pop1.csv',
+                 usecols=['SID_pseudo', 'INDIKATION'])
+        .set_index('SID_pseudo')
+        .dropna(how='all')
+    )
+    acs_indication = (
+        angiopci
+        .INDIKATION.isin(['STEMI', 'NSTEMI', 'Instabil angina pectoris'])
+        .rename('acs_indication')
+    )
+    return (
+        index[['SID_pseudo']]
+        .join(acs_indication, on='SID_pseudo')
+        .fillna(False)
+        .drop(columns=['SID_pseudo'])
+    )
+
+
+def _make_rikshia_i21_tnt_cabg_stemi(scaar_index):
+    log.debug('Gathering diagnosis and lab-values from rikshia')
+    rikshia = read_csv(
+        'ESC_TROP_SWEDEHEART_DAT221_rikshia_pop1.csv', dtype=str
+    )
+    rikshia = (
+        scaar_index[['MCEID_pseudo']]
+        .dropna()
+        .join(rikshia.set_index('MCEID_pseudo'), on='MCEID_pseudo')
+    )
+    i21 = (
+        rikshia
+        .filter(regex='diag(\\d+)', axis=1)
+        .stack()
+        .str.match('I21')
+        .rename('i21_rikshia')
+        .reset_index(level=1, drop=True)
+        .groupby('Alias')
+        .any()
+    )
+    tnt = (
+        rikshia.loc[
+            rikshia.d_BIOCHEMICAL_MARKER_TYPE == 'HS Troponin-T (ng)',
+            'd_BIOCHEMICAL_MARKER_VALUE']
+        .astype(float)
+        .dropna()
+        .rename('tnt_rikshia')
+    )
+    cabg = (
+        (rikshia.PRIOR_CARDIAC_SURGERY == 'CABG')
+        .rename('prior_cabg')
+    )
+    stemi = (
+        (rikshia.INFARCTTYPE == 'STEMI').rename('stemi')
+    )
+
+    return (
+        pd.DataFrame(index=scaar_index.index)
+        .join([i21, tnt, cabg, stemi])
+        .fillna({'prior_cabg': False})
+    )
+
+
+def load_tnt():
+    col_map = {
+        'KontaktId': 'id',
+        'Analyssvar_ProvtagningDatum': 'tnt_date',
+        'Labanalys_Namn': 'name',
+        'Analyssvar_Varde': 'tnt'
+    }
+    lab = read_csv(
+        'ESC_TROP_LabAnalysSvar_InkluderadeIndexBesök_2017_2018.csv'
+    )
+    lab = lab.loc[:, list(col_map)].rename(columns=col_map)
+    lab.tnt_date = pd.to_datetime(lab.tnt_date, format="%Y-%m-%d %H:%M:%S.%f")
+
+    tnt = (
+        lab.loc[
+            lab.name.str.match('P-Troponin'),
+            ['id', 'tnt', 'tnt_date']]
+        .dropna()
+        .sort_values(by=['id', 'tnt_date'])
+    )
+
+    tnt.loc[tnt.tnt.str.match('<5'), 'tnt'] = 4
+    tnt.tnt = pd.to_numeric(tnt.tnt, errors='coerce')
+    tnt = tnt.dropna()
+    return tnt
+
+
+def _make_melior_tnt(index):
+    log.debug('Gathering TnT data from Melior')
+    tnt = load_tnt()
+    tnt_max = (
+        tnt.sort_values(
+            by=['id', 'tnt', 'tnt_date'],
+            ascending=[True, False, True])
+        .groupby('id').first()
+    )
+    return index.join(tnt_max, on='id', how='left')['tnt'].rename('tnt_melior')
+
+
+def _make_sos_i21(index):
+    log.debug('Gathering diagnoses from sos')
+    sos = _make_diagnoses_from_sos().join(index)
+
+    sos['i21_sos'] = sos.icd10.str.match('I21')
+
+    dt = (sos.diagnosis_date - sos.admission_date.dt.floor('D')
+          ).dt.total_seconds() / (3600 * 24)
+    sos = (
+        sos.loc[(dt >= -1) & (dt <= 1), 'i21_sos']
+        .groupby('Alias')
+        .any()
+    )
+    return sos
+
+
+def make_omi_table(index):
+    log.debug('Making index from scaar register')
+    scaar_index = _make_scaar_index(index)
+    omi = index.join(
+        [
+            _make_occlusion_and_presentation(scaar_index),
+            _make_stenosis(scaar_index),
+            _make_acs_indication(scaar_index),
+            _make_rikshia_i21_tnt_cabg_stemi(scaar_index),
+            _make_melior_tnt(index),
+            _make_sos_i21(index)
+        ]
+    ).fillna({
+        'occlusion_within_3_months': False,
+        'acute_presentation': False,
+        'stenosis_100%': False,
+        'stenosis_90-99%': False,
+        'acs_indication': False,
+        'i21_rikshia': False,
+        'i21_sos': False,
+        'prior_cabg': False,
+        'stemi': False
+    })
+    omi['tnt'] = omi[['tnt_melior', 'tnt_rikshia']].max(axis=1)
+    omi['i21'] = omi.i21_rikshia | omi.i21_sos
+    omi['stenosis_over_90%'] = omi['stenosis_100%'] | omi['stenosis_90-99%']
+
+    return omi
+
+
+def make_omi_label(omi_table, stenosis_limit=90, tnt_limit=750):
+    stenosis_condition = (
+        omi_table['stenosis_over_90%'] if stenosis_limit == 90 else
+        omi_table['stenosis_100%']
+    )
+
+    omi = (
+        omi_table.i21
+        & (
+            omi_table.occlusion_within_3_months
+            | (omi_table.tnt >= tnt_limit)
+            | (stenosis_condition & omi_table.acs_indication)
+        )
+    )
+    return omi

@@ -662,3 +662,14 @@ class Extractor:
 
     def get_test_data(self) -> DataWrapper:
         raise NotImplementedError
+
+
+class Augmentor:
+    def __init__(self, **settings):
+        self.settings = settings
+
+    def augment_training_data(self, data: DataWrapper) -> DataWrapper:
+        raise NotImplementedError
+
+    def augment_validation_data(self, data: DataWrapper) -> DataWrapper:
+        return data

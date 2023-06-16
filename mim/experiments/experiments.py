@@ -17,7 +17,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import PredefinedSplit, KFold
 
-from mim.experiments.extractor import Extractor
+from mim.experiments.extractor import Extractor, Augmentor
 from mim.cross_validation import CrossValidationWrapper, \
     RepeatingCrossValidator
 from mim.config import PATH_TO_TEST_RESULTS
@@ -40,6 +40,8 @@ class Experiment(NamedTuple):
         "labels": None,
         "processing": None,
     }
+    augmentation: Callable[[Any], Augmentor] = None
+    augmentation_kwargs: dict = {}
     use_predefined_splits: bool = False
     cv: Any = KFold
     cv_kwargs: dict = {}
@@ -201,6 +203,7 @@ class Experiment(NamedTuple):
             if i < splits_so_far or i >= splits_to_do + splits_so_far:
                 continue
 
+            train, validation = self.augment_data(train, validation)
             pre_process = self.get_pre_processor(i)
             train, validation = pre_process(train, validation)
             model = self.build_model(train, validation, split_number=i)
@@ -235,6 +238,16 @@ class Experiment(NamedTuple):
         :return: Extractor object
         """
         return self.extractor(**self.extractor_kwargs)
+
+    def augment_data(self, train, validation):
+        if self.augmentation is None:
+            return train, validation
+
+        log.info('Applying data-augmentation')
+        augmentor = self.augmentation(**self.augmentation_kwargs)
+        train = augmentor.augment_training_data(train)
+        validation = augmentor.augment_validation_data(validation)
+        return train, validation
 
     def get_cross_validation(self, predefined_splits=None):
         if self.use_predefined_splits:
