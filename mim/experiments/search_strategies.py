@@ -1,8 +1,11 @@
 import copy
+import gc
 import itertools
 import math
 import random
 
+import keras.backend
+import tensorflow as tf
 import numpy as np
 import pandas as pd
 
@@ -238,8 +241,9 @@ class RandomSearch(Searcher):
             s = pd.Series(hp.flatten(xp.asdict()), name=xp.name)
             log.info(f"Experiment {xp.name} with kwargs\n"
                      f"{s}\n\n")
-
             xp.run()
+            gc.collect()
+            keras.backend.clear_session()
 
     def experiments(self):
         # For more complicated search strategies, this generator might have

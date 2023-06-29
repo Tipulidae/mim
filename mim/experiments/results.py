@@ -31,6 +31,8 @@ class ExperimentResult:
     total_splits: int = 1
     training_results: List[Result] = field(default_factory=list)
     validation_results: List[Result] = field(default_factory=list)
+    training_mse: List[Result] = field(default_factory=list)
+    validation_mse: List[Result] = field(default_factory=list)
 
     def add(self, train_result: Result, validation_result: Result):
         self.training_results.append(train_result)

@@ -3,6 +3,8 @@ from os.path import join
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from mim.util.logs import get_logger
+log = get_logger("In rsvd_plus")
 
 
 def read_csv(name, **kwargs):
@@ -24,9 +26,11 @@ def make_befo_data():
             'Kön'
         ]
     )
-
     befo_short = befo_short[befo_short["FödelseårOchMånad"] < 200501]
     befo_short = befo_short[befo_short["FödelseårOchMånad"] >= 195612]
+    befo_short["Male"] = pd.get_dummies(befo_short["Kön"])["M"]
+    befo_short["Female"] = pd.get_dummies(befo_short["Kön"])["K"]
+    befo_short = befo_short.drop(["Kön"], axis=1)
     return befo_short
 
 
@@ -133,7 +137,20 @@ def make_vaccination_data(befo_alias_series):
     vaccinations['vaccination_date'] = pd.to_datetime(vaccinations['vaccination_date'])
     vaccinations = vaccinations.sort_values("vaccination_date").dropna()
     vaccinations = vaccinations.merge(befo_alias_series, how="inner")
+    vaccinations["Dose_1"] = (vaccinations['dose_number'] == 1)*1
+    vaccinations["Dose_2"] = (vaccinations['dose_number'] == 2)*1
+    vaccinations['Dose_more_3'] = (vaccinations['dose_number'] >= 3)*1
 
+    vaccinations = vaccinations[vaccinations.vaccine_product != "COVID-19 Vaccine Janssen"]
+
+    vaccinations["Pfizer"] = (vaccinations['vaccine_product'] == "Comirnaty")*1
+    vaccinations["AstraZeneca"] = (vaccinations['vaccine_product'] == "Spikevax")*1
+    vaccinations['Moderna'] = (vaccinations['vaccine_product'] == "Vaxzevria")*1
+
+    vaccinations["FödelseårOchMånad"] = pd.to_datetime(vaccinations["FödelseårOchMånad"], format="%Y%m")
+    age = vaccinations["vaccination_date"] - vaccinations["FödelseårOchMånad"]
+    vaccinations["Age"] = (age.dt.days / 365.25).astype(int)
+    vaccinations = vaccinations.drop(["FödelseårOchMånad", "vaccine_product", "dose_number"], axis=1)
     return vaccinations
 
 
@@ -255,17 +272,17 @@ def get_relevant_data(vaccinations, diag, biokemi, days):
     """
     vaccinations_copy = vaccinations.copy()
     if days > 0:
-        for i in range(days):
+        for i in range(1, days+1):
             vaccinations_copy["vaccination_date_" + str(i)] = vaccinations_copy["vaccination_date"] \
                                                           + pd.Timedelta(str(i) + " day")
     if days < 0:
-        for i in range(np.abs(days)):
+        for i in range(1, np.abs(days)+1):
             vaccinations_copy["vaccination_date_" + str(i)] = vaccinations_copy["vaccination_date"] \
                                                           - pd.Timedelta(str(i)+" day")
 
     vacc_diag_lab = pd.DataFrame()
 
-    for i in range(np.abs(days)):
+    for i in range(1, np.abs(days)+1):
         vacc_diag_lab_new = pd.merge(
             vaccinations_copy, biokemi,
             left_on=['Alias', 'vaccination_date_' + str(i)],
@@ -274,7 +291,7 @@ def get_relevant_data(vaccinations, diag, biokemi, days):
         )
         vacc_diag_lab = pd.concat([vacc_diag_lab, vacc_diag_lab_new])
 
-    for i in range(np.abs(days)):
+    for i in range(1, np.abs(days)+1):
         vacc_diag_lab_new = pd.merge(
             vaccinations_copy, diag,
             left_on=['Alias', 'vaccination_date_' + str(i)],
@@ -282,9 +299,10 @@ def get_relevant_data(vaccinations, diag, biokemi, days):
             how="inner")
         vacc_diag_lab = pd.concat([vacc_diag_lab, vacc_diag_lab_new])
 
-    vacc_diag_lab = vacc_diag_lab.drop(columns=["vaccination_date_" + str(i) for i in range(days)])
-    icd_map = {}
+    vacc_diag_lab = vacc_diag_lab.drop(columns=["vaccination_date_" + str(i) for i in range(1, 1+np.abs(days))])
 
+    icd_map = {}
+    
     icd_codes = pd.read_csv("~/AutoencoderProject/ICDCodes.csv")
     icd_codes["Letter"] = icd_codes['Codes'].str[:1]
     icd_codes["Start"] = icd_codes['Codes'].str[1:3]
@@ -314,12 +332,15 @@ def get_relevant_data(vaccinations, diag, biokemi, days):
         icd_map[diagnos] = result
         return result
 
-    vacc_diag_lab["Diagnos1"] = vacc_diag_lab["Diagnos1"].map(get_icd_range)
-    vacc_diag_lab["Diagnos2"] = vacc_diag_lab["Diagnos2"].map(get_icd_range)
-    vacc_diag_lab["Diagnos3"] = vacc_diag_lab["Diagnos3"].map(get_icd_range)
-    vacc_diag_lab["Diagnos4"] = vacc_diag_lab["Diagnos4"].map(get_icd_range)
-    vacc_diag_lab["Diagnos5"] = vacc_diag_lab["Diagnos5"].map(get_icd_range)
-
+    def get_icd_range_first_4(diagnos):
+        if pd.isna(diagnos):
+            return np.nan
+        return diagnos[0:3]
+    vacc_diag_lab["Diagnos1"] = vacc_diag_lab["Diagnos1"].map(get_icd_range_first_4)
+    vacc_diag_lab["Diagnos2"] = vacc_diag_lab["Diagnos2"].map(get_icd_range_first_4)
+    vacc_diag_lab["Diagnos3"] = vacc_diag_lab["Diagnos3"].map(get_icd_range_first_4)
+    vacc_diag_lab["Diagnos4"] = vacc_diag_lab["Diagnos4"].map(get_icd_range_first_4)
+    vacc_diag_lab["Diagnos5"] = vacc_diag_lab["Diagnos5"].map(get_icd_range_first_4)
     return vacc_diag_lab
 
 
@@ -380,12 +401,17 @@ def make_diag_samples(vacc_diag_lab):
 
     diagnos_df = pd.concat([diagnoser1, diagnoser2, diagnoser3, diagnoser4, diagnoser5]).groupby(
         by=['Alias', 'vaccination_date']).sum().astype(int)
+
+    # diagnos_df = diagnoser1.groupby(by=['Alias', 'vaccination_date']).sum().astype(int)
+
     if np.nan in diagnos_df.columns:
         diagnos_df = diagnos_df.drop(columns=[np.nan])
+    diagnos_codes = diagnos_df.sum()[diagnos_df.sum() > 30].index.tolist()
+    diagnos_df = diagnos_df[diagnos_df.columns.intersection(diagnos_codes)]
     return diagnos_df
 
 
-def make_history_diag_samples(rsvd_data, vaccinations):
+def make_history_diag_samples(rsvd_data, vaccinations, days):
 
     def get_icd_letter(diagnos):
         if type(diagnos) != str:
@@ -410,7 +436,10 @@ def make_history_diag_samples(rsvd_data, vaccinations):
     diag_copy["Diagnos5"] = diag_copy["Diagnos5"].map(get_icd_letter)
     vaccinations_dates = vaccinations[["Alias", "vaccination_date"]]
     history_diag = pd.merge(diag_copy, vaccinations_dates, left_on="Alias", right_on="Alias")
-    history_diag = history_diag[history_diag['Kontaktdatum'] <= history_diag['vaccination_date']]
+    history_diag = history_diag[history_diag['Kontaktdatum'] <
+                                history_diag['vaccination_date'] - pd.Timedelta(str(abs(days))+" days")]
+    history_diag = history_diag[history_diag['Kontaktdatum'] >
+                                history_diag['vaccination_date'] - pd.Timedelta("730 days")]
 
     history_diag['temp'] = 1
 
@@ -452,14 +481,13 @@ def make_history_diag_samples(rsvd_data, vaccinations):
     return history_diag_df
 
 
-
 def make_kva_samples(vacc_diag_lab):
     vacc_diag_lab['temp'] = 1
     kva_codes = ["ZV050", "ZV100", "AQ002", "AV034", "DR016", "DR014", "AV061", "AF021", "AC041", "AF034", "AC032",
                  "AC012", "AC034", "AL001", "DT001", "AF022", "AW999", "AF015", "AG051", "AG053", "AL019",
                  "AC026", "AM041", "AK047", "AG018", "AQ001", "DL006", "AV008", "DR029", "DL005", "AN006", "AF037",
                  "AV032", "AF040", "AQ004", "AL004", "AP032", "AF020", "SI310", "DQ017", "AG029", "AF023", "AG031",
-                 "AB040", "DQ019", "AF012", "AQ012", "AC022", "AD003", "DV071", "AC019"]
+                 "AB040", "DQ019", "AF012", "AQ012", "AC022", "AD003", "DV071", "AC019", "XS100"]
 
     kva1 = vacc_diag_lab[['Alias', 'Kva_kod1', 'vaccination_date', 'temp', 'Kontaktdatum']].dropna(
         subset=['Kontaktdatum']).sort_values(by=['Alias', 'vaccination_date'])
@@ -515,36 +543,29 @@ def make_med_data(index, blood_samples, diag_samples, kva_samples, contact_sampl
     return result
 
 
-def merge_data(befo_data, vaccination_data, med_data):
+def merge_data(vaccination_data, med_data):
     med_vacc = pd.merge(vaccination_data, med_data, left_on=["Alias", "vaccination_date"],
                         right_on=["Alias", "vaccination_date"])
-    all_data = pd.merge(befo_data, med_vacc, left_on="Alias", right_on="Alias")
-    return all_data
-
-
-def make_data_samples(days, samples):
-    befo_alias = make_befo_data()["Alias"].sample(n=samples)
-    vaccination_data = make_vaccination_data(befo_alias)
-    rsvd_data = make_rsvd_data(befo_alias)
-    lab_data = make_lab_data(befo_alias)
-    relevant_data = get_relevant_data(vaccination_data, rsvd_data, lab_data, days=days)
-    med_data = make_med_data(make_index(vaccination_data), make_lab_samples(relevant_data),
-                             make_diag_samples(relevant_data), make_kva_samples(relevant_data),
-                             make_contact_samples(relevant_data),
-                             make_history_diag_samples(rsvd_data, vaccination_data))
-
-    return merge_data(make_befo_data(), vaccination_data, med_data)
+    return med_vacc
 
 
 def make_data(days):
-    befo_alias = make_befo_data()["Alias"]
-    vaccination_data = make_vaccination_data(befo_alias)
-    rsvd_data = make_rsvd_data(befo_alias)
-    lab_data = make_lab_data(befo_alias)
+    log.debug("Starting to make dataset for " + str(days) + " days after/before vaccination.")
+    log.debug("Demografic data extraction...")
+    befo = make_befo_data()
+    log.debug("Vaccination data extraction...")
+    vaccination_data = make_vaccination_data(befo)
+    log.debug("RSVD data extraction...")
+    rsvd_data = make_rsvd_data(befo["Alias"])
+    log.debug("Laboratory data extraction...")
+    lab_data = make_lab_data(befo["Alias"])
+    log.debug("Reducing data...")
     relevant_data = get_relevant_data(vaccination_data, rsvd_data, lab_data, days=days)
+    log.debug("Pivoting data...")
     med_data = make_med_data(make_index(vaccination_data), make_lab_samples(relevant_data),
                              make_diag_samples(relevant_data), make_kva_samples(relevant_data),
                              make_contact_samples(relevant_data),
-                             make_history_diag_samples(rsvd_data, vaccination_data))
-
-    return merge_data(make_befo_data(), vaccination_data, med_data)
+                             make_history_diag_samples(rsvd_data, vaccination_data, days=days))
+    log.debug("Merging data...")
+    out_data = merge_data(vaccination_data, med_data)
+    return out_data

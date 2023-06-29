@@ -71,10 +71,13 @@ class Experiment(NamedTuple):
     ignore_callbacks: bool = False
     save_prediction_history: bool = False
     save_model_checkpoints: bool = False
+    save_train_result: bool = True
+    save_val_result: bool = True
     use_tensorboard: bool = False
     save_learning_rate: bool = False
     ensemble: int = 1
     rule_out_logger: bool = False
+    plot_model: bool = True
 
     def run(self, action='train', restart=False, splits_to_do=-1):
         try:
@@ -82,6 +85,7 @@ class Experiment(NamedTuple):
             if action == 'train':
                 if restart:
                     self.clear_old_results()
+                self.make_results_folder()
                 results = self._train_and_validate(splits_to_do)
                 path = self.train_result_path
             elif action == 'test':
@@ -109,6 +113,7 @@ class Experiment(NamedTuple):
         else:
             log.debug('No old experiment results found.')
 
+    def make_results_folder(self):
         os.makedirs(self.base_path, exist_ok=True)
 
     def _evaluate(self) -> TestResult:
@@ -208,10 +213,12 @@ class Experiment(NamedTuple):
                 total_splits=splits_total,
                 save_model=self.save_model
             )
+
             results.add(train_result, validation_result)
 
         log.info(f'Finished computing scores for {self.name} in '
                  f'{time() - t}s. ')
+
         return results
 
     def get_pre_processor(self, split=0):
@@ -314,7 +321,8 @@ class Experiment(NamedTuple):
                 use_tensorboard=self.use_tensorboard,
                 save_learning_rate=self.save_learning_rate,
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
-                rule_out_logger=self.rule_out_logger
+                rule_out_logger=self.rule_out_logger,
+                plot_model=self.plot_model
             )
         else:
             return Model(
@@ -417,10 +425,11 @@ def _history_to_dataframe(history, data):
     )
 
 
-def gather_results(model, history_dict, data) -> Result:
+def gather_results(model, history_dict, data, save_result) -> Result:
     result = Result()
-    result.targets = data.y
-    result.predictions = model.predict(data)
+    if save_result:
+        result.targets = data.y
+        result.predictions = model.predict(data)
     if not history_dict:
         return result
 
@@ -429,6 +438,7 @@ def gather_results(model, history_dict, data) -> Result:
         result.prediction_history = _history_to_dataframe(predictions, data)
 
     result.history = history_dict
+
     return result
 
 
@@ -451,7 +461,7 @@ def _split_history(history_dict):
 
 def train_model(training_data, validation_data, model, scoring,
                 split_number=None, total_splits=None, save_model=True
-                ) -> Tuple[Result, Result]:
+                , save_train_result=True, save_val_result=True) -> Tuple[Result, Result]:
     t0 = time()
     log.info(f'\n\nFitting classifier, split {split_number} of {total_splits}')
 
@@ -461,10 +471,11 @@ def train_model(training_data, validation_data, model, scoring,
         split_number=split_number
     )
     train_history, val_history = _split_history(history)
-    train_result = gather_results(model, train_history, training_data)
+
+    train_result = gather_results(model, train_history, training_data, save_result=False)
     train_result.time = time() - t0
 
-    validation_result = gather_results(model, val_history, validation_data)
+    validation_result = gather_results(model, val_history, validation_data, save_result=save_val_result)
     validation_result.time = time() - train_result.time - t0
 
     if scoring:
@@ -477,8 +488,9 @@ def train_model(training_data, validation_data, model, scoring,
 
     if save_model:
         model.save(split_number=split_number)
-
+    
     return train_result, validation_result
+
 
 
 def fix_metrics(m):

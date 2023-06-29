@@ -1,3 +1,4 @@
+import gc
 import random
 import itertools
 from copy import copy
@@ -352,8 +353,11 @@ class DataWrapper:
             name=self.data['index'].columns[0]
         )
         columns = self.data['y'].columns
+        #print(f"{y=}, {columns=}")
         if isinstance(columns, dict):
             columns = list(itertools.chain(*columns.values()))
+        if isinstance(y, dict):
+            y = np.concatenate(list(y.values()), axis=-1)
         return pd.DataFrame(y, index=index, columns=columns)
 
     def as_dataset(self, batch_size=1, prefetch=0, **kwargs):
@@ -364,8 +368,8 @@ class DataWrapper:
         # If the data _does_ fit in memory, we can use the tf shuffling
         # instead. This would be bad if data doesn't fit in memory though,
         # because tf will load the entire dataset in memory before shuffling.
-        if self.data.fits_in_memory:
-            fixed_data = fixed_data.shuffle(len(self.data))
+        # if self.data.fits_in_memory:
+        #   fixed_data = fixed_data.shuffle(len(self.data))
 
         fixed_data = fixed_data.batch(batch_size)
 
@@ -627,13 +631,16 @@ class ECGData(Data):
 
 class Extractor:
     def __init__(self, index=None, features=None, labels=None,
-                 processing=None, fits_in_memory=True, cv_kwargs=None):
+                 processing=None, fits_in_memory=True, cv_kwargs=None, drop_name=None, simple_fake=None):
         self.index = {} if index is None else index
         self.features = {} if features is None else features
         self.labels = {} if labels is None else labels
         self.processing = {} if processing is None else processing
+        self.drop_name = drop_name
+        self.simple_fake = simple_fake
         self.fits_in_memory = fits_in_memory
         self.cv_kwargs = cv_kwargs
+
 
     def get_development_data(self) -> DataWrapper:
         raise NotImplementedError

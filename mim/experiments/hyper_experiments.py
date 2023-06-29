@@ -14,7 +14,7 @@ class HyperExperiment(NamedTuple):
     strategy_kwargs: dict = None
     validate_experiment_params: Any = None
 
-    def run(self, action='train'):
+    def run(self, action='train', **kwargs):
         if action != 'train':
             raise ValueError("Can't validate hyper-experiments yet.")
         log.info(
@@ -40,6 +40,10 @@ class HyperExperiment(NamedTuple):
 
     def asdict(self):
         return callable_to_string(self._asdict())
+
+    @property
+    def is_partial(self):
+        return False
 
     @property
     def is_trained(self):

@@ -66,7 +66,6 @@ class Model:
         if self.can_use_tf_dataset:
             train = training_data.as_dataset(**kwargs)
             val = validation_data.as_dataset(**kwargs)
-            print(f"{train=}, {val=}")
             return self.model.fit(train, validation_data=val, **kwargs).history
         else:
             self.model.fit(*training_data.as_numpy())
@@ -98,7 +97,7 @@ class Model:
         pd.to_pickle(self.model, checkpoint)
 
     def _prediction(self, x):
-        return self.model.predict_proba(x)
+        return self.model.predict_proba(tf.convert_to_tensor(x))
 
 
 class LearningRateLogger(tf.keras.callbacks.Callback):
@@ -126,10 +125,10 @@ class PredictionLogger(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         t0 = time()
         logs["predictions"] = _fix_prediction(
-            self.model.predict(self.training_data))
+            self.model(self.training_data))
         if self.validation_data:
             logs["val_predictions"] = _fix_prediction(
-                self.model.predict(self.validation_data))
+                self.model(self.validation_data))
         log.info(f"PredictionCallback time: {time() - t0}")
 
 
@@ -185,12 +184,16 @@ class KerasWrapper(Model):
     ):
         super().__init__(model, can_use_tf_dataset=True, **kwargs)
         if not skip_compile:
+            log.debug("Compiling model!")
             self.model.compile(
                 optimizer=optimizer,
                 loss=loss,
                 loss_weights=loss_weights,
                 metrics=metrics
             )
+        else:
+            log.debug("Skipping model compile!")
+
         self.checkpoint_path = checkpoint_path
         self.tensorboard_path = tensorboard_path
         self.exp_base_path = exp_base_path
@@ -206,7 +209,7 @@ class KerasWrapper(Model):
         self.reduce_lr_on_plateau = reduce_lr_on_plateau
         self.rule_out_logger = rule_out_logger
         self.plot_model = plot_model
-        log.info("\n\n" + keras_model_summary_as_string(model))
+        # log.info("\n\n" + keras_model_summary_as_string(self.model))
 
     def fit(self, training_data, validation_data=None, split_number=None,
             **kwargs):
