@@ -302,6 +302,7 @@ def get_relevant_data(vaccinations, diag, biokemi, days):
 
     vacc_diag_lab = vacc_diag_lab.drop(columns=["vaccination_date_" + str(i) for i in range(1, 1+np.abs(days))])
 
+    """
     icd_map = {}
     
     icd_codes = pd.read_csv("~/AutoencoderProject/ICDCodes.csv")
@@ -332,7 +333,7 @@ def get_relevant_data(vaccinations, diag, biokemi, days):
         result = icd_codes_copy.Codes.iloc[0]
         icd_map[diagnos] = result
         return result
-
+    """
     def get_icd_range_first_4(diagnos):
         if pd.isna(diagnos):
             return np.nan
