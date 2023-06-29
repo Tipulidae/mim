@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from mim.util.logs import get_logger
+from mim.config import THOMAS_BASE_PATH, THOMAS_BASE_DATA_COPY
 log = get_logger("In rsvd_plus")
 
 
 def read_csv(name, **kwargs):
-    base_path = "/mnt/air-crypt/air-crypt-esc-trop/thomas/data_copy"
+    base_path = THOMAS_BASE_DATA_COPY
     return pd.read_csv(
         join(base_path, name),
         encoding="ISO-8859-1",
@@ -44,7 +45,7 @@ def make_lab_data(befo_alias_series):
         ]
     )
     ecg = pd.read_csv(
-        "/mnt/air-crypt/air-crypt-esc-trop/thomas/EKG_2022_11_25/GE_EKG_Persons_20201227.csv",
+        THOMAS_BASE_PATH + "/EKG_2022_11_25/GE_EKG_Persons_20201227.csv",
         sep=";",
         encoding="ISO-8859-1",
         usecols=[
@@ -54,7 +55,7 @@ def make_lab_data(befo_alias_series):
     )
 
     immunologen = pd.read_csv(
-        "/mnt/air-crypt/air-crypt-esc-trop/thomas/data_copy/"
+        THOMAS_BASE_DATA_COPY + "/" +
         "MIKROBIOLOGI_IMM_Analyser_Covers_2019_2022_CoversPop20201227.massaged.utf8.csv",
         sep="|",
         encoding="UTF8",
