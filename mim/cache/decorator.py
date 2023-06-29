@@ -11,7 +11,6 @@ from mim.util.logs import get_logger
 from mim.config import PATH_TO_CACHE
 from mim.util.metadata import Metadata, MetadataConsistencyError
 from mim.cache import settings
-
 log = get_logger('Cache')
 
 # TODO:
