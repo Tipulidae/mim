@@ -1359,14 +1359,15 @@ def _make_occlusion_and_presentation(index):
         'ESC_TROP_SWEDEHEART_DAT221_sc_segment_pop1.csv',
         usecols=['SID_pseudo', 'OCKL', 'OCKLUSION']
     )
-    sc_segment['occlusion_within_3_months'] = sc_segment.OCKL == 'Ja, <3 mån'
+    sc_segment['occlusion_less_than_3_months_old'] = \
+        sc_segment.OCKL == 'Ja, <3 mån'
     sc_segment['acute_presentation'] = (
             sc_segment.OCKLUSION == 'Ja, akut presentation (t.ex. SAT)')
 
     # Both OCKL and OCKLUSION columns sometimes have conflicting entries.
     # Here I only require that one of the entries satisfies the condition.
     sc_segment = sc_segment.groupby('SID_pseudo')[
-        ['occlusion_within_3_months', 'acute_presentation']].any()
+        ['occlusion_less_than_3_months_old', 'acute_presentation']].any()
 
     return (
         index[['SID_pseudo']]
@@ -1523,7 +1524,10 @@ def _make_melior_tnt(index):
             ascending=[True, False, True])
         .groupby('id').first()
     )
-    return index.join(tnt_max, on='id', how='left')['tnt'].rename('tnt_melior')
+    return (
+        index.join(tnt_max, on='id', how='left')[['tnt', 'tnt_date']]
+        .rename(columns={'tnt': 'tnt_melior', 'tnt_date': 'tnt_melior_date'})
+    )
 
 
 def _make_sos_i21(index):
@@ -1555,7 +1559,7 @@ def make_omi_table(index):
             _make_sos_i21(index)
         ]
     ).fillna({
-        'occlusion_within_3_months': False,
+        'occlusion_less_than_3_months_old': False,
         'acute_presentation': False,
         'stenosis_100%': False,
         'stenosis_90-99%': False,
@@ -1581,7 +1585,7 @@ def make_omi_label(omi_table, stenosis_limit=90, tnt_limit=750):
     omi = (
         omi_table.i21
         & (
-            omi_table.occlusion_within_3_months
+            omi_table.occlusion_less_than_3_months_old
             | (omi_table.tnt >= tnt_limit)
             | (stenosis_condition & omi_table.acs_indication)
         )
