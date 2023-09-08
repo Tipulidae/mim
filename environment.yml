@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.11
   - pytest
   - numpy
   - pandas
@@ -22,7 +22,9 @@ dependencies:
   - wfdb
   - pre-commit
   - xgboost
-  - tensorflow=2.11
+  - lxml
+  - h5py
+  - tensorflow=2.12
   - pip:
     - ecg_plot
     - compress-pickle
