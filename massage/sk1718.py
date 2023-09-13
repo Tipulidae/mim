@@ -2,7 +2,7 @@ from os.path import join
 
 import numpy as np
 import pandas as pd
-
+import h5py
 
 from massage.sos_util import fix_dors_date
 from mim.util.logs import get_logger
@@ -14,7 +14,7 @@ log = get_logger("Skåne 17-18 massage")
 
 
 def read_csv(name, **kwargs):
-    base_path = "/mnt/air-crypt/air-crypt-raw/andersb/data/Skane_17-18/" \
+    base_path = "/tank/air-crypt/air-crypt-raw/andersb/data/Skane_17-18/" \
                 "Uttag_1"
     return pd.read_csv(
         join(base_path, name),
@@ -1137,3 +1137,60 @@ def read_lisa(year):
         })
 
     return df
+
+
+def make_ecg_table(drop_bad_ecgs=True, drop_duplicates=True, 
+                   drop_unknown_alias=True):
+    ecg_path = '/tank/air-crypt/axel/sk1718_ecg.hdf5'
+    with h5py.File(ecg_path, 'r') as ecg:
+        table = pd.DataFrame(
+            pd.to_datetime(ecg['meta']['date'][:].astype(str)),
+            columns=['ecg_date']
+        )
+        table['Alias'] = ecg['meta']['alias'][:].astype(int)
+        table['age'] = ecg['meta']['age'][:]
+        table['sex'] = ecg['meta']['sex'][:].astype(str)
+
+        status = pd.DataFrame(
+            ecg['meta']['status'][:],
+            columns=ecg['meta']['status_keys'][:].astype(str)
+        )
+        important_status_labels = [
+            'missing_patient_demographics',
+            'missing_test_demographics',
+            'missing_alias',
+            'missing_date',
+            'missing_time',
+            'bad_date',
+            'missing_median',
+            'missing_median_lead',
+            'empty_median_rows',
+            'empty_median_columns',
+            'bad_median_crc',
+            'missing_rhythm',
+            'missing_rhythm_lead',
+            'empty_rhythm_rows',
+            'empty_rhythm_columns',
+            'bad_rhythm_crc'
+        ]
+        table['USABLE'] = ~status.loc[:, important_status_labels].any(axis=1)
+
+    if drop_bad_ecgs:
+        table = table.loc[table.USABLE, :]
+
+    if drop_duplicates:
+        # We only care about duplicates wrt Alias and ECGs. But if there 
+        # is one "usable" and one "unusable" duplicate, we prefer to keep 
+        # the usable one.
+        table = (
+            table
+            .sort_values(by=['Alias', 'ecg_date', 'USABLE'])
+            .drop_duplicates(subset=['Alias', 'ecg_date'], keep='last')
+            .sort_index()
+        )
+
+    if drop_unknown_alias:
+        index = make_index()
+        table = table[table.Alias.isin(index.Alias)]
+
+    return table

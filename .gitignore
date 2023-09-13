@@ -8,6 +8,7 @@
 *.tar.gz
 .pytest_cache
 .idea/
+.venv/
 data/
 .ipynb_checkpoints
 notebooks/

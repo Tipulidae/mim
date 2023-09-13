@@ -180,7 +180,7 @@ mace_codes_anders = [
 
 
 def make_ecg_table():
-    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    ecg_path = '/tank/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
     with h5py.File(ecg_path, 'r') as ecg:
         table = pd.DataFrame(
             pd.to_datetime(ecg['meta']['date'][:].astype(str)),

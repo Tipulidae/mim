@@ -11,6 +11,7 @@ from scipy.signal import resample
 from lxml import etree
 
 from mim.util.metadata import Metadata
+from .carlson_ecg import empty_row_count
 
 
 @dataclass
@@ -29,13 +30,15 @@ class ECGStatus:
 
     missing_median: bool = False
     missing_median_lead: bool = False
-    empty_median_lead: bool = False
+    empty_median_rows: bool = False
+    empty_median_columns: bool = False
     bad_median_crc: bool = False
     median_resampled: bool = False
 
     missing_rhythm: bool = False
     missing_rhythm_lead: bool = False
-    empty_rhythm_lead: bool = False
+    empty_rhythm_rows: bool = False
+    empty_rhythm_columns: bool = False
     bad_rhythm_crc: bool = False
     rhythm_resampled: bool = False
 
@@ -156,6 +159,18 @@ class MuseECG:
              for lead in expected_lead_names],
             axis=-1
         )
+        if empty_row_count(waveform) > 0:
+            if waveform_type == 'Median':
+                self.status.empty_median_rows = True
+            else:
+                self.status.empty_rhythm_rows = True
+
+        if empty_row_count(waveform.T) > 0:
+            if waveform_type == 'Median':
+                self.status.empty_median_columns = True
+            else:
+                self.status.empty_rhythm_columns = True
+
         return waveform
 
     def parse_waveform_data(self, element_dict, lead, size, waveform_type):
@@ -193,12 +208,6 @@ class MuseECG:
             else:
                 self.status.rhythm_resampled = True
             data = resample(data, size).astype(np.int16)
-
-        if not np.any(data):
-            if waveform_type == 'Median':
-                self.status.empty_median_lead = True
-            else:
-                self.status.empty_median_lead = True
 
         return data
 
@@ -253,7 +262,17 @@ def to_hdf5(ecg_paths, target_path):
             dtype=h5py.string_dtype(encoding='utf-8')
         )
         meta.create_dataset(
-            "alias",
+            "Alias",
+            (n,),
+            dtype='int64'
+        )
+        meta.create_dataset(
+            "age",
+            (n,),
+            dtype='int64'
+        )
+        meta.create_dataset(
+            "sex",
             (n,),
             dtype=h5py.string_dtype(encoding='utf-8')
         )
@@ -301,6 +320,8 @@ def to_hdf5(ecg_paths, target_path):
 
             demographics = ecg.demographics()
             data['meta']['date'][i] = demographics['date']
-            data['meta']['alias'][i] = demographics['Alias']
+            data['meta']['Alias'][i] = int(demographics['Alias'])
             data['meta']['location'][i] = demographics['location']
             data['meta']['status'][i] = get_status(ecg.status)
+            data['meta']['age'][i] = demographics['age']
+            data['meta']['sex'][i] = demographics['sex']
