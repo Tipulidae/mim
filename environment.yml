@@ -1,4 +1,4 @@
-name: mim
+name: mim-gpu
 channels:
   - conda-forge
   - defaults
@@ -24,7 +24,7 @@ dependencies:
   - xgboost
   - lxml
   - h5py
-  - tensorflow=2.12
+  - tensorflow-gpu=2.12
   - pip:
     - ecg_plot
     - compress-pickle

@@ -9,6 +9,7 @@
 .pytest_cache
 .idea/
 .venv/
+.micromamba
 data/
 .ipynb_checkpoints
 notebooks/

@@ -62,7 +62,7 @@ class Experiment(NamedTuple):
     skip_compile: bool = False
     random_state: Union[int, hp.Param] = 123
     scoring: Any = roc_auc_score
-    log_conda_env: bool = True
+    log_conda_env: bool = False
     alias: str = ''
     parent_base: str = None
     parent_name: str = None
