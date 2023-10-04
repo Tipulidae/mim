@@ -67,6 +67,7 @@ class Presenter:
             if xp_name in self.results:
                 log.warning(f"Two experiments with the name {xp_name}!")
 
+            # trunk-ignore(bandit/B301)
             self.results[xp_name] = pd.read_pickle(path)
 
         if verbose > 0:
@@ -142,7 +143,7 @@ class Presenter:
 
     def scores2(self, like='.*', threshold=None):
         results = {}
-        for name, xp in list(self._results_that_match_pattern(like)):
+        for name, _ in list(self._results_that_match_pattern(like)):
             targets, predictions = self._target_predictions(name)
             results[name] = pd.DataFrame({
                 col: calculate_scores(targets[col], predictions[col],
@@ -157,12 +158,13 @@ class Presenter:
         # experiment
         predictions = []
         the_target = None
-        for name, xp in self._results_that_match_pattern(like):
+        for name, _ in self._results_that_match_pattern(like):
             target, prediction = self._target_predictions(name)
             if the_target is None:
                 the_target = target
 
-            assert the_target.equals(target)
+            if not the_target.equals(target):
+                raise Exception('Targets differ')
             predictions.append(
                 prediction.iloc[:, 0].rename(name)
             )
@@ -181,7 +183,7 @@ class Presenter:
 
     def threshold_scores(self, like='.*', threshold=0.5):
         results = []
-        for name, xp in self._results_that_match_pattern(like):
+        for name, _ in self._results_that_match_pattern(like):
             targets, predictions = self._threshold_target_predictions(
                 name, threshold)
             results.append(pd.Series(
@@ -220,8 +222,8 @@ class Presenter:
             predictions = pd.concat(r['predictions']['prediction'])
             fpr, tpr, thresholds = roc_curve(targets, predictions)
             auc = roc_auc_score(targets, predictions)
-            l, = plt.plot(fpr, tpr, lw=1, alpha=1)
-            lines.append(l)
+            k, = plt.plot(fpr, tpr, lw=1, alpha=1)
+            lines.append(k)
             labels.append(f'{xp} - AUC = {auc:.4f}')
 
         plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', alpha=.8)

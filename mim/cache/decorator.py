@@ -9,7 +9,7 @@ from compress_pickle import dump, load
 
 from mim.util.logs import get_logger
 from mim.config import PATH_TO_CACHE
-from mim.util.metadata import Metadata, MetadataConsistencyError
+from mim.util.metadata import Metadata, MetadataConsistencyException
 from mim.cache import settings
 
 log = get_logger('Cache')
@@ -99,7 +99,7 @@ def _cache(f, args, kwargs, is_method=False):
     except FileNotFoundError:
         log.debug(f'Cache file {os.path.basename(path)} '
                   f'not found, re-computing!')
-    except MetadataConsistencyError:
+    except MetadataConsistencyException:
         log.debug(f'Metadata for {os.path.basename(path)} '
                   f'inconsistent, re-computing!')
 
@@ -146,7 +146,10 @@ def args_and_kwargs_to_string(*args, __max_length__=100, **kwargs):
     kwargs_str = _kwargs_to_string(kwargs)
     result = ', '.join(filter(lambda x: x, [args_str, kwargs_str]))
     if len(result) > __max_length__:
-        result = hashlib.sha1(result.encode('utf-8')).hexdigest()
+        result = hashlib.sha1(
+            result.encode('utf-8'),
+            usedforsecurity=False
+        ).hexdigest()
 
     return result
 
@@ -174,4 +177,4 @@ def _arg_to_str(arg):
 
 def _hash_pandas(df):
     hashed_values = pd.util.hash_pandas_object(df, index=True).values
-    return hashlib.sha1(hashed_values).hexdigest()
+    return hashlib.sha1(hashed_values, usedforsecurity=False).hexdigest()

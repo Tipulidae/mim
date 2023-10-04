@@ -1,6 +1,4 @@
-%\documentclass[a4paper,10pt]{article}
 \documentclass[preprint]{elsarticle}
-%\pagestyle{empty}
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{adjustbox}
@@ -9,13 +7,13 @@
 \begin{document}
 
 \section{Machine learning models}
-The Logistic Regression (LR) classification model is a linear model with no interactions between the input variables when predicting MACE. The LR model is structurally identical to a multilayer perceptron (MLP) model with no hidden nodes and a single output node with a logistic activation function.
+The Logistic Regression (LR) is a classification model that predicts the outcomes by forming a linear combination of the input features followed by a logistic activation function. Because it is a linear model, it requires any non-linear relationships between the input and outcome to be captured by the features themselves. 
 
-The MLPs can model any complex relationship between the inputs and the outcome (MACE). An MLP consists of multiple layers of interconnected nodes, called neurons, organized into an input layer, one or more hidden layers, and an output layer. Neurons within each layer apply weighted sums and activation functions to their inputs. Through a process called backpropagation, the MLP adjusts its weights iteratively during training to minimize prediction errors.
+The multilayer perceptron (MLP) consists of multiple layers of interconnected nodes, called neurons, organized into an input layer, one or more hidden layers and an output layer. Neurons within each layer apply weighted sums and activation functions to their inputs. Through a process called backpropagation, the MLP adjusts its weights iteratively during training to minimize prediction errors. A sufficiently large MLP can in theory model any relationship between the inputs and the outcome. 
 
 A convolutional neural network (CNN) is tailored for processing grid-like data such as images, time series data, and more. CNNs incorporate unique layers like convolutional and pooling layers to capture hierarchical features in the data automatically. Convolutional layers employ small filters to scan the input, enabling the network to detect local patterns like edges and textures. Pooling layers reduce the spatial dimensions of the data while preserving essential information. This design reduces the number of parameters compared to fully connected MLPs, enabling CNNs to learn and generalize from large and complex datasets efficiently.
 
-The residual neural network (RN) architecture is an evolution of the original CNN model that addresses the challenges of training very deep neural networks \citep{he2016}. Residual networks introduces the concept of residual blocks, which consist of shortcut connections that bypass one or more layers. These shortcuts enable the network to learn residual functions, making training easier and preventing the vanishing gradient problem that may occur in deep networks. In contrast to the traditional CNN where each layer learns to transform the input directly, RNs residual blocks learn to adjust the difference between the input and the desired output. This ``skip connection'' allows for smoother optimization and enables the construction of much deeper architectures while maintaining or improving performance.
+The residual neural network (RN) architecture is an evolution of the original CNN model that addresses the challenges of training very deep neural networks \citep{he2016}. Residual networks introduce the concept of residual blocks, which consist of shortcut connections that bypass one or more layers. These shortcuts enable the network to learn residual functions, making training easier and preventing the vanishing gradient problem that may occur in deep networks. In contrast to the traditional CNN where each layer learns to transform the input directly, RNs residual blocks learn to adjust the difference between the input and the desired output. This ``skip connection'' allows for smoother optimization and enables the construction of much deeper architectures while maintaining or improving performance.
 
 For an introduction to deep learning, we recommend the excellent book Deep Learning, by \citet{goodfellow2016}.
 

@@ -8,6 +8,7 @@ import pandas as pd
 import h5py
 from tqdm import tqdm
 from scipy.signal import resample
+# trunk-ignore(bandit/B410)
 from lxml import etree
 
 from mim.util.metadata import Metadata
@@ -59,6 +60,7 @@ class MuseECG:
     def __init__(self, path):
         parser = etree.XMLParser(encoding="iso-8859-1")
         self.path = path
+        # trunk-ignore(bandit/B320)
         self.tree = etree.parse(path, parser)
         self.status = ECGStatus()
 

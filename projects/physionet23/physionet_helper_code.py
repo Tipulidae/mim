@@ -7,7 +7,6 @@
 import os
 import numpy as np
 import scipy as sp
-import scipy.io
 
 
 # Find the folders with data files.
@@ -77,8 +76,8 @@ def load_recording(record_name):
     initial_values = list()
     checksums = list()
 
-    for i, l in enumerate(header):
-        arrs = [arr.strip() for arr in l.split(' ')]
+    for i, k in enumerate(header):
+        arrs = [arr.strip() for arr in k.split(' ')]
         # Parse the record line.
         if i == 0:
             # record_name = arrs[0]
@@ -185,8 +184,8 @@ def get_variable(text, variable_name, variable_type, preserve_nan=True):
 # Get a column from the recording metadata.
 def get_column(string, column, variable_type, sep='\t'):
     variables = list()
-    for i, l in enumerate(string.split('\n')):
-        arrs = [arr.strip() for arr in l.split(sep) if arr.strip()]
+    for i, k in enumerate(string.split('\n')):
+        arrs = [arr.strip() for arr in k.split(sep) if arr.strip()]
         if i == 0:
             column_index = arrs.index(column)
         elif arrs:

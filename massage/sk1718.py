@@ -1139,7 +1139,8 @@ def read_lisa(year):
     return df
 
 
-def make_ecg_table(drop_bad_ecgs=True, drop_duplicates=True, 
+# @cache
+def make_ecg_table(drop_bad_ecgs=True, drop_duplicates=True,
                    drop_unknown_alias=True):
     ecg_path = '/projects/air-crypt/axel/sk1718_ecg.hdf5'
     log.debug('Making ECG table')
@@ -1182,8 +1183,8 @@ def make_ecg_table(drop_bad_ecgs=True, drop_duplicates=True,
             log.info(f'Dropped {n - len(table)} bad/malformed ECGs')
 
         if drop_duplicates:
-            # We only care about duplicates wrt Alias and ECGs. But if there 
-            # is one "usable" and one "unusable" duplicate, we prefer to keep 
+            # We only care about duplicates wrt Alias and ECGs. But if there
+            # is one "usable" and one "unusable" duplicate, we prefer to keep
             # the usable one.
             n = len(table)
             table = (
@@ -1207,15 +1208,15 @@ def make_ecg_table(drop_bad_ecgs=True, drop_duplicates=True,
 
 
 def find_index_ecgs(index, ecgs, min_age_seconds=-3600, max_age_seconds=7200):
-    # Find the closest ECG within the specified time-frame of each visit in 
+    # Find the closest ECG within the specified time-frame of each visit in
     # index. If there are multiple visits with the same ECG, take the first.
-    # This can happen when a patient is (erroneously) admitted multiple times 
+    # This can happen when a patient is (erroneously) admitted multiple times
     # in a short time-frame.
     ecg = (
         index
         .join(
-            ecgs.reset_index().set_index('Alias')[['ecg_id', 'ecg_date']], 
-            on='Alias', 
+            ecgs.reset_index().set_index('Alias')[['ecg_id', 'ecg_date']],
+            on='Alias',
             how='inner')
         .sort_values(by=['Alias', 'KontaktId', 'ecg_date'])
     )

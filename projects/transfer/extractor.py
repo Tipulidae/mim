@@ -1,4 +1,5 @@
 import h5py
+import scipy
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -8,6 +9,7 @@ from mim.experiments.extractor import DataWrapper, Data, Extractor
 from massage import sk1718
 from massage.muse_ecg import expected_lead_names
 from mim.util.logs import get_logger
+# from mim.cache.decorator import cache
 
 
 log = get_logger("Transfer-learning extractor")
@@ -21,17 +23,28 @@ def make_target_index(ecg_table):
 
 
 def train_val_test_split(
-        index, temporal_test_percent=0.2, random_test_percent=0.1, 
-        val_percent=0.2, train_percent=1.0, 
-        exclude_test_aliases=False,
+        index, temporal_test_percent=0.15, random_test_percent=0.15,
+        val_percent=0.15, train_percent=1.0, exclude_test_aliases=True,
         ):
+    test_percent = temporal_test_percent + random_test_percent
+    if 0 <= temporal_test_percent < 1.0:
+        raise ValueError('temporal_test_percent must be between 0.0 and 1.0')
+    if 0 <= random_test_percent < 1.0:
+        raise ValueError('random_test_percent must be between 0.0 and 1.0')
+    if 0 <= test_percent < 1.0:
+        raise ValueError('sum of test percentages must be between 0.0 and 1.0')
+    if 0 <= val_percent < 1.0 - test_percent:
+        raise ValueError('val_percent must be between 0 and 1-test percent')
+
     dev, test = hold_out_split(
-        index, temporal_test_percent, random_test_percent, exclude_test_aliases)
-    train, val = development_split(dev, val_percent, train_percent)
+        index, temporal_test_percent, random_test_percent,
+        exclude_test_aliases)
+    train, val = development_split(
+        dev, val_percent/(1 - test_percent), train_percent)
     return train, val, test
 
 
-def hold_out_split(index, temporal_test_percent, random_test_percent, 
+def hold_out_split(index, temporal_test_percent, random_test_percent,
                    exclude_test_aliases, random_state=123):
     # Sort index by admission time
     # Take the last k% of the visits
@@ -40,8 +53,8 @@ def hold_out_split(index, temporal_test_percent, random_test_percent,
     remainder, temporal_test = temporal_split(
         index, temporal_test_percent, exclude_test_aliases)
     splitter = GroupShuffleSplit(
-        n_splits=1, 
-        test_size=random_test_percent/(1-temporal_test_percent), 
+        n_splits=1,
+        test_size=random_test_percent/(1-temporal_test_percent),
         random_state=random_state
     )
     dev, random_test = next(splitter.split(remainder, groups=remainder.Alias))
@@ -60,14 +73,14 @@ def temporal_split(index, percent, exclude_test_aliases):
     remainder = index.iloc[:remainder_size, :]
     if exclude_test_aliases:
         remainder = remainder.loc[~remainder.Alias.isin(test.Alias), :]
-        
+
     return remainder, test
 
 
-def development_split(index, val_percent, train_percent_of_remainder=1.0, 
+def development_split(index, val_percent, train_percent_of_remainder=1.0,
                       random_state=321):
-    # After splitting into train/val sets, we return only a subset of the index 
-    # depending on the train_percent_of_remainder parameter.
+    # After splitting into train/val sets, we return only a subset of the
+    # index depending on the train_percent_of_remainder parameter.
     random_aliases = (
         pd.Series(index.Alias.unique())
         .sort_values()
@@ -85,16 +98,36 @@ def development_split(index, val_percent, train_percent_of_remainder=1.0,
     return train, val
 
 
+def make_target_labels(index):
+    # For now, let's just roll with the AMI outcome. It's the most straight-
+    # forward.
+    icd, _ = sk1718._make_sos_codes('SV', index)
+    events = sk1718.remove_events_outside_time_interval(icd, index)
+    ami = (
+        events
+        .loc[events.ICD.str.startswith('I21'), :]
+        .reset_index()
+        .drop_duplicates(subset=['KontaktId'])
+    )
+    ami['ami'] = True
+    return (
+        index
+        .join(ami.set_index('KontaktId').ami, on='KontaktId', how='left')
+        .loc[:, ['ami']]
+        .fillna(False)
+    )
+
+
 def make_source_labels(index):
-    # I don't really trust the age and sex provided by the ECG itself, so 
-    # instead I will look at "liggaren" for this information. The age in 
-    # particular is sometimes wrong for the ECG. I will use the age at the 
-    # first ED visit to approximate the birthday, and then use 
+    # I don't really trust the age and sex provided by the ECG itself, so
+    # instead I will look at "liggaren" for this information. The age in
+    # particular is sometimes wrong for the ECG. I will use the age at the
+    # first ED visit to approximate the birthday, and then use
     # birthday + ecg timestamp to calculate the (approximate) age.
-    # I could get a more accurate estimate of the birthday by looking at the 
-    # age at more ED-visits, but this should be good enough, and the error is 
-    # bounded by one year anyway, assuming the information in liggaren is 
-    # correct. 
+    # I could get a more accurate estimate of the birthday by looking at the
+    # age at more ED-visits, but this should be good enough, and the error is
+    # bounded by one year anyway, assuming the information in liggaren is
+    # correct.
     liggaren = sk1718.make_index()
     liggaren = (
         liggaren
@@ -103,10 +136,10 @@ def make_source_labels(index):
         .set_index('Alias')
         .loc[:, ['admission_date', 'age', 'sex']]
     )
-    # Adding 0.5 years should give an unbiased estimate of the true age, 
+    # Adding 0.5 years should give an unbiased estimate of the true age,
     # since age in years is rounded down.
     liggaren['birthday'] = (
-        liggaren.admission_date - 
+        liggaren.admission_date -
         ((liggaren.age + 0.5) * 365.125).astype('timedelta64[D]')
     )
     index = index.join(liggaren[['birthday', 'sex']], on='Alias', how='left')
@@ -145,7 +178,7 @@ def make_source_index(
         source = exclude('Alias', train, 'training set')
     elif exclude_train_ecgs:
         source = exclude('ecg_id', train, 'training set')
-    
+
     return (
         source
         .sort_values(by=['ecg_id'])
@@ -153,11 +186,30 @@ def make_source_index(
     )
 
 
-def make_ecg_data(ecgs, mode):
+# @cache
+def make_ecg_data(ecgs, mode, ribeiro=False):
     with h5py.File('/projects/air-crypt/axel/sk1718_ecg.hdf5', 'r') as f:
-        data = np.array([f[mode][ecg] for ecg in tqdm(ecgs)])
-    
+        data = np.array([f[mode][ecg] for ecg in tqdm(ecgs, 'loading ecgs')])
+
+    # Data is now scaled to mV
+    data = data.astype(np.float16) * (4.88/1000)
+    if ribeiro:
+        shape = (len(data), 4096, 8)
+        fixed_data = np.zeros(shape, np.float16)
+
+        for ecg in tqdm(range(len(data)), desc='resampling ecgs'):
+            fixed_data[ecg] = resample_and_pad(data[ecg])
+
+        data = fixed_data
     return data
+
+
+def resample_and_pad(data):
+    # Resample to 400Hz
+    # pad to 4096 (adding zeros on both side)
+    data = scipy.signal.resample(data, 4000)
+    data = np.pad(data, pad_width=[[48, 48], [0, 0]])
+    return data.astype(np.float16)
 
 
 class TargetTask(Extractor):
@@ -168,15 +220,14 @@ class TargetTask(Extractor):
         dev = pd.concat([train, val])
 
         # TODO: not the real target, fix this later!
-        y = dev.sex.map({'M': 0, 'F': 1})
-        
+        y = make_target_labels(dev, **self.labels)
 
         return DataWrapper(
             features=Data(
-                data=make_ecg_data(dev.ecg_id, self.features['ecg_mode']),
+                data=make_ecg_data(dev.ecg_id, **self.features),
                 columns=expected_lead_names,
             ),
-            labels=Data(y.values, columns=['sex']),
+            labels=Data(y.values, columns=list(y)),
             index=Data(dev.ecg_id.values, columns=['ecg_id']),
             groups=dev.Alias.values,
             predefined_splits=len(train)*[-1] + len(val)*[0],
@@ -209,7 +260,7 @@ class SourceTask(Extractor):
 
         # TODO: parameterize this!
         y = make_source_labels(index)
-        
+
         return DataWrapper(
             features=Data(
                 data=make_ecg_data(index.ecg_id, self.features['ecg_mode']),

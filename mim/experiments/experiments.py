@@ -177,6 +177,7 @@ class Experiment(NamedTuple):
         cv = self.get_cross_validation(data.predefined_splits)
 
         if self.has_train_results:
+            # trunk-ignore(bandit/B301)
             results = pd.read_pickle(self.train_result_path)
             md = Metadata().report(conda=self.log_conda_env)
             Validator(
@@ -352,6 +353,7 @@ class Experiment(NamedTuple):
         def _load():
             model_type = path.split('.')[-1]
             if model_type == 'sklearn':
+                # trunk-ignore(bandit/B301)
                 return pd.read_pickle(path)
             elif model_type == 'keras':
                 return keras.models.load_model(filepath=path)
@@ -411,6 +413,7 @@ class Experiment(NamedTuple):
         if not self.has_train_results:
             return False
 
+        # trunk-ignore(bandit/B301)
         results = pd.read_pickle(self.train_result_path)
         return results.num_splits_done < results.total_splits
 
@@ -419,12 +422,14 @@ class Experiment(NamedTuple):
         if not self.has_train_results:
             return 0
 
+        # trunk-ignore(bandit/B301)
         results = pd.read_pickle(self.train_result_path)
         return results.num_splits_done
 
     @property
     def validation_scores(self):
         if self.has_train_results:
+            # trunk-ignore(bandit/B301)
             results = pd.read_pickle(self.train_result_path)
             return results.validation_scores
         else:

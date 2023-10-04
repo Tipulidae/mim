@@ -180,7 +180,7 @@ mace_codes_anders = [
 
 
 def make_ecg_table():
-    ecg_path = '/tank/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    ecg_path = '/projects/air-crypt/legacy/air-crypt-esc-trop/axel/ecg.hdf5'
     with h5py.File(ecg_path, 'r') as ecg:
         table = pd.DataFrame(
             pd.to_datetime(ecg['meta']['date'][:].astype(str)),
@@ -270,7 +270,7 @@ def make_ed_ecgs(index, min_age_seconds=-3600, max_age_seconds=7200,
 
 
 def make_forberg_features(ecg_ids):
-    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    ecg_path = '/projects/air-crypt/legacy/air-crypt-esc-trop/axel/ecg.hdf5'
     with h5py.File(ecg_path, 'r') as ecg:
         glasgow_features = []
         for x in tqdm(ecg_ids, desc='Extracting Glasgow vectors'):
@@ -317,7 +317,7 @@ def make_forberg_features(ecg_ids):
 
 @cache
 def make_johansson_features(ecg_ids):
-    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
+    ecg_path = '/projects/air-crypt/legacy/air-crypt-esc-trop/axel/ecg.hdf5'
     with h5py.File(ecg_path, 'r') as ecg:
         glasgow_features = []
         glasgow_scalars = []
@@ -456,8 +456,8 @@ def make_double_ecg_features(index, include_delta_t=False):
 
 
 def read_csv(name, **kwargs):
-    base_path = "/mnt/air-crypt/air-crypt-raw/andersb/data/" \
-                "ESC_Trop_17-18-2020-09-21/data/"
+    base_path = "/projects/air-crypt/air-crypt-raw/andersb/data/" \
+                "ESC_Trop_17-18-2020-09-21/data"
     return pd.read_csv(
         join(base_path, name),
         encoding='latin1',
