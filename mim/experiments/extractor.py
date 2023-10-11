@@ -34,6 +34,8 @@ class Data:
 
         if dtype is None:
             self.dtype = infer_dtype(data)
+        elif isinstance(dtype, dict):
+            self.dtype = dtype
         else:
             self.dtype = tf.as_dtype(dtype)
 
@@ -420,12 +422,15 @@ def infer_shape(data):
 
 def infer_dtype(data):
     if hasattr(data, 'dtype'):
-        dtype = data.dtype
+        return tf.as_dtype(data.dtype)
     elif isinstance(data, list):
         return infer_dtype(data[0])
+    elif isinstance(data, float):
+        return tf.float64
+    elif isinstance(data, bool):
+        return tf.bool
     else:
-        dtype = 'int64'
-    return tf.as_dtype(dtype)
+        return tf.int64
 
 
 def sklearn_process(split_number=0, **processors):
