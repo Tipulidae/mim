@@ -20,6 +20,8 @@ from mim.util.logs import get_logger
 log = get_logger("ESC-Trop Massage")
 
 
+ECG_PATH = '/projects/air-crypt/legacy/air-crypt-esc-trop/axel/ecg.hdf5'
+
 important_status_labels = {
     ECGStatus.MISSING_DATA,
     ECGStatus.MISSING_LABELS,
@@ -180,8 +182,7 @@ mace_codes_anders = [
 
 
 def make_ecg_table():
-    ecg_path = '/projects/air-crypt/legacy/air-crypt-esc-trop/axel/ecg.hdf5'
-    with h5py.File(ecg_path, 'r') as ecg:
+    with h5py.File(ECG_PATH, 'r') as ecg:
         table = pd.DataFrame(
             pd.to_datetime(ecg['meta']['date'][:].astype(str)),
             columns=['ecg_date']
@@ -572,7 +573,7 @@ def _make_diagnoses_from_sos():
     diagnosis_cols = ['hdia'] + [f'DIA{x}' for x in range(1, 31)]
 
     sos_sv = pd.read_csv(
-        '/mnt/air-crypt/air-crypt-raw/andersb/data/'
+        '/projects/air-crypt/air-crypt-raw/andersb/data/'
         'Socialstyrelsen-2020-03-10/csv_files/sv_esctrop.csv',
         usecols=['Alias', 'INDATUM'] + diagnosis_cols,
         dtype=str
@@ -1149,8 +1150,7 @@ def make_lindow_dataframe():
         return ' --- '.join(
             [glasgow_diagnoses[i] for i, x in enumerate(ds) if x])
 
-    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
-    with h5py.File(ecg_path, 'r') as ecg:
+    with h5py.File(ECG_PATH, 'r') as ecg:
         OVERALL_QRS = glasgow_scalar_names.index('OverallQRSdur')
         ILBBB = glasgow_diagnoses.index('Incomplete LBBB')
         LBBB = glasgow_diagnoses.index('Left bundle branch block')
@@ -1248,10 +1248,9 @@ def _load_angio():
 
 
 def _extract_glasgow_vector(name, ecgs):
-    ecg_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
     name_index = glasgow_vector_names.index(name)
     result = []
-    with h5py.File(ecg_path, 'r') as ecg:
+    with h5py.File(ECG_PATH, 'r') as ecg:
         for ecg_id in tqdm(ecgs, desc=f"Extracting {name}"):
             result.append(ecg['glasgow']['vectors'][ecg_id, name_index, :])
 
@@ -1278,8 +1277,7 @@ def _make_ecg_paths(index):
     # the path of the original ECG file.
     log.debug("Retrieving ECG paths")
     ecg = ecg[['ecg_0']].dropna().sort_values(by='ecg_0')
-    hdf5_path = '/mnt/air-crypt/air-crypt-esc-trop/axel/ecg.hdf5'
-    with h5py.File(hdf5_path, 'r') as ecg_hdf5:
+    with h5py.File(ECG_PATH, 'r') as ecg_hdf5:
         # Important that the index (ecg.values) is sorted here, because hdf5
         ecg['ecg_path'] = ecg_hdf5['meta']['path'][ecg.values]
 
@@ -1411,8 +1409,8 @@ def _make_stenosis(index):
             names=['source', 'stenosis'],
             join='outer')
         .fillna(False)
-        .groupby(axis='columns', level='stenosis')
-        .any()
+        .T.groupby(level='stenosis')  # groupby(axis=1) is deprecated
+        .any().T
         .rename(columns={'100%': 'stenosis_100%', '90-99%': 'stenosis_90-99%'})
     )
 
@@ -1591,3 +1589,23 @@ def make_omi_label(omi_table, stenosis_limit=90, tnt_limit=750):
         )
     )
     return omi
+
+
+def load_sectra():
+    path = '/projects/air-crypt/air-crypt-raw/andersb/data/' \
+           'ESC_Trop_17-18-2020-09-21/data/' \
+           'ESC_TROP_sectra utdata_20190904.AB-Fnutt-fix.utf8.2023-05-09.csv'
+    sectra = pd.read_csv(
+        path,
+        encoding='UTF-8',
+        sep='|',
+        quotechar='"',
+        parse_dates=['Undersökningsdatum'],
+        usecols=['Alias', 'Undersökningskod', 'Undersökningsdatum',
+                 'Fullständigt_svar'],
+        low_memory=False
+    ).rename(columns={
+        'Undersökningskod': 'sectra_code',
+        'Undersökningsdatum': 'sectra_date',
+        'Fullständigt_svar': 'answer'})
+    return sectra

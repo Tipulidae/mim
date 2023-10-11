@@ -12,6 +12,7 @@ from scipy.signal import resample
 from lxml import etree
 
 from mim.util.metadata import Metadata
+from massage.sk1718 import ECG_PATH
 from .carlson_ecg import empty_row_count
 
 
@@ -224,13 +225,13 @@ def create_hdf5_sk1718():
     print('globbing...')
     xml_paths = list(sorted(
         glob.iglob(
-            '/tank/air-crypt/legacy/air-crypt-esc-trop/andersb/sk1718-ECG/'
+            '/projects/air-crypt/legacy/air-crypt-esc-trop/andersb/sk1718-ECG/'
             'decomp/MIL*/MIL/*.xml',
             recursive=True
         )
     ))
     print('Making hdf5 file...')
-    to_hdf5(xml_paths, '/tank/air-crypt/axel/sk1718_ecg.hdf5')
+    to_hdf5(xml_paths, ECG_PATH)
 
 
 def to_hdf5(ecg_paths, target_path):

@@ -19,10 +19,11 @@ def cnn(
         validation=None,
         cnn_kwargs=None,
         ffnn_kwargs=None,
-        final_ffnn_kwargs=None
 ):
-    if final_ffnn_kwargs is None:
-        final_ffnn_kwargs = {}
+    # inp = {
+    #     key: Input(shape=value)
+    #     for key, value in train.feature_tensor_shape.items()
+    # }
 
     inp = Input(shape=train.feature_tensor_shape)
     x = cnn_helper(inp, **cnn_kwargs)
@@ -52,7 +53,7 @@ def resnet_v1(
 
 
 def resnet_v2(
-        train, validation=None, residual_kwargs=None
+        train, validation=None, filters=64, residual_kwargs=None
 ):
     if residual_kwargs is None:
         residual_kwargs = {}
@@ -62,23 +63,34 @@ def resnet_v2(
                kernel_initializer='he_normal')(signal)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x, y = ResidualUnitV2(2048, 64, **residual_kwargs)([x, x])
-    x, y = ResidualUnitV2(2048, 64, **residual_kwargs)([x, y])
-    x, y = ResidualUnitV2(1024, 64, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(2048, filters, **residual_kwargs)([x, x])
+    x, y = ResidualUnitV2(2048, filters, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(1024, filters, **residual_kwargs)([x, y])
 
-    x, y = ResidualUnitV2(512, 128, **residual_kwargs)([x, y])
-    x, y = ResidualUnitV2(512, 128, **residual_kwargs)([x, y])
-    x, y = ResidualUnitV2(256, 128, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(512, 2*filters, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(512, 2*filters, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(256, 2*filters, **residual_kwargs)([x, y])
 
-    x, y = ResidualUnitV2(128, 256, **residual_kwargs)([x, y])
-    x, y = ResidualUnitV2(128, 256, **residual_kwargs)([x, y])
-    x, y = ResidualUnitV2(64, 256, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(128, 4*filters, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(128, 4*filters, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(64, 4*filters, **residual_kwargs)([x, y])
 
-    x, y = ResidualUnitV2(32, 512, **residual_kwargs)([x, y])
-    x, y = ResidualUnitV2(32, 512, **residual_kwargs)([x, y])
-    x, _ = ResidualUnitV2(16, 512, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(32, 8*filters, **residual_kwargs)([x, y])
+    x, y = ResidualUnitV2(32, 8*filters, **residual_kwargs)([x, y])
+    x, _ = ResidualUnitV2(16, 8*filters, **residual_kwargs)([x, y])
 
     x = Flatten()(x)
     output = Dense(1, activation='sigmoid', kernel_initializer='he_normal')(x)
     model = keras.Model(signal, output)
     return model
+
+
+def mlp(
+        train,
+        validation=None,
+        mlp_kwargs=None,
+):
+    inp = Input(shape=train.feature_tensor_shape)
+    x = mlp_helper(inp, **mlp_kwargs)
+    output = Dense(units=1, activation='sigmoid', kernel_regularizer='l2')(x)
+    return keras.Model(inp, output)

@@ -1,11 +1,12 @@
 import hashlib
 import inspect
 import os
+# trunk-ignore(bandit/B403)
+import pickle
 from itertools import starmap
 from types import FunctionType
 
 import pandas as pd
-from compress_pickle import dump, load
 
 from mim.util.logs import get_logger
 from mim.config import PATH_TO_CACHE
@@ -85,32 +86,33 @@ def cache(f):
 
 def _cache(f, args, kwargs, is_method=False):
     path = function_to_cache_path(f, args, kwargs, is_method=is_method)
-    current_metadata = Metadata().report()
-    try:
-        cached_result, cached_metadata = load(
-            path,
-            compression='bz2',
-            set_default_extension=False
-        )
-        settings.validator.validate_consistency(
-            [current_metadata, cached_metadata])
-        log.debug(f'Loading cached result for {os.path.basename(path)}.')
-        return cached_result
-    except FileNotFoundError:
-        log.debug(f'Cache file {os.path.basename(path)} '
-                  f'not found, re-computing!')
-    except MetadataConsistencyException:
-        log.debug(f'Metadata for {os.path.basename(path)} '
-                  f'inconsistent, re-computing!')
+    current_metadata = Metadata().report(conda=False)
+    if os.path.isfile(path):
+        try:
+            log.debug(f'Loading cached result for {os.path.basename(path)}.')
+
+            with open(path, 'rb') as file:
+                # trunk-ignore(bandit/B301)
+                cached_result, cached_metadata = pickle.load(
+                    file,
+                )
+            settings.validator.validate_consistency(
+                [current_metadata, cached_metadata])
+
+            return cached_result
+        except MetadataConsistencyException:
+            log.debug(f'Metadata for {os.path.basename(path)} '
+                      f'inconsistent, re-computing!')
+
+    log.debug(f'Cache file {os.path.basename(path)} '
+              f'not found, re-computing!')
 
     results = f(*args, **kwargs)
-    dump(
-        obj=(results, current_metadata),
-        path=path,
-        compression='bz2',
-        set_default_extension=False
-    )
-    # pd.to_pickle((results, current_metadata), path, compression='gz')
+    with open(path, 'wb') as file:
+        pickle.dump(
+            (results, current_metadata),
+            file,
+        )
     return results
 
 

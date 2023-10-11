@@ -22,6 +22,7 @@ class FakeExtractor(Extractor):
         data = DataWrapper(
             features=Data(x, columns=feature_names),
             labels=Data(y, columns=['y']),
-            index=Data(index, columns=['index'])
+            index=Data(index, columns=['index']),
+            fits_in_memory=self.fits_in_memory
         )
         return data

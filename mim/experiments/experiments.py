@@ -72,7 +72,7 @@ class Experiment(NamedTuple):
     reduce_lr_on_plateau: Any = None
     ignore_callbacks: bool = False
     save_prediction_history: bool = False
-    save_model_checkpoints: bool = False
+    save_model_checkpoints: Union[bool, dict] = False
     use_tensorboard: bool = False
     save_learning_rate: bool = False
     ensemble: int = 1
@@ -385,7 +385,7 @@ class Experiment(NamedTuple):
 
     @property
     def base_path(self):
-        parent_base = self.parent_base or ''
+        parent_base = self.parent_base or self.project_name
         parent_name = self.parent_name or str(self.__class__.__name__)
         return os.path.join(
             PATH_TO_TEST_RESULTS,
@@ -393,6 +393,12 @@ class Experiment(NamedTuple):
             parent_name,
             self.name
         )
+
+    @property
+    def project_name(self):
+        # Bit of a hack. self.__class__.__module__ is something like
+        # projects.transfer.experiments.
+        return self.__class__.__module__.split('.')[1]
 
     @property
     def is_trained(self):
@@ -484,7 +490,9 @@ def train_model(training_data, validation_data, model, scoring,
                 verbose=1,
                 ) -> Tuple[Result, Result]:
     t0 = time()
-    log.info(f'\n\nFitting classifier, split {split_number} of {total_splits}')
+    log.info(f'\n\nFitting classifier, split {split_number} of {total_splits}'
+             f'\nTrain size: {len(training_data)}, '
+             f'val size: {len(validation_data)}')
 
     history = model.fit(
         training_data,

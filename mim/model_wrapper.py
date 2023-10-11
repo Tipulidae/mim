@@ -274,11 +274,19 @@ class KerasWrapper(Model):
                 PredictionLogger(training_data, validation_data)
             )
         if self.save_model_checkpoints:
-            path = os.path.join(self.checkpoint_path, split_folder)
-            callbacks.append(ModelCheckpoint(
-                filepath=os.path.join(path, 'last.ckpt')))
-            callbacks.append(ModelCheckpoint(
-                filepath=os.path.join(path, 'last.ckpt')))
+            path = os.path.join(self.checkpoint_path, split_folder,
+                                'checkpoints')
+            if isinstance(self.save_model_checkpoints, dict):
+                callbacks.append(ModelCheckpoint(
+                    filepath=os.path.join(path, 'epoch_{epoch:02d}'),
+                    **self.save_model_checkpoints
+                ))
+            else:
+                callbacks.append(ModelCheckpoint(
+                    filepath=os.path.join(path, 'last.ckpt')))
+                callbacks.append(ModelCheckpoint(
+                    filepath=os.path.join(path, 'best.ckpt'),
+                    save_best_only=True))
         if self.use_tensorboard:
             path = os.path.join(self.tensorboard_path, split_folder)
             callbacks.append(TensorBoard(log_dir=path))
@@ -293,9 +301,6 @@ class KerasWrapper(Model):
                 RuleOutLogger(training_data, validation_data)
             )
 
-        # callbacks.append(
-        #     Foobar(training_data)
-        # )
         return callbacks
 
     @property

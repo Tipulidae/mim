@@ -12,6 +12,8 @@ from massage.icd_util import round_icd_to_chapter, icd_chapters, \
 
 log = get_logger("Skåne 17-18 massage")
 
+ECG_PATH = '/ssdscratch/air-scratch-crypt/axel/sk1718_ecg.hdf5'
+
 
 def read_csv(name, **kwargs):
     base_path = "/projects/air-crypt/air-crypt-raw/andersb/data/Skane_17-18/" \
@@ -1139,12 +1141,11 @@ def read_lisa(year):
     return df
 
 
-# @cache
+@cache
 def make_ecg_table(drop_bad_ecgs=True, drop_duplicates=True,
                    drop_unknown_alias=True):
-    ecg_path = '/projects/air-crypt/axel/sk1718_ecg.hdf5'
     log.debug('Making ECG table')
-    with h5py.File(ecg_path, 'r') as ecg:
+    with h5py.File(ECG_PATH, 'r') as ecg:
         table = pd.DataFrame(
             pd.to_datetime(ecg['meta']['date'][:].astype(str)),
             columns=['ecg_date']

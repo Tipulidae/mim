@@ -153,25 +153,31 @@ class Presenter:
 
         return pd.concat(results.values(), axis=1, keys=results.keys())
 
-    def predictions(self, like='.*'):
+    def predictions(self, like='.*', droplevel=True):
         # Return dataframe with the true targets and predictions for each
         # experiment
         predictions = []
+        keys = []
         the_target = None
-        for name, _ in self._results_that_match_pattern(like):
-            target, prediction = self._target_predictions(name)
+        for name, xp in self._results_that_match_pattern(like):
+            target = xp.validation_targets
+            prediction = xp.validation_predictions
             if the_target is None:
                 the_target = target
 
             if not the_target.equals(target):
                 raise Exception('Targets differ')
-            predictions.append(
-                prediction.iloc[:, 0].rename(name)
-            )
+            predictions.append(prediction)
+            keys.append(name)
 
-        predictions = pd.DataFrame(predictions).T
-        predictions.index = the_target.index
-        return the_target.join(predictions)
+        result = pd.concat(
+            [the_target] + predictions,
+            keys=['target'] + keys,
+            axis=1
+        )
+        if droplevel:
+            result.columns = result.columns.droplevel(1)
+        return result
 
     def prediction_ranks(self, like='.*'):
         predictions = self.predictions(like=like)

@@ -1,6 +1,6 @@
 import numpy as np
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (
+from keras.models import Model
+from keras.layers import (
     Input,
     Conv1D,
     MaxPooling1D,

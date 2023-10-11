@@ -3,13 +3,13 @@ import scipy
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from sklearn.model_selection import GroupShuffleSplit
+from sklearn.model_selection import GroupShuffleSplit, ShuffleSplit
 
 from mim.experiments.extractor import DataWrapper, Data, Extractor
 from massage import sk1718
 from massage.muse_ecg import expected_lead_names
 from mim.util.logs import get_logger
-# from mim.cache.decorator import cache
+from mim.cache.decorator import cache
 
 
 log = get_logger("Transfer-learning extractor")
@@ -27,13 +27,13 @@ def train_val_test_split(
         val_percent=0.15, train_percent=1.0, exclude_test_aliases=True,
         ):
     test_percent = temporal_test_percent + random_test_percent
-    if 0 <= temporal_test_percent < 1.0:
+    if not (0 <= temporal_test_percent < 1.0):
         raise ValueError('temporal_test_percent must be between 0.0 and 1.0')
-    if 0 <= random_test_percent < 1.0:
+    if not (0 <= random_test_percent < 1.0):
         raise ValueError('random_test_percent must be between 0.0 and 1.0')
-    if 0 <= test_percent < 1.0:
+    if not (0 <= test_percent < 1.0):
         raise ValueError('sum of test percentages must be between 0.0 and 1.0')
-    if 0 <= val_percent < 1.0 - test_percent:
+    if not (0 <= val_percent < 1.0 - test_percent):
         raise ValueError('val_percent must be between 0 and 1-test percent')
 
     dev, test = hold_out_split(
@@ -98,6 +98,7 @@ def development_split(index, val_percent, train_percent_of_remainder=1.0,
     return train, val
 
 
+@cache
 def make_target_labels(index):
     # For now, let's just roll with the AMI outcome. It's the most straight-
     # forward.
@@ -149,10 +150,13 @@ def make_source_labels(index):
     return index
 
 
+@cache
 def make_source_index(
         exclude_test_aliases=True, exclude_test_ecgs=True,
         exclude_val_aliases=True, exclude_val_ecgs=True,
-        exclude_train_aliases=False, exclude_train_ecgs=False):
+        exclude_train_aliases=False, exclude_train_ecgs=False,
+        small_subset=None,
+):
     source = sk1718.make_ecg_table()  # We start with all the ECGs
     target = make_target_index(source)  # All target ECGs before any splits
     train, val, test = train_val_test_split(target)
@@ -179,37 +183,59 @@ def make_source_index(
     elif exclude_train_ecgs:
         source = exclude('ecg_id', train, 'training set')
 
-    return (
+    source = (
         source
         .sort_values(by=['ecg_id'])
         .loc[:, ['ecg_id', 'Alias', 'ecg_date']]
     )
+    if small_subset is not None:
+        log.info(f"Dropping all but {100*small_subset:.0f}% of the data "
+                 f"points")
+        splitter = ShuffleSplit(
+            n_splits=1,
+            train_size=small_subset,
+            random_state=91992
+        )
+        inds, _ = next(splitter.split(source))
+        source = source.iloc[inds, :]
+
+    return source
 
 
-# @cache
-def make_ecg_data(ecgs, mode, ribeiro=False):
-    with h5py.File('/projects/air-crypt/axel/sk1718_ecg.hdf5', 'r') as f:
+@cache
+def make_ecg_data(ecgs, mode, ribeiro=False, precision=16, scale=1.0,
+                  **kwargs):
+    with h5py.File(sk1718.ECG_PATH, 'r') as f:
         data = np.array([f[mode][ecg] for ecg in tqdm(ecgs, 'loading ecgs')])
 
-    # Data is now scaled to mV
-    data = data.astype(np.float16) * (4.88/1000)
+    if precision == 16:
+        dtype = np.float16
+    elif precision == 32:
+        dtype = np.float32
+    elif precision == 64:
+        dtype = np.float64
+    else:
+        raise ValueError(f"precision must be either 16, 32 or 64. "
+                         f"Was {precision}.")
+
+    data = data.astype(dtype) * (scale * 4.88 / 1000)
     if ribeiro:
         shape = (len(data), 4096, 8)
-        fixed_data = np.zeros(shape, np.float16)
+        fixed_data = np.zeros(shape, dtype)
 
         for ecg in tqdm(range(len(data)), desc='resampling ecgs'):
-            fixed_data[ecg] = resample_and_pad(data[ecg])
+            fixed_data[ecg] = resample_and_pad(data[ecg], dtype)
 
         data = fixed_data
     return data
 
 
-def resample_and_pad(data):
+def resample_and_pad(data, dtype):
     # Resample to 400Hz
     # pad to 4096 (adding zeros on both side)
     data = scipy.signal.resample(data, 4000)
     data = np.pad(data, pad_width=[[48, 48], [0, 0]])
-    return data.astype(np.float16)
+    return data.astype(dtype)
 
 
 class TargetTask(Extractor):
@@ -222,7 +248,7 @@ class TargetTask(Extractor):
         # TODO: not the real target, fix this later!
         y = make_target_labels(dev, **self.labels)
 
-        return DataWrapper(
+        data = DataWrapper(
             features=Data(
                 data=make_ecg_data(dev.ecg_id, **self.features),
                 columns=expected_lead_names,
@@ -233,6 +259,8 @@ class TargetTask(Extractor):
             predefined_splits=len(train)*[-1] + len(val)*[0],
             fits_in_memory=True
         )
+        log.debug('Finished extracting development data')
+        return data
 
     def get_test_data(self) -> DataWrapper:
         ecg_table = sk1718.make_ecg_table()
@@ -260,16 +288,18 @@ class SourceTask(Extractor):
 
         # TODO: parameterize this!
         y = make_source_labels(index)
+        if self.fits_in_memory is None:
+            self.fits_in_memory = len(y) < 100000
 
         return DataWrapper(
             features=Data(
-                data=make_ecg_data(index.ecg_id, self.features['ecg_mode']),
+                data=make_ecg_data(index.ecg_id, **self.features),
                 columns=expected_lead_names,
             ),
-            labels=Data(y.sex.data, columns=['sex']),
+            labels=Data(y.sex.values, columns=['sex']),
             index=Data(index.ecg_id.values, columns=['ecg_id']),
             groups=index.Alias.values,
-            fits_in_memory=True
+            fits_in_memory=self.fits_in_memory
         )
 
     def get_test_data(self) -> DataWrapper:

@@ -19,7 +19,7 @@ class Data:
             data,
             index=None,
             columns=None,
-            dtype=tf.int64,
+            dtype=None,
             fits_in_memory=True,
             groups=None,
             predefined_splits=None,
@@ -31,7 +31,12 @@ class Data:
             self._columns = list(range(num_features))
         else:
             self._columns = columns
-        self.dtype = dtype
+
+        if dtype is None:
+            self.dtype = infer_dtype(data)
+        else:
+            self.dtype = tf.as_dtype(dtype)
+
         self.groups = groups
         self.predefined_splits = predefined_splits
         self._fits_in_memory = fits_in_memory
@@ -59,10 +64,6 @@ class Data:
                 self.predefined_splits[i] for i in index]
 
         return new_data
-
-    # def lazy_partition(self, xs):
-    #     for p in partition(xs):
-    #         yield self.lazy_slice(p)
 
     @property
     def index(self):
@@ -274,18 +275,8 @@ class DataWrapper:
         :param predefined_splits:
         :param fits_in_memory:
         """
-
-        def wrap_as_data(x):
-            if isinstance(x, dict):
-                return Container({k: wrap_as_data(v) for k, v in x.items()})
-            else:
-                return Data(x[0], columns=list(x[1]))
-
         self.data = Container(
             {
-                # 'x': wrap_as_data(features),
-                # 'y': wrap_as_data(labels),
-                # 'index': wrap_as_data(index),
                 'x': features,
                 'y': labels,
                 'index': index,
@@ -425,6 +416,16 @@ def infer_shape(data):
         return None
 
     return list(shape[1:])
+
+
+def infer_dtype(data):
+    if hasattr(data, 'dtype'):
+        dtype = data.dtype
+    elif isinstance(data, list):
+        return infer_dtype(data[0])
+    else:
+        dtype = 'int64'
+    return tf.as_dtype(dtype)
 
 
 def sklearn_process(split_number=0, **processors):
@@ -649,7 +650,7 @@ class ECGData(Data):
 
 class Extractor:
     def __init__(self, index=None, features=None, labels=None,
-                 processing=None, fits_in_memory=True, cv_kwargs=None):
+                 processing=None, fits_in_memory=None, cv_kwargs=None):
         self.index = {} if index is None else index
         self.features = {} if features is None else features
         self.labels = {} if labels is None else labels
