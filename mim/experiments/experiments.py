@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import re
 from copy import copy
 from time import time
 from pathlib import Path
@@ -23,7 +24,7 @@ from mim.cross_validation import CrossValidationWrapper, \
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
-from mim.util.metadata import Metadata, Validator
+from mim.util.metadata import Metadata
 from mim.util.util import callable_to_string, keras_model_summary_as_string
 from mim.experiments.results import ExperimentResult, TestResult, Result
 import mim.experiments.hyper_parameter as hp
@@ -179,13 +180,15 @@ class Experiment(NamedTuple):
         if self.has_train_results:
             # trunk-ignore(bandit/B301)
             results = pd.read_pickle(self.train_result_path)
-            md = Metadata().report(conda=self.log_conda_env)
-            Validator(
-                allow_uncommitted=False,
-                allow_different_commits=False,
-                allow_different_branches=False,
-                allow_different_environments=False
-            ).validate_consistency([md, results.metadata])
+            # TODO: enable this again when I get the micromamba environment
+            # logging to work!
+            # md = Metadata().report(conda=self.log_conda_env)
+            # Validator(
+            #     allow_uncommitted=False,
+            #     allow_different_commits=False,
+            #     allow_different_branches=False,
+            #     allow_different_environments=False
+            # ).validate_consistency([md, results.metadata])
         else:
             results = ExperimentResult(
                 feature_names=data.feature_names,
@@ -274,27 +277,29 @@ class Experiment(NamedTuple):
         return CrossValidationWrapper(cv(**cv_kwargs))
 
     def build_model(self, train, validation, split_number):
-        model_kwargs = copy(self.model_kwargs)
+        if self.has_partially_trained_model(split_number):
+            resume_from_epoch, path = self.get_partial_epoch(split_number)
+            model = self.load_partially_trained_model(path)
+            reset_random_generators(self.random_state + split_number)
+        else:
+            resume_from_epoch = 0
+            model_kwargs = copy(self.model_kwargs)
 
-        if self.building_model_requires_development_data:
-            model_kwargs['train'] = train
-            model_kwargs['validation'] = validation
+            if self.building_model_requires_development_data:
+                model_kwargs['train'] = train
+                model_kwargs['validation'] = validation
 
-        # This is kinda ugly, but important that the model is loaded from
-        # the right split, otherwise we peek!
-        if self.model.__name__ == 'load_keras_model':
-            model_kwargs['split_number'] = split_number
+            # This is kinda ugly, but important that the model is loaded from
+            # the right split, otherwise we peek!
+            if self.model.__name__ == 'load_keras_model':
+                model_kwargs['split_number'] = split_number
 
-        # Releases keras global state. Ref:
-        # https://www.tensorflow.org/api_docs/python/tf/keras/backend/clear_session
-        tf.keras.backend.clear_session()
-        rand_state = self.random_state + split_number
-        np.random.seed(rand_state)
-        tf.random.set_seed(rand_state)
-        model = self.model(**model_kwargs)
-        return self._wrap_model(model)
+            reset_random_generators(self.random_state + split_number)
+            model = self.model(**model_kwargs)
 
-    def _wrap_model(self, model, verbose=1):
+        return self._wrap_model(model, resume_from_epoch=resume_from_epoch)
+
+    def _wrap_model(self, model, resume_from_epoch=0, verbose=1):
         if isinstance(model, tf.keras.Model):
             # TODO: refactor this! :(
             if isinstance(self.optimizer, dict):
@@ -322,13 +327,13 @@ class Experiment(NamedTuple):
                 exp_base_path=self.base_path,
                 batch_size=self.batch_size,
                 epochs=self.epochs,
-                initial_epoch=self.initial_epoch,
+                initial_epoch=self.initial_epoch + resume_from_epoch,
                 optimizer=optimizer,
                 loss=loss,
                 loss_weights=self.loss_weights,
                 class_weight=self.class_weight,
                 metrics=fix_metrics(self.metrics),
-                skip_compile=self.skip_compile,
+                skip_compile=any([self.skip_compile, resume_from_epoch > 0]),
                 ignore_callbacks=self.ignore_callbacks,
                 save_prediction_history=self.save_prediction_history,
                 save_model_checkpoints=self.save_model_checkpoints,
@@ -363,6 +368,35 @@ class Experiment(NamedTuple):
 
     def asdict(self):
         return callable_to_string(self._asdict())
+
+    def has_partially_trained_model(self, split_number):
+        checkpoint_path = os.path.join(
+            self.base_path,
+            f'split_{split_number}',
+            'checkpoints',
+            'epoch_*.h5'
+        )
+        cps = list(glob(checkpoint_path))
+        return 0 < len(cps) < self.epochs
+
+    def get_partial_epoch(self, split_number):
+        checkpoint_path = os.path.join(
+            self.base_path,
+            f'split_{split_number}',
+            'checkpoints',
+            'epoch_*.h5'
+        )
+        cps = list(glob(checkpoint_path))
+        p = re.compile('epoch_0*(\\d+).h5')
+
+        def path_to_epoch(path):
+            return int(p.findall(path)[0])
+
+        latest_path = max(cps, key=path_to_epoch)
+        return path_to_epoch(latest_path), latest_path
+
+    def load_partially_trained_model(self, path):
+        return keras.models.load_model(filepath=path)
 
     @property
     def is_binary(self):
@@ -416,12 +450,15 @@ class Experiment(NamedTuple):
 
     @property
     def is_partial(self):
-        if not self.has_train_results:
-            return False
-
-        # trunk-ignore(bandit/B301)
-        results = pd.read_pickle(self.train_result_path)
-        return results.num_splits_done < results.total_splits
+        # either there are train results where not all splits are done
+        # OR there is a checkpoints folder with fewer than epochs checkpoints
+        if self.has_partially_trained_model(split_number=0):
+            return True
+        if self.has_train_results:
+            results = pd.read_pickle(self.train_result_path)
+            if results.num_splits_done < results.total_splits:
+                return True
+        return False
 
     @property
     def num_splits_done(self):
@@ -440,6 +477,14 @@ class Experiment(NamedTuple):
             return results.validation_scores
         else:
             return None
+
+
+def reset_random_generators(new_seed):
+    # Releases keras global state. Ref:
+    # https://www.tensorflow.org/api_docs/python/tf/keras/backend/clear_session
+    tf.keras.backend.clear_session()
+    np.random.seed(new_seed)
+    tf.random.set_seed(new_seed)
 
 
 def _history_to_dataframe(history, data):

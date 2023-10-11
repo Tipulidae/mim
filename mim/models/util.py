@@ -2,6 +2,7 @@ import math
 from typing import Union, List
 
 import tensorflow as tf
+from keras.saving.object_registration import register_keras_serializable
 from keras.layers import (
     AveragePooling1D, Conv1D, BatchNormalization, ReLU, MaxPooling1D,
     Dropout, Flatten, Dense, Input, Add, Activation, GlobalAveragePooling1D,
@@ -437,7 +438,8 @@ class ResidualUnitV2:
 
 # Copy-paste from tensorflow 2.14. Current version doesn't have the warmup
 # thing.
-class CosineDecay(LearningRateSchedule):
+@register_keras_serializable(package="mim.models")
+class CosineDecayWithWarmup(LearningRateSchedule):
     """A LearningRateSchedule that uses a cosine decay with optional warmup.
 
     See [Loshchilov & Hutter, ICLR2016](https://arxiv.org/abs/1608.03983),

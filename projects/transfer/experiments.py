@@ -5,7 +5,7 @@ from sklearn.model_selection import GroupShuffleSplit
 from keras.optimizers import Adam
 
 from mim.experiments.experiments import Experiment
-from mim.models.util import CosineDecay
+from mim.models.util import CosineDecayWithWarmup
 from projects.transfer.extractor import TargetTask, SourceTask
 from projects.transfer.models import cnn, resnet_v2
 
@@ -25,7 +25,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -57,7 +57,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -79,7 +79,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -101,7 +101,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -123,7 +123,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -145,7 +145,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -167,7 +167,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -189,7 +189,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -211,7 +211,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -233,7 +233,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
@@ -316,7 +316,7 @@ class Target(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 1e-4,
@@ -333,7 +333,8 @@ class Target(Experiment, Enum):
 
 class Source(Experiment, Enum):
     RN2_R_SEX = Experiment(
-        description='',
+        description='A 12 block ResNet architecture from Gustafsson et al. '
+                    'Trained here to predict sex using the raw ECG signal.',
         model=resnet_v2,
         model_kwargs={},
         extractor=SourceTask,
@@ -343,18 +344,19 @@ class Source(Experiment, Enum):
             },
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': False
         },
         optimizer={
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 5e-4,
                         'alpha': 1e-6,
                         'warmup_steps': 10*1628,
-                        'decay_steps': 200*1628,
+                        'decay_steps': 100*1628,
                     }
                 }
             }
@@ -365,19 +367,18 @@ class Source(Experiment, Enum):
             'train_size': 0.95,
             'random_state': 515,
         },
-        epochs=200,
+        epochs=100,
         batch_size=512,
         loss='binary_crossentropy',
         scoring=roc_auc_score,
-        metrics=['auc'],
-        data_fits_in_memory=False,
+        metrics=['auc', 'accuracy'],
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_learning_rate=True,
         save_model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
-            'save_weights_only': True
+            'save_weights_only': False
         }
     )
 
@@ -416,7 +417,7 @@ class Source(Experiment, Enum):
             'name': Adam,
             'kwargs': {
                 'learning_rate': {
-                    'scheduler': CosineDecay,
+                    'scheduler': CosineDecayWithWarmup,
                     'scheduler_kwargs': {
                         'initial_learning_rate': 0.0,
                         'warmup_target': 1e-4,
@@ -461,6 +462,7 @@ class Source(Experiment, Enum):
                 'precision': 16,
                 'ribeiro': False,
             },
+            'fits_in_memory': True
         },
         model_kwargs={
             'cnn_kwargs': {
@@ -482,9 +484,24 @@ class Source(Experiment, Enum):
                 'batch_norm': [False, False]
             },
         },
+        # optimizer={
+        #     'name': Adam,
+        #     'kwargs': {'learning_rate': 0.0001}
+        # },
         optimizer={
             'name': Adam,
-            'kwargs': {'learning_rate': 0.0001}
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': CosineDecayWithWarmup,
+                    'scheduler_kwargs': {
+                        'initial_learning_rate': 0.0,
+                        'warmup_target': 5e-4,
+                        'alpha': 1e-6,
+                        'warmup_steps': 10*480,
+                        'decay_steps': 100*480,
+                    }
+                }
+            }
         },
         cv=GroupShuffleSplit,
         cv_kwargs={
@@ -499,6 +516,12 @@ class Source(Experiment, Enum):
         scoring=roc_auc_score,
         metrics=['accuracy', 'auc'],
         use_tensorboard=True,
+        save_model_checkpoints={
+            'save_best_only': False,
+            'save_freq': 'epoch',
+            'save_weights_only': False
+        },
+        save_learning_rate=True,
     )
     CNN1_R5_F32_SEX = CNN1_R5_F16_SEX._replace(
         description='',

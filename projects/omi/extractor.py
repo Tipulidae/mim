@@ -89,7 +89,7 @@ def make_annotation_documents():
 
     for i, row in tqdm(documents.iterrows(),
                        desc='Writing annotation documents'):
-        omi_stats = [f"{k:<25}{str(v):>19}" for k, v in row.head(-1).items()]
+        omi_stats = [f"{k:<32}{str(v):>19}" for k, v in row.head(-1).items()]
         text = "<pre>" + "\n".join(omi_stats) + "</pre>"
         text += '<br>' + row.answer.replace('\n', '<br>')
 

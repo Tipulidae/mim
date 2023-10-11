@@ -278,7 +278,7 @@ class KerasWrapper(Model):
                                 'checkpoints')
             if isinstance(self.save_model_checkpoints, dict):
                 callbacks.append(ModelCheckpoint(
-                    filepath=os.path.join(path, 'epoch_{epoch:02d}'),
+                    filepath=os.path.join(path, 'epoch_{epoch:03d}.h5'),
                     **self.save_model_checkpoints
                 ))
             else:
