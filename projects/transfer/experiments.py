@@ -7,7 +7,7 @@ from keras.optimizers import Adam
 from mim.experiments.experiments import Experiment
 from mim.models.util import CosineDecayWithWarmup
 from projects.transfer.extractor import TargetTask, SourceTask
-from projects.transfer.models import cnn, resnet_v2
+from projects.transfer.models import cnn, resnet_v1, resnet_v2
 
 
 class Target(Experiment, Enum):
@@ -332,10 +332,11 @@ class Target(Experiment, Enum):
 
 
 class Source(Experiment, Enum):
-    RN2_R_SEX = Experiment(
-        description='A 12 block ResNet architecture from Gustafsson et al. '
-                    'Trained here to predict sex using the raw ECG signal.',
-        model=resnet_v2,
+    RN1_R_SEX = Experiment(
+        description='A 4 block ResNet architecture from Ribeiro et al. '
+                    'Trained here to predict sex using the raw ECG signal. '
+                    'Adapted to use 8 input leads instead of 12.',
+        model=resnet_v1,
         model_kwargs={},
         extractor=SourceTask,
         extractor_kwargs={
@@ -381,9 +382,14 @@ class Source(Experiment, Enum):
             'save_weights_only': False
         }
     )
-
-    CNN2_R_SEX = Experiment(
-        description='',
+    RN2_R_SEX = RN1_R_SEX._replace(
+        description='A 12 block ResNet architecture from Gustafsson et al. '
+                    'Trained here to predict sex using the raw ECG signal.',
+        model=resnet_v2,
+    )
+    CNN1_R_SEX = Experiment(
+        description='M_R1_CNN1 from the serial ECGs project. Predicting '
+                    'sex using the raw ECG signal.',
         extractor=SourceTask,
         extractor_kwargs={
             'index': {
@@ -391,6 +397,7 @@ class Source(Experiment, Enum):
             },
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': False
         },
         model=cnn,
         model_kwargs={
@@ -409,8 +416,7 @@ class Source(Experiment, Enum):
             'ffnn_kwargs': {
                 'sizes': [10, 100],
                 'dropout': [0.4, 0.3],
-                'batch_norm': [False, False],
-                'regularizer': 0.001
+                'batch_norm': [False, False]
             },
         },
         optimizer={
@@ -447,26 +453,11 @@ class Source(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
     )
-    CNN1_R5_F16_SEX = Experiment(
-        description='Using only a random subset of the data',
-        model=cnn,
-        extractor=SourceTask,
-        extractor_kwargs={
-            'index': {
-                'exclude_train_aliases': True,
-                'small_subset': 0.05,
-            },
-            'labels': {},
-            'features': {
-                'mode': 'raw',
-                'precision': 16,
-                'ribeiro': False,
-            },
-            'fits_in_memory': True
-        },
+    CNN2_R_SEX = CNN1_R_SEX._replace(
+        description='Same as CNN1, but with some extra regularization at the '
+                    'final layer.',
         model_kwargs={
             'cnn_kwargs': {
-                'initial_batch_norm': False,
                 'num_layers': 2,
                 'down_sample': False,
                 'dropouts': [0.5, 0.4],
@@ -481,91 +472,8 @@ class Source(Experiment, Enum):
             'ffnn_kwargs': {
                 'sizes': [10, 100],
                 'dropout': [0.4, 0.3],
-                'batch_norm': [False, False]
-            },
-        },
-        # optimizer={
-        #     'name': Adam,
-        #     'kwargs': {'learning_rate': 0.0001}
-        # },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*480,
-                        'decay_steps': 100*480,
-                    }
-                }
-            }
-        },
-        cv=GroupShuffleSplit,
-        cv_kwargs={
-            'n_splits': 1,
-            'train_size': 0.7,
-            'random_state': 515,
-        },
-        epochs=100,
-        batch_size=64,
-        building_model_requires_development_data=True,
-        loss='binary_crossentropy',
-        scoring=roc_auc_score,
-        metrics=['accuracy', 'auc'],
-        use_tensorboard=True,
-        save_model_checkpoints={
-            'save_best_only': False,
-            'save_freq': 'epoch',
-            'save_weights_only': False
-        },
-        save_learning_rate=True,
-    )
-    CNN1_R5_F32_SEX = CNN1_R5_F16_SEX._replace(
-        description='',
-        extractor_kwargs={
-            'index': {
-                'exclude_train_aliases': True,
-                'small_subset': True,
-            },
-            'labels': {},
-            'features': {
-                'mode': 'raw',
-                'precision': 32,
-                'ribeiro': False,
-            },
-        },
-    )
-    CNN1_R5_F64_SEX = CNN1_R5_F16_SEX._replace(
-        description='',
-        extractor_kwargs={
-            'index': {
-                'exclude_train_aliases': True,
-                'small_subset': True,
-            },
-            'labels': {},
-            'features': {
-                'mode': 'raw',
-                'precision': 64,
-                'ribeiro': False,
-            },
-        },
-    )
-    CNN1_R5_F16_SEX_GENERATOR = CNN1_R5_F16_SEX._replace(
-        description='',
-        extractor_kwargs={
-            'index': {
-                'exclude_train_aliases': True,
-                'small_subset': True,
-            },
-            'labels': {},
-            'features': {
-                'mode': 'raw',
-                'precision': 16,
-                'ribeiro': False,
-                'fits_in_memory': False
+                'batch_norm': [False, False],
+                'regularizer': 0.001
             },
         },
     )
