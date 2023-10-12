@@ -94,16 +94,15 @@ def _cache(f, args, kwargs, is_method=False):
             try:
                 settings.validator.validate_consistency(
                     [current_metadata, cached_metadata])
+                cached_result = pickle.load(file)
+                log.debug('Cached file successfully loaded!')
+                return cached_result
             except MetadataConsistencyException as e:
                 log.debug(f'Metadata for {os.path.basename(path)} '
                           f'inconsistent, re-computing. {e}')
-
-            cached_result = pickle.load(file)
-            log.debug('Cached file successfully loaded!')
-            return cached_result
-
-    log.debug(f'Cache file {os.path.basename(path)} '
-              f'not found, re-computing!')
+    else:
+        log.debug(f'Cache file {os.path.basename(path)} '
+                  f'not found, re-computing!')
 
     results = f(*args, **kwargs)
     with open(path, 'wb') as file:
