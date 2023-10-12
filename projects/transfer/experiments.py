@@ -454,7 +454,7 @@ class Source(Experiment, Enum):
         extractor_kwargs={
             'index': {
                 'exclude_train_aliases': True,
-                'small_subset': True,
+                'small_subset': 0.05,
             },
             'labels': {},
             'features': {
