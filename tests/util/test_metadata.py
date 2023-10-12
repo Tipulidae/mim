@@ -50,13 +50,13 @@ class TestMetadata:
 
         md = Metadata()
 
-        assert expected == md.report(conda=False)
+        assert expected == md.report(environment=False)
 
         include = {}
         while expected:
             k, v = expected.popitem()
             include[k] = False
-            assert expected == md.report(conda=False, **include)
+            assert expected == md.report(environment=False, **include)
 
 
 class TestValidator:

@@ -24,7 +24,7 @@ from mim.cross_validation import CrossValidationWrapper, \
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
-from mim.util.metadata import Metadata
+from mim.util.metadata import Metadata, Validator
 from mim.util.util import callable_to_string, keras_model_summary_as_string
 from mim.experiments.results import ExperimentResult, TestResult, Result
 import mim.experiments.hyper_parameter as hp
@@ -63,7 +63,7 @@ class Experiment(NamedTuple):
     skip_compile: bool = False
     random_state: Union[int, hp.Param] = 123
     scoring: Any = roc_auc_score
-    log_conda_env: bool = False
+    log_environment: bool = True
     alias: str = ''
     parent_base: str = None
     parent_name: str = None
@@ -156,7 +156,7 @@ class Experiment(NamedTuple):
         )
 
         results = TestResult(
-            metadata=Metadata().report(conda=self.log_conda_env),
+            metadata=Metadata().report(conda=self.log_environment),
             targets=targets,
             predictions=predictions
         )
@@ -178,21 +178,18 @@ class Experiment(NamedTuple):
         cv = self.get_cross_validation(data.predefined_splits)
 
         if self.has_train_results:
-            # trunk-ignore(bandit/B301)
             results = pd.read_pickle(self.train_result_path)
-            # TODO: enable this again when I get the micromamba environment
-            # logging to work!
-            # md = Metadata().report(conda=self.log_conda_env)
-            # Validator(
-            #     allow_uncommitted=False,
-            #     allow_different_commits=False,
-            #     allow_different_branches=False,
-            #     allow_different_environments=False
-            # ).validate_consistency([md, results.metadata])
+            md = Metadata().report(conda=self.log_environment)
+            Validator(
+                allow_uncommitted=False,
+                allow_different_commits=False,
+                allow_different_branches=False,
+                allow_different_environments=False
+            ).validate_consistency([md, results.metadata])
         else:
             results = ExperimentResult(
                 feature_names=data.feature_names,
-                metadata=Metadata().report(conda=self.log_conda_env),
+                metadata=Metadata().report(conda=self.log_environment),
                 experiment_summary=self.asdict(),
                 path=self.base_path,
                 total_splits=cv.get_n_splits()
@@ -223,6 +220,8 @@ class Experiment(NamedTuple):
                 verbose=self.verbose
             )
             results.add(train_result, validation_result)
+            if self.save_results:
+                pd.to_pickle(results, self.train_result_path)
 
         log.info(f'Finished computing scores for {self.name} in '
                  f'{time() - t}s. ')

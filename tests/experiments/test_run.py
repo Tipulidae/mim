@@ -17,7 +17,7 @@ class SmallTestExperiment(Experiment, Enum):
         model_kwargs={'n_estimators': 10},
         save_model=False,
         save_results=False,
-        log_conda_env=False  # True (which is default) is a little slow
+        log_environment=False  # True (which is default) is a little slow
     )
 
     test_keras = Experiment(
@@ -44,7 +44,7 @@ class SmallTestExperiment(Experiment, Enum):
         loss='binary_crossentropy',
         metrics=['accuracy'],
         scoring=sparse_categorical_accuracy,
-        log_conda_env=False,
+        log_environment=False,
         save_model=False,
         save_results=False
     )
