@@ -1,4 +1,4 @@
-import subprocess  # trunk-ignore(bandit/B404)
+import subprocess
 from os import listdir
 from os.path import isfile, join, getmtime, abspath
 from datetime import datetime
@@ -91,16 +91,15 @@ class Metadata:
         return {f: {'changed': self._file_modified_date(f)} for f in
                 self._all_files()}
 
-    def conda(self):
+    def environment(self):
         """
-        :return: Returns the output from running "conda list", which is to
+        :return: Returns the output from running "micromamba list", which is to
         say, all the installed packages in the currently active environment.
         """
-        return self._bash_command(['micromamba', 'list'])
+        return self._bash_command(['bash', '-c', '$MAMBA_EXE list'])
 
     @staticmethod
     def _bash_command(array):
-        # trunk-ignore(bandit/B603)
         return subprocess.check_output([] + array).strip().decode('UTF8')
 
     def _all_files(self):
@@ -177,7 +176,9 @@ class Validator:
         """
         self._validate_uncommitted_changes(metadata)
         self._validate_same_commit(metadata)
+        self._validate_same_branch(metadata)
         self._validate_timestamp(metadata)
+        self._validate_same_environment(metadata)
         self._validate_files(metadata)
         return True
 
@@ -231,11 +232,11 @@ class Validator:
             envs = set()
             for md in metadata:
                 try:
-                    envs.add(md['conda'])
+                    envs.add(md['environment'])
                 except KeyError as e:
                     raise MetadataConsistencyException(
                         'Metadata incomplete! No information about '
-                        'conda environment.') from e
+                        'python environment.') from e
 
                 if len(envs) > 1:
                     raise MetadataConsistencyException(

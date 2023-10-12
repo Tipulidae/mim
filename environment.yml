@@ -25,6 +25,7 @@ dependencies:
   - xgboost
   - lxml
   - h5py
+  - conda-lock
   - tensorflow-gpu=2.12
   - pip:
     - ecg_plot

@@ -1,7 +1,6 @@
 import hashlib
 import inspect
 import os
-# trunk-ignore(bandit/B403)
 import pickle
 from itertools import starmap
 from types import FunctionType
@@ -88,31 +87,28 @@ def _cache(f, args, kwargs, is_method=False):
     path = function_to_cache_path(f, args, kwargs, is_method=is_method)
     current_metadata = Metadata().report(conda=False)
     if os.path.isfile(path):
-        try:
-            log.debug(f'Loading cached result for {os.path.basename(path)}.')
+        log.debug(f'Loading cached result for {os.path.basename(path)}.')
 
-            with open(path, 'rb') as file:
-                # trunk-ignore(bandit/B301)
-                cached_result, cached_metadata = pickle.load(
-                    file,
-                )
-            settings.validator.validate_consistency(
-                [current_metadata, cached_metadata])
+        with open(path, 'rb') as file:
+            cached_metadata = pickle.load(file)
+            try:
+                settings.validator.validate_consistency(
+                    [current_metadata, cached_metadata])
+            except MetadataConsistencyException:
+                log.debug(f'Metadata for {os.path.basename(path)} '
+                          f'inconsistent, re-computing!')
 
+            cached_result = pickle.load(file)
+            log.debug('Cached file successfully loaded!')
             return cached_result
-        except MetadataConsistencyException:
-            log.debug(f'Metadata for {os.path.basename(path)} '
-                      f'inconsistent, re-computing!')
 
     log.debug(f'Cache file {os.path.basename(path)} '
               f'not found, re-computing!')
 
     results = f(*args, **kwargs)
     with open(path, 'wb') as file:
-        pickle.dump(
-            (results, current_metadata),
-            file,
-        )
+        pickle.dump(current_metadata, file)
+        pickle.dump(results, file)
     return results
 
 
