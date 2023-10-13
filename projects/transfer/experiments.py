@@ -7,7 +7,7 @@ from keras.optimizers import Adam
 from mim.experiments.experiments import Experiment
 from mim.models.util import CosineDecayWithWarmup
 from projects.transfer.extractor import TargetTask, SourceTask
-from projects.transfer.models import cnn, resnet_v1, resnet_v2
+from projects.transfer.models import cnn, resnet_v1, resnet_v2, pretrained
 
 
 class Target(Experiment, Enum):
@@ -330,6 +330,56 @@ class Target(Experiment, Enum):
         save_learning_rate=True,
     )
 
+    PT_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R_SEX',
+                'commit': 'bdaca8d1d5a01f38e80f139ba0afc9f9d4221512',
+                'epoch': 40,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+            },
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+        optimizer={
+            'name': Adam,
+            'kwargs': {
+                'learning_rate': {
+                    'scheduler': CosineDecayWithWarmup,
+                    'scheduler_kwargs': {
+                        'initial_learning_rate': 0.0,
+                        'warmup_target': 1e-4,
+                        'alpha': 1e-5,
+                        'warmup_steps': 10*40,
+                        'decay_steps': 20*40,
+                    }
+                }
+            }
+        },
+        epochs=100,
+        batch_size=512,
+        unfreeze_at_epoch=30,
+        building_model_requires_development_data=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+    )
+
 
 class Source(Experiment, Enum):
     RN1_R_SEX = Experiment(
@@ -443,7 +493,7 @@ class Source(Experiment, Enum):
         save_model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
-            'save_weights_only': True
+            'save_weights_only': False
         },
         epochs=200,
         batch_size=512,

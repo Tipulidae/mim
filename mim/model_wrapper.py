@@ -150,6 +150,23 @@ class RuleOutLogger(keras.callbacks.Callback):
         logs['val_rule_out'] = rule_out(self.y_val, pred_val)
 
 
+class UnfreezeModel(keras.callbacks.Callback):
+    def __init__(self, unfreeze_epoch):
+        super().__init__()
+        self.unfreeze_epoch = unfreeze_epoch
+
+    def on_epoch_end(self, epoch, logs=None):
+        if epoch != self.unfreeze_epoch:
+            return
+
+        log.debug('Unfreezing model layers')
+
+        # for layer in self.model.layers:
+        #     layer.trainable = True
+        self.model.trainable = True
+        self.model.make_train_function(force=True)
+
+
 class FLLogger(keras.callbacks.Callback):
     def __init__(self, train, val):
         super().__init__()
@@ -205,6 +222,7 @@ class KerasWrapper(Model):
             class_weight=None,
             reduce_lr_on_plateau=None,
             plot_model=True,
+            unfreeze_at_epoch=-1,
             **kwargs
     ):
         # model = LossModel(model)
@@ -232,6 +250,7 @@ class KerasWrapper(Model):
         self.reduce_lr_on_plateau = reduce_lr_on_plateau
         self.rule_out_logger = rule_out_logger
         self.plot_model = plot_model
+        self.unfreeze_at_epoch = unfreeze_at_epoch
 
     def fit(self, training_data, validation_data=None, split_number=None,
             **kwargs):
@@ -300,6 +319,9 @@ class KerasWrapper(Model):
             callbacks.append(
                 RuleOutLogger(training_data, validation_data)
             )
+        if self.unfreeze_at_epoch > 0:
+            callbacks.append(
+                UnfreezeModel(unfreeze_epoch=self.unfreeze_at_epoch))
 
         return callbacks
 

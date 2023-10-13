@@ -9,6 +9,7 @@ from keras.layers import (
     Dense
 )
 
+from mim.models.load import load_model_from_experiment_result
 from mim.models.util import (
     cnn_helper, mlp_helper, ResidualUnit, ResidualUnitV2
 )
@@ -31,6 +32,17 @@ def cnn(
         x = mlp_helper(x, **ffnn_kwargs)
     output = Dense(units=1, activation='sigmoid', kernel_regularizer='l2')(x)
 
+    return keras.Model(inp, output)
+
+
+def pretrained(train, validation=None, from_xp=None, final_mlp_kwargs=None):
+    pretrained_model = load_model_from_experiment_result(**from_xp)
+    inp = pretrained_model.input
+    x = pretrained_model.output
+
+    if final_mlp_kwargs:
+        x = mlp_helper(x, **final_mlp_kwargs)
+    output = Dense(units=1, activation='sigmoid', kernel_regularizer='l2')(x)
     return keras.Model(inp, output)
 
 

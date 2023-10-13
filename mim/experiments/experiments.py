@@ -76,6 +76,7 @@ class Experiment(NamedTuple):
     save_model_checkpoints: Union[bool, dict] = False
     use_tensorboard: bool = False
     save_learning_rate: bool = False
+    unfreeze_at_epoch: int = -1
     ensemble: int = 1
     rule_out_logger: bool = False
     verbose: int = 1
@@ -339,7 +340,8 @@ class Experiment(NamedTuple):
                 use_tensorboard=self.use_tensorboard,
                 save_learning_rate=self.save_learning_rate,
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
-                rule_out_logger=self.rule_out_logger
+                rule_out_logger=self.rule_out_logger,
+                unfreeze_at_epoch=self.unfreeze_at_epoch
             )
 
             if verbose:
