@@ -37,6 +37,9 @@ def cnn(
 def resnet_v1(
         train, validation=None, residual_kwargs=None
 ):
+    if residual_kwargs is None:
+        residual_kwargs = {}
+
     signal = Input(shape=(4096, 8), dtype=np.float16, name='signal')
     x = Conv1D(64, 17, padding='same', use_bias=False,
                kernel_initializer='he_normal')(signal)
