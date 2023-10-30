@@ -352,18 +352,15 @@ class Presenter:
         #
         # return history
 
-    def max_auc(self):
+    def max_auc(self, like='.*'):
         def get_max_auc(xp):
-            return self.history(
-                xp, columns=['val_auc'], folds='first'
-            ).max()[0]
+            return xp.validation_history[0]['val_auc'].max()
 
-        auc = pd.DataFrame({
-            'final_auc': self.scores()['auc'],
-            'max_auc': {xp: get_max_auc(xp) for xp in self.results},
-        })
-        auc['overfit'] = auc.max_auc - auc.final_auc
-        return auc
+        results = {}
+        for name, xp in self._results_that_match_pattern(like):
+            results[name] = get_max_auc(xp)
+
+        return pd.Series(results)
 
     def best_during_training(self, column='auc', bigger_is_better=True):
         def best_and_final(xp):

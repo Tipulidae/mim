@@ -529,6 +529,9 @@ class CosineDecayWithWarmup(LearningRateSchedule):
         name=None,
         warmup_target=None,
         warmup_steps=0,
+        decay_epochs=0,
+        warmup_epochs=0,
+        steps_per_epoch=0
     ):
         """Applies cosine decay to the learning rate.
 
@@ -539,7 +542,7 @@ class CosineDecayWithWarmup(LearningRateSchedule):
             Number of steps to decay over.
           alpha: A scalar `float32` or `float64` `Tensor` or a Python int.
             Minimum learning rate value for decay as a fraction of
-            `initial_learning_rate`.
+            `warmup_target`.
           name: String. Optional name of the operation.  Defaults to
             'CosineDecay'.
           warmup_target: None or a scalar `float32` or `float64` `Tensor` or a
@@ -552,13 +555,17 @@ class CosineDecayWithWarmup(LearningRateSchedule):
             Number of steps to warmup over.
         """
         super().__init__()
-
         self.initial_learning_rate = initial_learning_rate
-        self.decay_steps = decay_steps
         self.alpha = alpha
         self.name = name
-        self.warmup_steps = warmup_steps
         self.warmup_target = warmup_target
+
+        if steps_per_epoch > 0 and decay_epochs > 0:
+            self.decay_steps = math.ceil(decay_epochs * steps_per_epoch)
+            self.warmup_steps = math.ceil(warmup_epochs * steps_per_epoch)
+        else:
+            self.decay_steps = decay_steps
+            self.warmup_steps = warmup_steps
 
     def _decay_function(self, step, decay_steps, decay_from_lr, dtype):
         with tf.name_scope(self.name or "CosineDecay"):
@@ -628,5 +635,5 @@ class CosineDecayWithWarmup(LearningRateSchedule):
             "alpha": self.alpha,
             "name": self.name,
             "warmup_target": self.warmup_target,
-            "warmup_steps": self.warmup_steps,
+            "warmup_steps": self.warmup_steps
         }

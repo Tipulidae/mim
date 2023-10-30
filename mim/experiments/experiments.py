@@ -3,6 +3,7 @@
 import os
 import shutil
 import re
+import math
 from copy import copy
 from time import time
 from pathlib import Path
@@ -52,6 +53,8 @@ class Experiment(NamedTuple):
     save_results: bool = True
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
+    optimizer_kwargs: dict = {}
+    learning_rate: Any = 0.01
     loss: Any = 'binary_crossentropy'
     loss_kwargs: Any = None
     loss_weights: Any = None
@@ -76,7 +79,7 @@ class Experiment(NamedTuple):
     save_model_checkpoints: Union[bool, dict] = False
     use_tensorboard: bool = False
     save_learning_rate: bool = False
-    unfreeze_at_epoch: int = -1
+    unfreeze_after_epoch: int = -1
     ensemble: int = 1
     rule_out_logger: bool = False
     verbose: int = 1
@@ -297,22 +300,28 @@ class Experiment(NamedTuple):
             reset_random_generators(self.random_state + split_number)
             model = self.model(**model_kwargs)
 
-        return self._wrap_model(model, resume_from_epoch=resume_from_epoch)
+        return self._wrap_model(
+            model, train_size=len(train), resume_from_epoch=resume_from_epoch)
 
-    def _wrap_model(self, model, resume_from_epoch=0, verbose=1):
+    def _make_optimizer(self, train_size=0):
+        if isinstance(self.learning_rate, float):
+            lr = self.learning_rate
+        else:
+            kwargs = copy(self.learning_rate['kwargs'])
+            if 'steps_per_epoch' in kwargs:
+                kwargs['steps_per_epoch'] = math.ceil(
+                    train_size / self.batch_size)
+
+            lr = self.learning_rate['scheduler'](**kwargs)
+        optimizer = self.optimizer(
+            learning_rate=lr,
+            **self.optimizer_kwargs
+        )
+        return optimizer
+
+    def _wrap_model(self, model, train_size, resume_from_epoch=0, verbose=1):
         if isinstance(model, tf.keras.Model):
-            # TODO: refactor this! :(
-            if isinstance(self.optimizer, dict):
-                optimizer_kwargs = copy(self.optimizer['kwargs'])
-                optimizer = self.optimizer['name']
-                if 'learning_rate' in optimizer_kwargs:
-                    lr = optimizer_kwargs.pop('learning_rate')
-                    if isinstance(lr, dict):
-                        lr = lr['scheduler'](**lr['scheduler_kwargs'])
-                    optimizer_kwargs['learning_rate'] = lr
-                optimizer = optimizer(**optimizer_kwargs)
-            else:
-                optimizer = self.optimizer
+            optimizer = self._make_optimizer(train_size=train_size)
 
             if callable(self.loss):
                 loss = self.loss(**self.loss_kwargs)
@@ -341,7 +350,7 @@ class Experiment(NamedTuple):
                 save_learning_rate=self.save_learning_rate,
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
                 rule_out_logger=self.rule_out_logger,
-                unfreeze_at_epoch=self.unfreeze_at_epoch
+                unfreeze_after_epoch=self.unfreeze_after_epoch
             )
 
             if verbose:

@@ -330,6 +330,137 @@ class Target(Experiment, Enum):
         save_learning_rate=True,
     )
 
+    PT_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R_SEX',
+                'commit': '32c9a77ea6c7def6d0d78a31c547d47069c75606',
+                'epoch': 59,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-4,
+                'alpha': 0.1,
+                'warmup_epochs': 10,
+                'decay_epochs': 20,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=100,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+    )
+    PT_RN1_R90 = PT_RN1_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_R80 = PT_RN1_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_R70 = PT_RN1_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_R60 = PT_RN1_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_R50 = PT_RN1_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_R40 = PT_RN1_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_R30 = PT_RN1_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_R20 = PT_RN1_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_R10 = PT_RN1_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+
     PT_RN2_R100 = Experiment(
         description='Uses RN2 model trained to predict sex.',
         model=pretrained,
@@ -346,6 +477,7 @@ class Target(Experiment, Enum):
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
+                'dropout': 0.3
             },
         },
         extractor=TargetTask,
@@ -355,29 +487,101 @@ class Target(Experiment, Enum):
             'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': True
         },
-        optimizer={
-            'name': Adam,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
             'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 1e-4,
-                        'alpha': 1e-5,
-                        'warmup_steps': 10*40,
-                        'decay_steps': 20*40,
-                    }
-                }
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-4,
+                'alpha': 0.1,
+                'warmup_epochs': 10,
+                'decay_epochs': 20,
+                'steps_per_epoch': -1
             }
         },
         epochs=100,
         batch_size=512,
-        unfreeze_at_epoch=30,
+        unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
+        use_predefined_splits=True,
         loss='binary_crossentropy',
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
+    )
+    PT_RN2_R90 = PT_RN2_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN2_R80 = PT_RN2_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN2_R70 = PT_RN2_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN2_R60 = PT_RN2_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN2_R50 = PT_RN2_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN2_R40 = PT_RN2_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN2_R30 = PT_RN2_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN2_R20 = PT_RN2_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN2_R10 = PT_RN2_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
     )
 
 

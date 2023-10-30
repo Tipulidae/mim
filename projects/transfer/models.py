@@ -21,10 +21,6 @@ def cnn(
         cnn_kwargs=None,
         ffnn_kwargs=None,
 ):
-    # inp = {
-    #     key: Input(shape=value)
-    #     for key, value in train.feature_tensor_shape.items()
-    # }
 
     inp = Input(shape=train.feature_tensor_shape)
     x = cnn_helper(inp, **cnn_kwargs)
@@ -36,9 +32,7 @@ def cnn(
 
 
 def pretrained(train, validation=None, from_xp=None, final_mlp_kwargs=None):
-    pretrained_model = load_model_from_experiment_result(**from_xp)
-    inp = pretrained_model.input
-    x = pretrained_model.output
+    inp, x = load_model_from_experiment_result(**from_xp)
 
     if final_mlp_kwargs:
         x = mlp_helper(x, **final_mlp_kwargs)

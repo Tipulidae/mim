@@ -155,16 +155,13 @@ class UnfreezeModel(keras.callbacks.Callback):
         super().__init__()
         self.unfreeze_epoch = unfreeze_epoch
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, logs=None):
         if epoch != self.unfreeze_epoch:
             return
 
         log.debug('Unfreezing model layers')
-
-        # for layer in self.model.layers:
-        #     layer.trainable = True
         self.model.trainable = True
-        self.model.make_train_function(force=True)
+        _ = self.model.make_train_function(force=True)
 
 
 class FLLogger(keras.callbacks.Callback):
@@ -222,10 +219,9 @@ class KerasWrapper(Model):
             class_weight=None,
             reduce_lr_on_plateau=None,
             plot_model=True,
-            unfreeze_at_epoch=-1,
+            unfreeze_after_epoch=-1,
             **kwargs
     ):
-        # model = LossModel(model)
         super().__init__(model, can_use_tf_dataset=True, **kwargs)
         if not skip_compile:
             self.model.compile(
@@ -250,7 +246,7 @@ class KerasWrapper(Model):
         self.reduce_lr_on_plateau = reduce_lr_on_plateau
         self.rule_out_logger = rule_out_logger
         self.plot_model = plot_model
-        self.unfreeze_at_epoch = unfreeze_at_epoch
+        self.unfreeze_after_epoch = unfreeze_after_epoch
 
     def fit(self, training_data, validation_data=None, split_number=None,
             **kwargs):
@@ -270,6 +266,7 @@ class KerasWrapper(Model):
             )
         if self.batch_size < 0:
             self.batch_size = len(training_data)
+
         return super().fit(
             training_data,
             validation_data=validation_data,
@@ -319,9 +316,11 @@ class KerasWrapper(Model):
             callbacks.append(
                 RuleOutLogger(training_data, validation_data)
             )
-        if self.unfreeze_at_epoch > 0:
+        if self.unfreeze_after_epoch > 0:
             callbacks.append(
-                UnfreezeModel(unfreeze_epoch=self.unfreeze_at_epoch))
+                UnfreezeModel(
+                    unfreeze_epoch=self.unfreeze_after_epoch,
+                ))
 
         return callbacks
 
@@ -334,14 +333,14 @@ class KerasWrapper(Model):
         return False
 
     def save(self, split_number):
-        name = "model.keras"
+        name = "model.tf"
         if split_number is None:
             split_folder = ""
         else:
             split_folder = f'split_{split_number}'
 
         checkpoint = os.path.join(self.checkpoint_path, split_folder)
-        self.model.save(os.path.join(checkpoint, name))
+        self.model.save(os.path.join(checkpoint, name), save_format='tf')
 
     def _prediction(self, x):
         prediction = self.model.predict(x.batch(self.batch_size))

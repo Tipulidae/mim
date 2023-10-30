@@ -56,17 +56,16 @@ def load_model_from_experiment_result(
     model = keras.models.load_model(filepath=xp_model_path, compile=False)
     model.trainable = trainable
 
-    if input_key is None:
-        inp = model.input
-    else:
-        inp = model.input[input_key]
-    model = keras.Model(inp, model.layers[final_layer_index].output)
-
     if suffix is not None:
         for layer in model.layers:
             layer._name += suffix
 
-    return model
+    if input_key is None:
+        inp = model.input
+    else:
+        inp = model.input[input_key]
+
+    return inp, model.layers[final_layer_index].output
 
 
 def load_ribeiro_model(freeze_resnet=False, suffix=None):
