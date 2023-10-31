@@ -45,6 +45,78 @@ class Target(Experiment, Enum):
         use_tensorboard=True,
         save_learning_rate=True,
     )
+    RN1_R090 = RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+    )
+    RN1_R080 = RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+    )
+    RN1_R070 = RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+    )
+    RN1_R060 = RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+    )
+    RN1_R050 = RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+    )
+    RN1_R040 = RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+    )
+    RN1_R030 = RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+    )
+    RN1_R020 = RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+    )
+    RN1_R010 = RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+    )
     RN2_RAW_100 = Experiment(
         description='',
         model=resnet_v2,
