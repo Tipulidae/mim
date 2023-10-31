@@ -171,10 +171,8 @@ class Target(Experiment, Enum):
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': False},
         },
-        optimizer={
-            'name': Adam,
-            'kwargs': {'learning_rate': 0.0001}
-        },
+        optimizer=Adam,
+        learning_Rate=0.0001,
         epochs=100,
         batch_size=64,
         use_predefined_splits=True,
@@ -286,6 +284,128 @@ class Target(Experiment, Enum):
             }
         },
         save_learning_rate=True,
+    )
+
+    PT_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R_SEX',
+                'commit': '4bbad47036ea117143012a5089fc9b9e3f5d8956',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -4,
+                'suffix': '_cnn1',
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=100,
+        batch_size=64,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+    )
+    PT_CNN1_R090 = PT_CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
+    )
+    PT_CNN1_R080 = PT_CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
+    )
+    PT_CNN1_R070 = PT_CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
+    )
+    PT_CNN1_R060 = PT_CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
+    )
+    PT_CNN1_R050 = PT_CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
+    )
+    PT_CNN1_R040 = PT_CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
+    )
+    PT_CNN1_R030 = PT_CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
+    )
+    PT_CNN1_R020 = PT_CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
+    )
+    PT_CNN1_R010 = PT_CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+            'fits_in_memory': True
+        },
     )
 
     PT_RN1_R100 = Experiment(
