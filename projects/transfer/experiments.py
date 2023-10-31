@@ -11,6 +11,40 @@ from projects.transfer.models import cnn, resnet_v1, resnet_v2, pretrained
 
 
 class Target(Experiment, Enum):
+    RN1_R100 = Experiment(
+        description='Training the ResNet v1 from scratch.',
+        model=resnet_v1,
+        model_kwargs={},
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True,
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 5e-4,
+                'alpha': 1e-6,
+                'warmup_epochs': 10,
+                'decay_epochs': 90,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=100,
+        batch_size=512,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_learning_rate=True,
+    )
     RN2_RAW_100 = Experiment(
         description='',
         model=resnet_v2,
@@ -21,20 +55,16 @@ class Target(Experiment, Enum):
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
         },
-        optimizer={
-            'name': Adam,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
             'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        # There seems to be 40 steps per epoch.
-                        'warmup_steps': 10*40,
-                        'decay_steps': 190*40,
-                    }
-                }
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 5e-4,
+                'alpha': 1e-6,
+                'warmup_epochs': 10,
+                'decay_epochs': 190,
             }
         },
         epochs=200,
@@ -53,42 +83,12 @@ class Target(Experiment, Enum):
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
         },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*36,
-                        'decay_steps': 190*36,
-                    }
-                }
-            }
-        },
     )
     RN2_RAW_80 = RN2_RAW_100._replace(
         extractor_kwargs={
             'index': {'train_percent': 0.8},
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
-        },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*32,
-                        'decay_steps': 190*32,
-                    }
-                }
-            }
         },
     )
     RN2_RAW_70 = RN2_RAW_100._replace(
@@ -97,42 +97,12 @@ class Target(Experiment, Enum):
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
         },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*28,
-                        'decay_steps': 190*28,
-                    }
-                }
-            }
-        },
     )
     RN2_RAW_60 = RN2_RAW_100._replace(
         extractor_kwargs={
             'index': {'train_percent': 0.6},
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
-        },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*24,
-                        'decay_steps': 190*24,
-                    }
-                }
-            }
         },
     )
     RN2_RAW_50 = RN2_RAW_100._replace(
@@ -141,42 +111,12 @@ class Target(Experiment, Enum):
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
         },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*20,
-                        'decay_steps': 190*20,
-                    }
-                }
-            }
-        },
     )
     RN2_RAW_40 = RN2_RAW_100._replace(
         extractor_kwargs={
             'index': {'train_percent': 0.4},
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
-        },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*16,
-                        'decay_steps': 190*16,
-                    }
-                }
-            }
         },
     )
     RN2_RAW_30 = RN2_RAW_100._replace(
@@ -185,21 +125,6 @@ class Target(Experiment, Enum):
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
         },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*12,
-                        'decay_steps': 190*12,
-                    }
-                }
-            }
-        },
     )
     RN2_RAW_20 = RN2_RAW_100._replace(
         extractor_kwargs={
@@ -207,42 +132,12 @@ class Target(Experiment, Enum):
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
         },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*8,
-                        'decay_steps': 190*8,
-                    }
-                }
-            }
-        },
     )
     RN2_RAW_10 = RN2_RAW_100._replace(
         extractor_kwargs={
             'index': {'train_percent': 0.1},
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
-        },
-        optimizer={
-            'name': Adam,
-            'kwargs': {
-                'learning_rate': {
-                    'scheduler': CosineDecayWithWarmup,
-                    'scheduler_kwargs': {
-                        'initial_learning_rate': 0.0,
-                        'warmup_target': 5e-4,
-                        'alpha': 1e-6,
-                        'warmup_steps': 10*4,
-                        'decay_steps': 190*4,
-                    }
-                }
-            }
         },
     )
 
@@ -287,6 +182,69 @@ class Target(Experiment, Enum):
         loss='binary_crossentropy',
         scoring=roc_auc_score,
         use_tensorboard=True,
+    )
+    CNN1_R090 = CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
+    )
+    CNN1_R080 = CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
+    )
+    CNN1_R070 = CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
+    )
+    CNN1_R060 = CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
+    )
+    CNN1_R050 = CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
+    )
+    CNN1_R040 = CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
+    )
+    CNN1_R030 = CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
+    )
+    CNN1_R020 = CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
+    )
+    CNN1_R010 = CNN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
     )
     CNN2_R100 = CNN1_R100._replace(
         description='Changes to the CosineDecay learning schedule and adds a '
@@ -362,14 +320,14 @@ class Target(Experiment, Enum):
             'kwargs': {
                 'decay_steps': -1,
                 'initial_learning_rate': 0.0,
-                'warmup_target': 1e-4,
-                'alpha': 0.1,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
                 'warmup_epochs': 10,
-                'decay_epochs': 20,
+                'decay_epochs': 30,
                 'steps_per_epoch': -1
             }
         },
-        epochs=100,
+        epochs=200,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
