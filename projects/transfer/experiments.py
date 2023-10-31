@@ -172,7 +172,7 @@ class Target(Experiment, Enum):
             'features': {'mode': 'raw', 'ribeiro': False},
         },
         optimizer=Adam,
-        learning_Rate=0.0001,
+        learning_rate=0.0001,
         epochs=100,
         batch_size=64,
         use_predefined_splits=True,
