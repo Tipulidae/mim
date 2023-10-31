@@ -457,7 +457,7 @@ class Target(Experiment, Enum):
         use_tensorboard=True,
         save_learning_rate=True,
     )
-    PT_RN1_R90 = PT_RN1_R100._replace(
+    PT_RN1_R090 = PT_RN1_R100._replace(
         description='',
         extractor_kwargs={
             'index': {'train_percent': 0.9},
@@ -466,7 +466,7 @@ class Target(Experiment, Enum):
             'fits_in_memory': True
         },
     )
-    PT_RN1_R80 = PT_RN1_R100._replace(
+    PT_RN1_R080 = PT_RN1_R100._replace(
         description='',
         extractor_kwargs={
             'index': {'train_percent': 0.8},
@@ -475,7 +475,7 @@ class Target(Experiment, Enum):
             'fits_in_memory': True
         },
     )
-    PT_RN1_R70 = PT_RN1_R100._replace(
+    PT_RN1_R070 = PT_RN1_R100._replace(
         description='',
         extractor_kwargs={
             'index': {'train_percent': 0.7},
@@ -484,7 +484,7 @@ class Target(Experiment, Enum):
             'fits_in_memory': True
         },
     )
-    PT_RN1_R60 = PT_RN1_R100._replace(
+    PT_RN1_R060 = PT_RN1_R100._replace(
         description='',
         extractor_kwargs={
             'index': {'train_percent': 0.6},
@@ -493,7 +493,7 @@ class Target(Experiment, Enum):
             'fits_in_memory': True
         },
     )
-    PT_RN1_R50 = PT_RN1_R100._replace(
+    PT_RN1_R050 = PT_RN1_R100._replace(
         description='',
         extractor_kwargs={
             'index': {'train_percent': 0.5},
@@ -502,7 +502,7 @@ class Target(Experiment, Enum):
             'fits_in_memory': True
         },
     )
-    PT_RN1_R40 = PT_RN1_R100._replace(
+    PT_RN1_R040 = PT_RN1_R100._replace(
         description='',
         extractor_kwargs={
             'index': {'train_percent': 0.4},
@@ -511,7 +511,7 @@ class Target(Experiment, Enum):
             'fits_in_memory': True
         },
     )
-    PT_RN1_R30 = PT_RN1_R100._replace(
+    PT_RN1_R030 = PT_RN1_R100._replace(
         description='',
         extractor_kwargs={
             'index': {'train_percent': 0.3},
@@ -520,7 +520,7 @@ class Target(Experiment, Enum):
             'fits_in_memory': True
         },
     )
-    PT_RN1_R20 = PT_RN1_R100._replace(
+    PT_RN1_R020 = PT_RN1_R100._replace(
         description='',
         extractor_kwargs={
             'index': {'train_percent': 0.2},
@@ -529,7 +529,7 @@ class Target(Experiment, Enum):
             'fits_in_memory': True
         },
     )
-    PT_RN1_R10 = PT_RN1_R100._replace(
+    PT_RN1_R010 = PT_RN1_R100._replace(
         description='',
         extractor_kwargs={
             'index': {'train_percent': 0.1},
