@@ -293,7 +293,7 @@ class Target(Experiment, Enum):
             'from_xp': {
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
-                'xp_name': 'RN1_R_SEX',
+                'xp_name': 'CNN1_R_SEX',
                 'commit': '4bbad47036ea117143012a5089fc9b9e3f5d8956',
                 'epoch': 200,
                 'trainable': False,
