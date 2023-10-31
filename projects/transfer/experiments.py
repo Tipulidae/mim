@@ -369,12 +369,13 @@ class Target(Experiment, Enum):
                 'commit': '4bbad47036ea117143012a5089fc9b9e3f5d8956',
                 'epoch': 200,
                 'trainable': False,
-                'final_layer_index': -4,
+                'final_layer_index': -6,
                 'suffix': '_cnn1',
             },
             'final_mlp_kwargs': {
-                'sizes': [100],
-                'dropout': 0.3
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
             }
         },
         extractor=TargetTask,
