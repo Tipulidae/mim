@@ -118,18 +118,20 @@ class LearningRateLogger(tf.keras.callbacks.Callback):
 
 
 class PredictionLogger(keras.callbacks.Callback):
-    def __init__(self, train, val):
+    def __init__(self, train, val, batch_size=32):
         super().__init__()
-        self.training_data = train.x(can_use_tf_dataset=True).batch(32)
-        self.validation_data = val.x(can_use_tf_dataset=True).batch(32)
+        self.training_data = train.x(can_use_tf_dataset=True).batch(batch_size)
+        self.validation_data = val.x(can_use_tf_dataset=True).batch(batch_size)
 
     def on_epoch_end(self, epoch, logs=None):
         t0 = time()
+        # This doesn't work anymore: the predictions can't be stored in
+        # the logs dict now for some reason. Could save it manually to disk
+        # instead I suppose.
         logs["predictions"] = _fix_prediction(
             self.model.predict(self.training_data))
-        if self.validation_data:
-            logs["val_predictions"] = _fix_prediction(
-                self.model.predict(self.validation_data))
+        logs["val_predictions"] = _fix_prediction(
+            self.model.predict(self.validation_data))
         log.info(f"PredictionCallback time: {time() - t0}")
 
 
@@ -287,7 +289,8 @@ class KerasWrapper(Model):
 
         if self.save_prediction_history:
             callbacks.append(
-                PredictionLogger(training_data, validation_data)
+                PredictionLogger(
+                    training_data, validation_data, batch_size=self.batch_size)
             )
         if self.save_model_checkpoints:
             path = os.path.join(self.checkpoint_path, split_folder,

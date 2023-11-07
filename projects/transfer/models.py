@@ -40,9 +40,7 @@ def pretrained(train, validation=None, from_xp=None, final_mlp_kwargs=None):
     return keras.Model(inp, output)
 
 
-def resnet_v1(
-        train, validation=None, residual_kwargs=None
-):
+def resnet_v1(train, validation=None, residual_kwargs=None):
     if residual_kwargs is None:
         residual_kwargs = {}
 
@@ -56,7 +54,24 @@ def resnet_v1(
     x, y = ResidualUnit(64, 256, **residual_kwargs)([x, y])
     x, _ = ResidualUnit(16, 320, **residual_kwargs)([x, y])
     x = Flatten()(x)
-    output = Dense(1, activation='sigmoid', kernel_initializer='he_normal')(x)
+
+    output_layers = []
+    for name in train.target_columns:
+        y = x
+        output_layers.append(
+            Dense(
+                units=1,
+                activation='sigmoid' if name == 'sex' else None,
+                kernel_initializer='he_normal',
+                name=name
+            )(y)
+        )
+
+    if len(output_layers) > 1:
+        output = output_layers
+    else:
+        output = output_layers[0]
+
     model = keras.Model(signal, output)
     return model
 

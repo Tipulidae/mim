@@ -3,7 +3,7 @@ import scipy
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from sklearn.model_selection import GroupShuffleSplit, ShuffleSplit
+from sklearn.model_selection import GroupShuffleSplit
 
 from mim.experiments.extractor import DataWrapper, Data, Extractor
 from massage import sk1718
@@ -119,7 +119,7 @@ def make_target_labels(index):
     )
 
 
-def make_source_labels(index):
+def make_source_labels(index, age=False, sex=True):
     # I don't really trust the age and sex provided by the ECG itself, so
     # instead I will look at "liggaren" for this information. The age in
     # particular is sometimes wrong for the ECG. I will use the age at the
@@ -147,6 +147,14 @@ def make_source_labels(index):
     index['age'] = (
         (index.ecg_date - index.birthday).dt.days / 365.125).astype(int)
     index['sex'] = index.sex.map({'M': 0, 'F': 1})
+
+    cols = []
+    if age:
+        cols.append('age')
+    if sex:
+        cols.append('sex')
+
+    index = index.loc[:, cols]
     return index
 
 
@@ -155,7 +163,7 @@ def make_source_index(
         exclude_test_aliases=True, exclude_test_ecgs=True,
         exclude_val_aliases=True, exclude_val_ecgs=True,
         exclude_train_aliases=False, exclude_train_ecgs=False,
-        small_subset=None,
+        train_percent=1.0,
 ):
     source = sk1718.make_ecg_table()  # We start with all the ECGs
     target = make_target_index(source)  # All target ECGs before any splits
@@ -188,18 +196,12 @@ def make_source_index(
         .sort_values(by=['ecg_id'])
         .loc[:, ['ecg_id', 'Alias', 'ecg_date']]
     )
-    if small_subset is not None:
-        log.info(f"Dropping all but {100*small_subset:.0f}% of the data "
-                 f"points")
-        splitter = ShuffleSplit(
-            n_splits=1,
-            train_size=small_subset,
-            random_state=91992
-        )
-        inds, _ = next(splitter.split(source))
-        source = source.iloc[inds, :]
 
-    return source
+    train, val = development_split(
+        source, val_percent=0.05,
+        train_percent_of_remainder=train_percent)
+
+    return train, val
 
 
 @cache
@@ -245,7 +247,6 @@ class TargetTask(Extractor):
         train, val, _ = train_val_test_split(brsm_ecgs, **self.index)
         dev = pd.concat([train, val])
 
-        # TODO: not the real target, fix this later!
         y = make_target_labels(dev, **self.labels)
 
         data = DataWrapper(
@@ -267,8 +268,7 @@ class TargetTask(Extractor):
         brsm_ecgs = make_target_index(ecg_table)
         _, _, test = train_val_test_split(brsm_ecgs, **self.index)
 
-        # TODO: not the real target, fix this later!
-        y = test.sex.map({'M': 0, 'F': 1})
+        y = make_target_labels(test, **self.labels)
 
         return DataWrapper(
             features=Data(
@@ -284,21 +284,22 @@ class TargetTask(Extractor):
 
 class SourceTask(Extractor):
     def get_development_data(self) -> DataWrapper:
-        index = make_source_index(**self.index)
+        train, val = make_source_index(**self.index)
+        dev = pd.concat([train, val])
 
-        # TODO: parameterize this!
-        y = make_source_labels(index)
+        y = make_source_labels(dev, **self.labels)
         if self.fits_in_memory is None:
             self.fits_in_memory = len(y) < 100000
 
         return DataWrapper(
             features=Data(
-                data=make_ecg_data(index.ecg_id, **self.features),
+                data=make_ecg_data(dev.ecg_id, **self.features),
                 columns=expected_lead_names,
             ),
-            labels=Data(y.sex.values, columns=['sex']),
-            index=Data(index.ecg_id.values, columns=['ecg_id']),
-            groups=index.Alias.values,
+            labels=Data(y.values, columns=list(y)),
+            index=Data(dev.ecg_id.values, columns=['ecg_id']),
+            groups=dev.Alias.values,
+            predefined_splits=len(train)*[-1] + len(val)*[0],
             fits_in_memory=self.fits_in_memory
         )
 
