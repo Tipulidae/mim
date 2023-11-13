@@ -144,6 +144,7 @@ def make_source_labels(index, age=False, sex=True):
         ((liggaren.age + 0.5) * 365.125).astype('timedelta64[D]')
     )
     index = index.join(liggaren[['birthday', 'sex']], on='Alias', how='left')
+    # Maybe I shouldn't cast this to int actually... Damn.
     index['age'] = (
         (index.ecg_date - index.birthday).dt.days / 365.125).astype(int)
     index['sex'] = index.sex.map({'M': 0, 'F': 1})

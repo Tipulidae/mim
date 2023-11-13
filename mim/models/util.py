@@ -252,7 +252,9 @@ class ResidualUnit(object):
     def __init__(self, n_samples_out, n_filters_out,
                  kernel_initializer='he_normal',
                  dropout_rate=0.8, kernel_size=17, preactivation=True,
-                 postactivation_bn=False, activation_function='relu'):
+                 postactivation_bn=False, activation_function='relu',
+                 use_se_layer=False, reduction_ratio=8,
+                 ):
         self.n_samples_out = n_samples_out
         self.n_filters_out = n_filters_out
         self.kernel_initializer = kernel_initializer
@@ -261,6 +263,8 @@ class ResidualUnit(object):
         self.preactivation = preactivation
         self.postactivation_bn = postactivation_bn
         self.activation_function = activation_function
+        self.use_se_layer = use_se_layer
+        self.reduction_ratio = reduction_ratio
 
     def _skip_connection(self, y, downsample, n_filters_in):
         """Implement skip connection."""
@@ -287,6 +291,15 @@ class ResidualUnit(object):
         else:
             x = BatchNormalization()(x)
             x = Activation(self.activation_function)(x)
+        return x
+
+    def _squeeze_excite_block(self, input):
+        x = GlobalAveragePooling1D()(input)
+        x = Reshape((1, self.n_filters_out))(x)
+        x = Dense(self.n_filters_out // self.reduction_ratio,
+                  activation='relu')(x)
+        x = Dense(self.n_filters_out, activation='sigmoid')(x)
+        x = multiply([input, x])
         return x
 
     def __call__(self, inputs):
@@ -317,6 +330,10 @@ class ResidualUnit(object):
             use_bias=False,
             kernel_initializer=self.kernel_initializer
         )(x)
+
+        if self.use_se_layer:
+            x = self._squeeze_excite_block(x)
+
         if self.preactivation:
             x = Add()([x, y])  # Sum skip connection and main connection
             y = x

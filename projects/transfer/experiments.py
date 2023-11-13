@@ -1007,6 +1007,50 @@ class Source(Experiment, Enum):
                     'Trained here to predict sex using the raw ECG signal.',
         model=resnet_v2,
     )
+    RN3_R100_SEX = Experiment(
+        description='Same as RN1, but with added Squeeze Excite (SE) layer.',
+        model=resnet_v1,
+        model_kwargs={
+            'residual_kwargs': {'use_se_layer': True}
+        },
+        extractor=SourceTask,
+        extractor_kwargs={
+            'index': {
+                'exclude_train_aliases': True,
+                'train_percent': 1.0
+            },
+            'labels': {'sex': True, 'age': False},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': False
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'steps_per_epoch': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 5e-4,
+                'alpha': 1e-6,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        use_predefined_splits=True,
+        epochs=100,
+        batch_size=512,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        metrics=['auc', 'accuracy'],
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_model_checkpoints={
+            'save_best_only': False,
+            'save_freq': 'epoch',
+            'save_weights_only': False
+        }
+    )
     CNN1_R_SEX = Experiment(
         description='M_R1_CNN1 from the serial ECGs project. Predicting '
                     'sex using the raw ECG signal.',

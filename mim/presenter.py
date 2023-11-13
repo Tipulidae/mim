@@ -352,9 +352,9 @@ class Presenter:
         #
         # return history
 
-    def max_auc(self, like='.*'):
+    def max_auc(self, like='.*', column='val_auc'):
         def get_max_auc(xp):
-            return xp.validation_history[0]['val_auc'].max()
+            return xp.validation_history[0][column].max()
 
         results = {}
         for name, xp in self._results_that_match_pattern(like):
