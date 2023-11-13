@@ -35,6 +35,35 @@ def make_ecg_data(ecg_ids):
     return data
 
 
+def make_angiographies(admission_dates):
+    # Admission dates should be a dataframe with 1 column called
+    # admission_date and index Alias
+    log.debug("Loading sectra files")
+    sectra = esc_trop.load_sectra()
+
+    log.debug("Finding angiographies")
+    angiography_codes = ['37300', '39648', '39600']
+    sectra_angio = (
+        sectra
+        .loc[sectra.sectra_code.isin(angiography_codes), :]
+        .join(admission_dates, how='inner', on='Alias')
+    )
+    dt = (sectra_angio.sectra_date -
+          sectra_angio.admission_date).dt.total_seconds() / (3600 * 24)
+    sectra_angio = (
+        sectra_angio[(dt >= -1) & (dt <= 7)]
+        .sort_values(by=['Alias', 'sectra_date'])
+        .groupby('Alias')
+        .agg({'sectra_date': 'first', 'answer': '\n\n'.join})
+    )
+    sectra_angio['has_angio'] = True
+    return (
+        pd.DataFrame(index=admission_dates.index)
+        .join(sectra_angio)
+        .fillna({'answer': 'N/A', 'has_angio': False})
+    )
+
+
 def make_annotation_documents():
     document_path = os.path.join(PATH_TO_DATA, 'sectra_documents')
     log.debug("Loading esc-trop index")

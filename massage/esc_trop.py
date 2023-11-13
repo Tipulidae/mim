@@ -1360,12 +1360,23 @@ def _make_occlusion_and_presentation(index):
     sc_segment['occlusion_less_than_3_months_old'] = \
         sc_segment.OCKL == 'Ja, <3 mån'
     sc_segment['acute_presentation'] = (
-            sc_segment.OCKLUSION == 'Ja, akut presentation (t.ex. SAT)')
+        sc_segment.OCKLUSION == 'Ja, akut presentation (t.ex. SAT)')
+    sc_segment['suspected_thrombosis'] = (
+        sc_segment.OCKLUSION.isin([
+            'Ja, akut presentation (t.ex. SAT)',
+            'Nej, men misstänkt tromb'])
+    )
+    sc_segment['no_occlusion_suspected_thrombosis'] = (
+        sc_segment.OCKLUSION == 'Nej, men misstänkt tromb')
 
     # Both OCKL and OCKLUSION columns sometimes have conflicting entries.
     # Here I only require that one of the entries satisfies the condition.
-    sc_segment = sc_segment.groupby('SID_pseudo')[
-        ['occlusion_less_than_3_months_old', 'acute_presentation']].any()
+    sc_segment = sc_segment.groupby('SID_pseudo')[[
+        'occlusion_less_than_3_months_old',
+        'acute_presentation',
+        'no_occlusion_suspected_thrombosis',
+        'suspected_thrombosis'
+    ]].any()
 
     return (
         index[['SID_pseudo']]
@@ -1558,6 +1569,8 @@ def make_omi_table(index):
         ]
     ).fillna({
         'occlusion_less_than_3_months_old': False,
+        'no_occlusion_suspected_thrombosis': False,
+        'suspected_thrombosis': False,
         'acute_presentation': False,
         'stenosis_100%': False,
         'stenosis_90-99%': False,

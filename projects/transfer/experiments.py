@@ -612,6 +612,128 @@ class Target(Experiment, Enum):
         },
     )
 
+    PTA_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+    )
+    PTA_RN1_R090 = PTA_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTA_RN1_R080 = PTA_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTA_RN1_R070 = PTA_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTA_RN1_R060 = PTA_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTA_RN1_R050 = PTA_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTA_RN1_R040 = PTA_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTA_RN1_R030 = PTA_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTA_RN1_R020 = PTA_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTA_RN1_R010 = PTA_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+
     PT_RN2_R100 = Experiment(
         description='Uses RN2 model trained to predict sex.',
         model=pretrained,
@@ -1009,6 +1131,56 @@ class Source(Experiment, Enum):
         loss='mean_absolute_error',
         scoring=r2_score,
         metrics=['mae', 'mse'],
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_model_checkpoints={
+            'save_best_only': False,
+            'save_freq': 'epoch',
+            'save_weights_only': False
+        }
+    )
+
+    RN1_R100_AGE_SEX = Experiment(
+        description='Predict age and sex using the 4-block ResNet.',
+        model=resnet_v1,
+        model_kwargs={},
+        extractor=SourceTask,
+        extractor_kwargs={
+            'index': {
+                'exclude_train_aliases': True,
+                'train_percent': 1.0
+            },
+            'labels': {'age': True, 'sex': True},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': False
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'steps_per_epoch': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 5e-4,
+                'alpha': 1e-6,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        use_predefined_splits=True,
+        epochs=100,
+        batch_size=512,
+        loss={
+            'sex': 'binary_crossentropy',
+            'age': 'mean_absolute_error'
+        },
+        loss_weights={'sex': 1.0, 'age': 0.045},
+        scoring=r2_score,
+        metrics={
+            'sex': ['acc', 'auc'],
+            'age': ['mae', 'mse']
+        },
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_learning_rate=True,

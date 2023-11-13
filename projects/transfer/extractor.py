@@ -5,7 +5,7 @@ import pandas as pd
 from tqdm import tqdm
 from sklearn.model_selection import GroupShuffleSplit
 
-from mim.experiments.extractor import DataWrapper, Data, Extractor
+from mim.experiments.extractor import DataWrapper, Data, Container, Extractor
 from massage import sk1718
 from massage.muse_ecg import expected_lead_names
 from mim.util.logs import get_logger
@@ -296,7 +296,10 @@ class SourceTask(Extractor):
                 data=make_ecg_data(dev.ecg_id, **self.features),
                 columns=expected_lead_names,
             ),
-            labels=Data(y.values, columns=list(y)),
+            labels=Container({
+                column: Data(y[[column]].values, columns=[column])
+                for column in y.columns
+            }),
             index=Data(dev.ecg_id.values, columns=['ecg_id']),
             groups=dev.Alias.values,
             predefined_splits=len(train)*[-1] + len(val)*[0],
