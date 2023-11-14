@@ -11,6 +11,58 @@ from projects.transfer.models import cnn, resnet_v1, resnet_v2, pretrained
 
 
 class Target(Experiment, Enum):
+    TEST = Experiment(
+        description='Testing the new prediction history callback',
+        model=cnn,
+        model_kwargs={
+            'cnn_kwargs': {
+                'num_layers': 2,
+                'down_sample': False,
+                'dropouts': [0.5, 0.4],
+                'pool_size': 15,
+                'filter_first': 28,
+                'filter_last': 8,
+                'kernel_first': 61,
+                'kernel_last': 17,
+                'batch_norms': [False, False],
+                'weight_decays': [0.0, 0.01],
+            },
+            'ffnn_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            },
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': False},
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 5e-4,
+                'alpha': 1e-6,
+                'warmup_epochs': 10,
+                'decay_epochs': 90,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=10,
+        batch_size=512,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
     RN1_R100 = Experiment(
         description='Training the ResNet v1 from scratch.',
         model=resnet_v1,
@@ -117,6 +169,7 @@ class Target(Experiment, Enum):
             'fits_in_memory': True,
         },
     )
+
     RN2_R100 = Experiment(
         description='',
         model=resnet_v2,
@@ -316,6 +369,7 @@ class Target(Experiment, Enum):
             'features': {'mode': 'raw', 'ribeiro': False},
         },
     )
+
     CNN2_R100 = CNN1_R100._replace(
         description='Changes to the CosineDecay learning schedule and adds a '
                     'bit of regularization to the final dense layers.',
@@ -734,6 +788,129 @@ class Target(Experiment, Enum):
         },
     )
 
+    PTAS_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age & sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE_SEX',
+                'commit': '5eb3b1586ba3a808cf6237a4c73faa6d85eefc1a',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -3,
+                'suffix': '_rn1',
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+    )
+    PTAS_RN1_R090 = PTAS_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTAS_RN1_R080 = PTAS_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTAS_RN1_R070 = PTAS_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTAS_RN1_R060 = PTAS_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTAS_RN1_R050 = PTAS_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTAS_RN1_R040 = PTAS_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTAS_RN1_R030 = PTAS_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTAS_RN1_R020 = PTAS_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PTAS_RN1_R010 = PTAS_RN1_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+
     PT_RN2_R100 = Experiment(
         description='Uses RN2 model trained to predict sex.',
         model=pretrained,
@@ -849,6 +1026,138 @@ class Target(Experiment, Enum):
         },
     )
     PT_RN2_R010 = PT_RN2_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+
+    PT_RN1_SE8_R100 = Experiment(
+        description='Uses RN1 model + SE block, trained to predict sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_SE8_R100_SEX',
+                'commit': 'ad81b5d5d8420d5192f4b634d910066683c55468',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_se8',
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PT_RN1_SE8_R090 = PT_RN1_SE8_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_SE8_R080 = PT_RN1_SE8_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_SE8_R070 = PT_RN1_SE8_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_SE8_R060 = PT_RN1_SE8_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_SE8_R050 = PT_RN1_SE8_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_SE8_R040 = PT_RN1_SE8_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_SE8_R030 = PT_RN1_SE8_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_SE8_R020 = PT_RN1_SE8_R100._replace(
+        description='',
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_SE8_R010 = PT_RN1_SE8_R100._replace(
+        description='',
         extractor_kwargs={
             'index': {'train_percent': 0.1},
             'labels': {},
@@ -1007,11 +1316,14 @@ class Source(Experiment, Enum):
                     'Trained here to predict sex using the raw ECG signal.',
         model=resnet_v2,
     )
-    RN3_R100_SEX = Experiment(
+    RN1_SE4_R100_SEX = Experiment(
         description='Same as RN1, but with added Squeeze Excite (SE) layer.',
         model=resnet_v1,
         model_kwargs={
-            'residual_kwargs': {'use_se_layer': True}
+            'residual_kwargs': {
+                'use_se_layer': True,
+                'reduction_ratio': 4
+            }
         },
         extractor=SourceTask,
         extractor_kwargs={
@@ -1045,11 +1357,36 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_learning_rate=True,
+        save_val_pred_history=True,
         save_model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
         }
+    )
+    RN1_SE8_R100_SEX = RN1_SE4_R100_SEX._replace(
+        model_kwargs={
+            'residual_kwargs': {
+                'use_se_layer': True,
+                'reduction_ratio': 8
+            }
+        },
+    )
+    RN1_SE16_R100_SEX = RN1_SE4_R100_SEX._replace(
+        model_kwargs={
+            'residual_kwargs': {
+                'use_se_layer': True,
+                'reduction_ratio': 16
+            }
+        },
+    )
+    RN1_SE24_R100_SEX = RN1_SE4_R100_SEX._replace(
+        model_kwargs={
+            'residual_kwargs': {
+                'use_se_layer': True,
+                'reduction_ratio': 24
+            }
+        },
     )
     CNN1_R_SEX = Experiment(
         description='M_R1_CNN1 from the serial ECGs project. Predicting '

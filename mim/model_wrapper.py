@@ -3,7 +3,8 @@
 import os
 from pathlib import Path
 from enum import Enum
-from time import time
+# from time import time
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -63,14 +64,8 @@ class Model:
         return data.to_dataframe(prediction)
 
     def fit(self, training_data, validation_data=None, **kwargs):
-        if self.can_use_tf_dataset:
-            train = training_data.as_dataset(**kwargs)
-            val = validation_data.as_dataset(**kwargs)
-            # print(f"{train=}, {val=}")
-            return self.model.fit(train, validation_data=val, **kwargs).history
-        else:
-            self.model.fit(*training_data.as_numpy())
-            return None
+        self.model.fit(*training_data.as_numpy())
+        return None
 
     @property
     def summary(self):
@@ -118,21 +113,32 @@ class LearningRateLogger(tf.keras.callbacks.Callback):
 
 
 class PredictionLogger(keras.callbacks.Callback):
-    def __init__(self, train, val, batch_size=32):
+    def __init__(self, train, val, batch_size=32, prediction_history=None,
+                 save_train=False, save_val=False):
         super().__init__()
         self.training_data = train.x(can_use_tf_dataset=True).batch(batch_size)
         self.validation_data = val.x(can_use_tf_dataset=True).batch(batch_size)
+        self.prediction_history = prediction_history
+        self.save_train = save_train
+        self.save_val = save_val
+        if save_train:
+            self.prediction_history['predictions'] = []
+        if save_val:
+            self.prediction_history['val_predictions'] = []
 
     def on_epoch_end(self, epoch, logs=None):
-        t0 = time()
+        # t0 = time()
         # This doesn't work anymore: the predictions can't be stored in
         # the logs dict now for some reason. Could save it manually to disk
         # instead I suppose.
-        logs["predictions"] = _fix_prediction(
-            self.model.predict(self.training_data))
-        logs["val_predictions"] = _fix_prediction(
-            self.model.predict(self.validation_data))
-        log.info(f"PredictionCallback time: {time() - t0}")
+        if self.save_train:
+            self.prediction_history["predictions"].append(
+                _fix_prediction(self.model.predict(self.training_data)))
+        if self.save_val:
+            self.prediction_history["val_predictions"].append(
+                _fix_prediction(self.model.predict(self.validation_data)))
+
+        # log.info(f"PredictionCallback time: {time() - t0}")
 
 
 class RuleOutLogger(keras.callbacks.Callback):
@@ -210,7 +216,8 @@ class KerasWrapper(Model):
             metrics=None,
             rule_out_logger=False,
             ignore_callbacks=False,
-            save_prediction_history=False,
+            save_train_prediction_history=False,
+            save_val_prediction_history=False,
             save_model_checkpoints=False,
             use_tensorboard=False,
             save_learning_rate=False,
@@ -240,7 +247,8 @@ class KerasWrapper(Model):
         self.epochs = epochs
         self.initial_epoch = initial_epoch
         self.ignore_callbacks = ignore_callbacks
-        self.save_prediction_history = save_prediction_history
+        self.save_train_prediction_history = save_train_prediction_history
+        self.save_val_prediction_history = save_val_prediction_history
         self.save_model_checkpoints = save_model_checkpoints
         self.use_tensorboard = use_tensorboard
         self.save_learning_rate = save_learning_rate
@@ -249,10 +257,11 @@ class KerasWrapper(Model):
         self.rule_out_logger = rule_out_logger
         self.plot_model = plot_model
         self.unfreeze_after_epoch = unfreeze_after_epoch
+        self.prediction_history = {}
 
     def fit(self, training_data, validation_data=None, split_number=None,
             **kwargs):
-
+        self.prediction_history = {}
         if self.plot_model:
             keras.utils.plot_model(
                 self.model,
@@ -269,9 +278,19 @@ class KerasWrapper(Model):
         if self.batch_size < 0:
             self.batch_size = len(training_data)
 
-        return super().fit(
-            training_data,
-            validation_data=validation_data,
+        train = training_data.as_dataset(
+            batch_size=self.batch_size,
+            **kwargs
+        )
+        val = validation_data.as_dataset(
+            batch_size=self.batch_size,
+            **kwargs
+        )
+        # print(f"{train=}, {val=}")
+        # return self.model.fit(train, validation_data=val, **kwargs).history
+        self.model.fit(
+            train,
+            validation_data=val,
             batch_size=self.batch_size,
             epochs=self.epochs,
             initial_epoch=self.initial_epoch,
@@ -279,6 +298,12 @@ class KerasWrapper(Model):
             class_weight=self.class_weight,
             **kwargs
         )
+        # This is honestly just daft. Why did they stop supporting vectors in
+        # the logs?
+        history = deepcopy(self.model.history.history)
+        history |= self.prediction_history
+
+        return history
 
     def _init_callbacks(self, split_number, training_data, validation_data):
         callbacks = []
@@ -287,10 +312,17 @@ class KerasWrapper(Model):
         else:
             split_folder = f'split_{split_number}'
 
-        if self.save_prediction_history:
+        if self.save_train_prediction_history or \
+                self.save_val_prediction_history:
             callbacks.append(
                 PredictionLogger(
-                    training_data, validation_data, batch_size=self.batch_size)
+                    training_data,
+                    validation_data,
+                    batch_size=self.batch_size,
+                    prediction_history=self.prediction_history,
+                    save_train=self.save_train_prediction_history,
+                    save_val=self.save_val_prediction_history
+                )
             )
         if self.save_model_checkpoints:
             path = os.path.join(self.checkpoint_path, split_folder,

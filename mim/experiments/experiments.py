@@ -75,7 +75,8 @@ class Experiment(NamedTuple):
     pre_processor_kwargs: dict = {}
     reduce_lr_on_plateau: Any = None
     ignore_callbacks: bool = False
-    save_prediction_history: bool = False
+    save_train_pred_history: bool = False
+    save_val_pred_history: bool = False
     save_model_checkpoints: Union[bool, dict] = False
     use_tensorboard: bool = False
     save_learning_rate: bool = False
@@ -344,7 +345,8 @@ class Experiment(NamedTuple):
                 metrics=fix_metrics(self.metrics),
                 skip_compile=any([self.skip_compile, resume_from_epoch > 0]),
                 ignore_callbacks=self.ignore_callbacks,
-                save_prediction_history=self.save_prediction_history,
+                save_train_prediction_history=self.save_train_pred_history,
+                save_val_prediction_history=self.save_val_pred_history,
                 save_model_checkpoints=self.save_model_checkpoints,
                 use_tensorboard=self.use_tensorboard,
                 save_learning_rate=self.save_learning_rate,
@@ -498,8 +500,8 @@ def reset_random_generators(new_seed):
 
 
 def _history_to_dataframe(history, data):
-    # history is a list of dataframes, and I want to combine them into
-    # one big dataframe
+    # history is a list of array-likes (one for each epoch), and I want to
+    # combine them into one big dataframe.
     return pd.concat(
         map(data.to_dataframe, history),
         axis=1,
