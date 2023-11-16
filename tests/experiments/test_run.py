@@ -37,10 +37,8 @@ class SmallTestExperiment(Experiment, Enum):
         batch_size=32,
         ignore_callbacks=True,
         epochs=2,
-        optimizer={
-            'name': Adam,
-            'kwargs': {'learning_rate': 1e-2}
-        },
+        optimizer=Adam,
+        learning_rate=1e-2,
         loss='binary_crossentropy',
         metrics=['accuracy'],
         scoring=sparse_categorical_accuracy,

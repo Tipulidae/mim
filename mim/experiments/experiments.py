@@ -301,8 +301,9 @@ class Experiment(NamedTuple):
             reset_random_generators(self.random_state + split_number)
             model = self.model(**model_kwargs)
 
+        train_size = 0 if train is None else len(train)
         return self._wrap_model(
-            model, train_size=len(train), resume_from_epoch=resume_from_epoch)
+            model, train_size=train_size, resume_from_epoch=resume_from_epoch)
 
     def _make_optimizer(self, train_size=0):
         if isinstance(self.learning_rate, float):

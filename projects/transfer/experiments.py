@@ -910,6 +910,9 @@ class Target(Experiment, Enum):
             'fits_in_memory': True
         },
     )
+    PTAS1000 = PTAS_RN1_R100._replace(
+        epochs=1000
+    )
 
     PT_RN2_R100 = Experiment(
         description='Uses RN2 model trained to predict sex.',
