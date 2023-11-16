@@ -1261,6 +1261,20 @@ def _extract_glasgow_vector(name, ecgs):
     )
 
 
+def _extract_glasgow_scalars(ecgs):
+    result = []
+    with h5py.File(ECG_PATH, 'r') as ecg:
+        for ecg_id in tqdm(ecgs, desc='Extracting scalars'):
+            result.append(ecg['glasgow']['scalars'][ecg_id, :])
+
+        column_names = ecg['meta']['glasgow_scalar_names'][:].astype(str)
+    return pd.DataFrame(
+        result,
+        index=ecgs.index,
+        columns=column_names
+    ).sort_index(axis=1)
+
+
 def _make_ecg_paths(index):
     """
     Given a dataframe with Alias as index and admission_date as column,

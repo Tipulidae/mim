@@ -12,7 +12,6 @@ from massage.icd_util import round_icd_to_chapter, icd_chapters, \
 
 log = get_logger("Skåne 17-18 massage")
 
-# ECG_PATH = '/ssdscratch/air-scratch-crypt/axel/sk1718_ecg.hdf5'
 ECG_PATH = '/projects/air-crypt/axel/sk1718_ecg.hdf5'
 
 
