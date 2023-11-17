@@ -7,6 +7,7 @@ from sklearn.model_selection import GroupShuffleSplit
 
 from mim.experiments.extractor import DataWrapper, Data, Container, Extractor
 from massage import sk1718
+from massage.ecg import calculate_four_last_leads
 from massage.muse_ecg import expected_lead_names
 from mim.util.logs import get_logger
 from mim.cache.decorator import cache
@@ -119,7 +120,7 @@ def make_target_labels(index):
     )
 
 
-def make_source_labels(index, age=False, sex=True):
+def make_source_labels(index, age=False, sex=True, scale_age=False):
     # I don't really trust the age and sex provided by the ECG itself, so
     # instead I will look at "liggaren" for this information. The age in
     # particular is sometimes wrong for the ECG. I will use the age at the
@@ -144,9 +145,7 @@ def make_source_labels(index, age=False, sex=True):
         ((liggaren.age + 0.5) * 365.125).astype('timedelta64[D]')
     )
     index = index.join(liggaren[['birthday', 'sex']], on='Alias', how='left')
-    # Maybe I shouldn't cast this to int actually... Damn.
-    index['age'] = (
-        (index.ecg_date - index.birthday).dt.days / 365.125).astype(int)
+    index['age'] = (index.ecg_date - index.birthday).dt.days / 365.125
     index['sex'] = index.sex.map({'M': 0, 'F': 1})
 
     cols = []
@@ -154,6 +153,8 @@ def make_source_labels(index, age=False, sex=True):
         cols.append('age')
     if sex:
         cols.append('sex')
+        if scale_age:
+            index['age'] = index['age'] / 100
 
     index = index.loc[:, cols]
     return index
@@ -207,7 +208,7 @@ def make_source_index(
 
 @cache
 def make_ecg_data(ecgs, mode, ribeiro=False, precision=16, scale=1.0,
-                  **kwargs):
+                  original_ribeiro=False, **kwargs):
     with h5py.File(sk1718.ECG_PATH, 'r') as f:
         data = np.array([f[mode][ecg] for ecg in tqdm(ecgs, 'loading ecgs')])
 
@@ -226,10 +227,20 @@ def make_ecg_data(ecgs, mode, ribeiro=False, precision=16, scale=1.0,
         shape = (len(data), 4096, 8)
         fixed_data = np.zeros(shape, dtype)
 
-        for ecg in tqdm(range(len(data)), desc='resampling ecgs'):
-            fixed_data[ecg] = resample_and_pad(data[ecg], dtype)
+        for i in tqdm(range(len(data)), desc='resampling ecgs'):
+            fixed_data[i] = resample_and_pad(data[i], dtype)
 
         data = fixed_data
+    elif original_ribeiro:
+        shape = (len(data), 4096, 12)
+        fixed_data = np.zeros(shape, dtype)
+        for i in tqdm(range(len(data)), desc='resampling and fixing ecgs'):
+            ecg = resample_and_pad(data[i], dtype)
+            ecg = calculate_four_last_leads(ecg)
+            fixed_data[i] = ecg[:, [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5]]
+
+        data = fixed_data
+
     return data
 
 
@@ -250,11 +261,24 @@ class TargetTask(Extractor):
 
         y = make_target_labels(dev, **self.labels)
 
+        data_dict = {}
+        if 'ecg_features' in self.features:
+            data_dict['ecg'] = Data(
+                make_ecg_data(dev.ecg_id, **self.features['ecg_features']),
+                columns=expected_lead_names
+            )
+        if 'flat_features' in self.features:
+            flat_features = make_source_labels(
+                dev.loc[:, ['Alias', 'ecg_date']],
+                **self.features['flat_features']
+            )
+            data_dict['flat_features'] = Data(
+                flat_features.values,
+                columns=list(flat_features)
+            )
+
         data = DataWrapper(
-            features=Data(
-                data=make_ecg_data(dev.ecg_id, **self.features),
-                columns=expected_lead_names,
-            ),
+            features=Container(data=data_dict),
             labels=Data(y.values, columns=list(y)),
             index=Data(dev.ecg_id.values, columns=['ecg_id']),
             groups=dev.Alias.values,
@@ -293,9 +317,11 @@ class SourceTask(Extractor):
             self.fits_in_memory = len(y) < 100000
 
         return DataWrapper(
-            features=Data(
-                data=make_ecg_data(dev.ecg_id, **self.features),
-                columns=expected_lead_names,
+            features=Container({
+                'ecg': Data(
+                    data=make_ecg_data(dev.ecg_id, **self.features),
+                    columns=expected_lead_names,
+                )}
             ),
             labels=Container({
                 column: Data(y[[column]].values, columns=[column])

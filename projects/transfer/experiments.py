@@ -7,7 +7,8 @@ from keras.optimizers import Adam
 from mim.experiments.experiments import Experiment
 from mim.models.util import CosineDecayWithWarmup
 from projects.transfer.extractor import TargetTask, SourceTask
-from projects.transfer.models import cnn, resnet_v1, resnet_v2, pretrained
+from projects.transfer.models import (cnn, resnet_v1, resnet_v2, pretrained,
+                                      ribeiros_resnet)
 
 
 class Target(Experiment, Enum):
@@ -264,6 +265,55 @@ class Target(Experiment, Enum):
             'labels': {},
             'features': {'mode': 'raw', 'ribeiro': True},
         },
+    )
+
+    RN1_ASR100 = Experiment(
+        description='Training the ResNet v1 from scratch. '
+                    'Uses ECG + age + sex',
+        model=resnet_v1,
+        model_kwargs={
+            'flat_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.0
+            },
+            'ecg_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True,
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 5e-4,
+                'alpha': 1e-6,
+                'warmup_epochs': 10,
+                'decay_epochs': 90,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=100,
+        batch_size=512,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
     )
 
     CNN1_R100 = Experiment(
@@ -2276,6 +2326,317 @@ class Target(Experiment, Enum):
         },
     )
 
+    PT_RN1_ASR100 = Experiment(
+        description='',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': '32c9a77ea6c7def6d0d78a31c547d47069c75606',
+                'epoch': 59,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+            },
+            'ecg_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            },
+            'flat_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.0
+            },
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PT_RN1_ASR090 = PT_RN1_ASR100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_ASR080 = PT_RN1_ASR100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_ASR070 = PT_RN1_ASR100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_ASR060 = PT_RN1_ASR100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_ASR050 = PT_RN1_ASR100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_ASR040 = PT_RN1_ASR100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_ASR030 = PT_RN1_ASR100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_ASR020 = PT_RN1_ASR100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RN1_ASR010 = PT_RN1_ASR100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True},
+                'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+            },
+            'fits_in_memory': True
+        },
+    )
+
+    PT_RIBEIRO_R100 = Experiment(
+        description='Uses the network pretrained by Ribeiro on 2M ECGs.',
+        model=ribeiros_resnet,
+        model_kwargs={
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_kwargs={
+            'index': {'train_percent': 1.0},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-2,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'auc'],
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PT_RIBEIRO_R090 = PT_RIBEIRO_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.9},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RIBEIRO_R080 = PT_RIBEIRO_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.8},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RIBEIRO_R070 = PT_RIBEIRO_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.7},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RIBEIRO_R060 = PT_RIBEIRO_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.6},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RIBEIRO_R050 = PT_RIBEIRO_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.5},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RIBEIRO_R040 = PT_RIBEIRO_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.4},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RIBEIRO_R030 = PT_RIBEIRO_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.3},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RIBEIRO_R020 = PT_RIBEIRO_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.2},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+    )
+    PT_RIBEIRO_R010 = PT_RIBEIRO_R100._replace(
+        extractor_kwargs={
+            'index': {'train_percent': 0.1},
+            'labels': {},
+            'features': {
+                'mode': 'raw',
+                'ribeiro': False,
+                'original_ribeiro': True,
+            },
+            'fits_in_memory': True
+        },
+    )
+
 
 class Source(Experiment, Enum):
     RN1_R100_SEX = Experiment(
@@ -2629,7 +2990,20 @@ class Source(Experiment, Enum):
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
-        }
+        },
+        save_val_pred_history=True
+    )
+    RN1_R100_AGE_SCALED = RN1_R100_AGE._replace(
+        description='Scales the age target by a factor 100.',
+        extractor_kwargs={
+            'index': {
+                'exclude_train_aliases': True,
+                'train_percent': 1.0
+            },
+            'labels': {'age': True, 'sex': False, 'scale_age': True},
+            'features': {'mode': 'raw', 'ribeiro': True},
+            'fits_in_memory': False
+        },
     )
 
     RN1_R100_AGE_SEX = Experiment(

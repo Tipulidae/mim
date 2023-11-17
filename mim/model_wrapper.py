@@ -12,6 +12,7 @@ import tensorflow as tf
 from tensorflow import keras
 from keras.callbacks import TensorBoard, ReduceLROnPlateau, \
     ModelCheckpoint
+from sklearn.metrics import roc_auc_score
 
 from mim.util.logs import get_logger
 from mim.util.util import keras_model_summary_as_string
@@ -114,13 +115,16 @@ class LearningRateLogger(tf.keras.callbacks.Callback):
 
 class PredictionLogger(keras.callbacks.Callback):
     def __init__(self, train, val, batch_size=32, prediction_history=None,
-                 save_train=False, save_val=False):
+                 save_train=False, save_val=False, save_auc=True):
         super().__init__()
         self.training_data = train.x(can_use_tf_dataset=True).batch(batch_size)
         self.validation_data = val.x(can_use_tf_dataset=True).batch(batch_size)
+        self.training_targets = train.y
+        self.validation_targets = val.y
         self.prediction_history = prediction_history
         self.save_train = save_train
         self.save_val = save_val
+        self.save_auc = save_auc
         if save_train:
             self.prediction_history['predictions'] = []
         if save_val:
@@ -132,13 +136,18 @@ class PredictionLogger(keras.callbacks.Callback):
         # the logs dict now for some reason. Could save it manually to disk
         # instead I suppose.
         if self.save_train:
-            self.prediction_history["predictions"].append(
-                _fix_prediction(self.model.predict(self.training_data)))
+            preds = _fix_prediction(self.model.predict(
+                self.training_data, verbose=0))
+            self.prediction_history["predictions"].append(preds)
+            if self.save_auc:
+                logs['real_auc'] = roc_auc_score(self.training_targets, preds)
         if self.save_val:
-            self.prediction_history["val_predictions"].append(
-                _fix_prediction(self.model.predict(self.validation_data)))
-
-        # log.info(f"PredictionCallback time: {time() - t0}")
+            preds = _fix_prediction(self.model.predict(
+                self.validation_data, verbose=0))
+            self.prediction_history["val_predictions"].append(preds)
+            if self.save_auc:
+                logs['val_real_auc'] = roc_auc_score(
+                    self.validation_targets, preds)
 
 
 class RuleOutLogger(keras.callbacks.Callback):
@@ -258,6 +267,7 @@ class KerasWrapper(Model):
         self.plot_model = plot_model
         self.unfreeze_after_epoch = unfreeze_after_epoch
         self.prediction_history = {}
+        self.log_real_auc = loss == 'binary_crossentropy'
 
     def fit(self, training_data, validation_data=None, split_number=None,
             **kwargs):
@@ -321,7 +331,8 @@ class KerasWrapper(Model):
                     batch_size=self.batch_size,
                     prediction_history=self.prediction_history,
                     save_train=self.save_train_prediction_history,
-                    save_val=self.save_val_prediction_history
+                    save_val=self.save_val_prediction_history,
+                    save_auc=self.log_real_auc
                 )
             )
         if self.save_model_checkpoints:

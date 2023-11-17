@@ -69,6 +69,11 @@ def load_model_from_experiment_result(
 
 
 def load_ribeiro_model(freeze_resnet=False, suffix=None):
+    """Loads the model pre-trained by Ribeiro et al.
+    Ribeiro, A.H., Ribeiro, M.H., Paixão, G.M.M. et al. Automatic
+    diagnosis of the 12-lead ECG using a deep neural network.
+    Nat Commun 11, 1760 (2020). https://doi.org/10.1038/s41467-020-15432-4
+    """
     resnet = keras.models.load_model(
         filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
     )
