@@ -356,12 +356,12 @@ class Prediction(Experiment, Enum):
         model=mlp_prediction,
         model_kwargs={
             'mlp_kwargs': {
-                'sizes': [20, 10, 5],
-                'dropout': [0.0, 0.0, 0.0],
+                'sizes': [2000, 500],
+                'dropout': [0.1, 0.0],
                 'regularizer': {
-                    "bias": [0, 0, 0],
-                    "activity": [0.0001, 0, 0],
-                    "kernel": [0, 0, 0.0001]
+                    "bias": [0, 0],
+                    "activity": [0, 0],
+                    "kernel": [0, 0]
                 },
             },
         },

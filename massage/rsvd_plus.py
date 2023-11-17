@@ -110,7 +110,7 @@ def make_lab_data(befo_alias_series):
 
     immunologen = immunologen[immunologen["Labanalys_Beskrivning"].isin(immu_test_to_keep)]
     ecg["Analyssvar_ProvtagningDatum"] = ecg["DBS_0_964"]
-    ecg['Analyssvar_ProvtagningDatum'] = pd.to_datetime(ecg['Analyssvar_ProvtagningDatum']).round("d")
+    ecg['Analyssvar_ProvtagningDatum'] = pd.to_datetime(ecg['Analyssvar_ProvtagningDatum'], errors='coerce').round("d")
     ecg["Labanalys_Beskrivning"] = "ECG"
     ecg = ecg[["Alias", "Analyssvar_ProvtagningDatum", "Labanalys_Beskrivning"]]
     biokemi_value_count = biokemi["Labanalys_Beskrivning"].value_counts().head(200)

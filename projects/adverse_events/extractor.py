@@ -28,27 +28,21 @@ def make_all_data_index_test(days):
     normalized_age = (data_end["Age"] - data_end["Age"].min()) / (data_end["Age"].max() - data_end["Age"].min())
     data_end['Age'] = normalized_age
     data_new = pd.merge(data_start, data_end, left_index=True, right_index=True)
+    """    
     sparse_matrix = sparse.csr_matrix(data_new.values)
     sparse_df = pd.DataFrame.sparse.from_spmatrix(
         sparse_matrix,
         index=data_new.index,
         columns=data_new.columns
-    )
-    return sparse_df
+    )"""
+    return data_new
 
 
 @cache
-def data_management_pre_wrap(simple_fake=None, drop_name=None):
-    normal_data = make_all_data_index_test(-20).sparse.to_dense()
-    signal_data = make_all_data_index_test(20).sparse.to_dense()
-    if simple_fake:
-        fake = simple_fake[0]  # [0, 0.5, 0.75, 0.875]
-        probability_normal = simple_fake[1]
-        probability_signal = simple_fake[2]
-        normal_data['fake'] = pd.NA
-        normal_data['fake'] = normal_data['fake'].apply(lambda x: np.random.choice(fake, p=probability_normal))
-        signal_data['fake'] = pd.NA
-        signal_data['fake'] = signal_data['fake'].apply(lambda x: np.random.choice(fake, p=probability_signal))
+def data_management_pre_wrap(drop_name=None):
+    normal_data = make_all_data_index_test(-20)#.sparse.to_dense()
+    signal_data = make_all_data_index_test(20)#.sparse.to_dense()
+
     normal_data, signal_data = remove_access_features(normal_data, signal_data)
     normal_data["Postvaccination_index"] = 0
     signal_data["Postvaccination_index"] = 1
@@ -73,13 +67,15 @@ def data_management_pre_wrap(simple_fake=None, drop_name=None):
     if drop_name:
         all_data = all_data.drop(columns=drop_name)
 
-    sparse_matrix = sparse.csr_matrix(all_data.values)
+    """    
+    sparse_matrix = sparse.csr_matrix(.values)
     sparse_df = pd.DataFrame.sparse.from_spmatrix(
         sparse_matrix,
         index=all_data.index,
         columns=all_data.columns
     )
-    return sparse_df
+    """
+    return all_data
 
 
 def remove_access_features(normal_df, signal_df):
@@ -93,8 +89,7 @@ def remove_access_features(normal_df, signal_df):
 class PredictionTasks(Extractor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        all_data = data_management_pre_wrap(simple_fake=self.simple_fake, drop_name=self.drop_name)\
-            .sparse.to_dense().sample(frac=1, random_state=44)
+        all_data = data_management_pre_wrap(drop_name=self.drop_name).sample(frac=1, random_state=44)
         data = DataWrapper(
             features=Data(all_data.iloc[:, :-1].values,
                           columns=list(all_data.iloc[:, :-1])),
@@ -104,12 +99,9 @@ class PredictionTasks(Extractor):
                        columns=['Alias', 'vaccination_date', 'Postvaccination_index']),
             groups=all_data.reset_index().Alias.values
         )
-        hold_out_splitter = CrossValidationWrapper(
-            GroupShuffleSplit(test_size=0.25, random_state=44)
-        )
-        development_data, test_data = next(hold_out_splitter.split(data))
-        self.development_data = development_data
-        self.test_data = test_data
+
+        self.development_data = data
+        # self.test_data = test_data
 
     def get_development_data(self) -> DataWrapper:
         log.debug("Making development DataWrapper")
