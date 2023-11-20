@@ -2672,9 +2672,7 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
         optimizer=Adam,
@@ -2713,9 +2711,7 @@ class Source(Experiment, Enum):
                 'train_percent': 0.9
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -2726,9 +2722,7 @@ class Source(Experiment, Enum):
                 'train_percent': 0.8
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -2739,9 +2733,7 @@ class Source(Experiment, Enum):
                 'train_percent': 0.7
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -2752,9 +2744,7 @@ class Source(Experiment, Enum):
                 'train_percent': 0.6
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -2765,9 +2755,7 @@ class Source(Experiment, Enum):
                 'train_percent': 0.5
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -2778,9 +2766,7 @@ class Source(Experiment, Enum):
                 'train_percent': 0.4
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -2791,9 +2777,7 @@ class Source(Experiment, Enum):
                 'train_percent': 0.3
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -2804,9 +2788,7 @@ class Source(Experiment, Enum):
                 'train_percent': 0.2
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -2817,9 +2799,7 @@ class Source(Experiment, Enum):
                 'train_percent': 0.1
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -2844,9 +2824,7 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'sex': True, 'age': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
         optimizer=Adam,
@@ -3005,9 +2983,7 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'age': True, 'sex': False},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
         optimizer=Adam,
@@ -3060,9 +3036,7 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'age': True, 'sex': False, 'scale_age': True},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
     )
@@ -3077,9 +3051,7 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'age': True, 'sex': True},
-            'features': {
-                'ecg_features': {'mode': 'raw', 'ribeiro': True}
-            },
+            'features': {'mode': 'raw', 'ribeiro': True},
             'fits_in_memory': False
         },
         optimizer=Adam,
