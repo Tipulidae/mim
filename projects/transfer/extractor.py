@@ -265,7 +265,7 @@ class TargetTask(Extractor):
         if 'ecg_features' in self.features:
             data_dict['ecg'] = Data(
                 make_ecg_data(dev.ecg_id, **self.features['ecg_features']),
-                columns=expected_lead_names
+                columns=expected_lead_names,
             )
         if 'flat_features' in self.features:
             flat_features = make_source_labels(
@@ -276,7 +276,6 @@ class TargetTask(Extractor):
                 flat_features.values,
                 columns=list(flat_features)
             )
-
         data = DataWrapper(
             features=Container(data=data_dict),
             labels=Data(y.values, columns=list(y)),

@@ -2497,9 +2497,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 1.0},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2533,9 +2535,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 0.9},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2545,9 +2549,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 0.8},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2557,9 +2563,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 0.7},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2569,9 +2577,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 0.6},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2581,9 +2591,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 0.5},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2593,9 +2605,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 0.4},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2605,9 +2619,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 0.3},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2617,9 +2633,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 0.2},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2629,9 +2647,11 @@ class Target(Experiment, Enum):
             'index': {'train_percent': 0.1},
             'labels': {},
             'features': {
-                'mode': 'raw',
-                'ribeiro': False,
-                'original_ribeiro': True,
+                'ecg_features': {
+                    'mode': 'raw',
+                    'ribeiro': False,
+                    'original_ribeiro': True,
+                }
             },
             'fits_in_memory': True
         },
@@ -2652,7 +2672,9 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
         optimizer=Adam,
@@ -2681,7 +2703,8 @@ class Source(Experiment, Enum):
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
-        }
+        },
+        save_val_pred_history=True
     )
     RN1_R090_SEX = RN1_R100_SEX._replace(
         extractor_kwargs={
@@ -2690,7 +2713,9 @@ class Source(Experiment, Enum):
                 'train_percent': 0.9
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
@@ -2701,7 +2726,9 @@ class Source(Experiment, Enum):
                 'train_percent': 0.8
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
@@ -2712,7 +2739,9 @@ class Source(Experiment, Enum):
                 'train_percent': 0.7
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
@@ -2723,7 +2752,9 @@ class Source(Experiment, Enum):
                 'train_percent': 0.6
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
@@ -2734,7 +2765,9 @@ class Source(Experiment, Enum):
                 'train_percent': 0.5
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
@@ -2745,7 +2778,9 @@ class Source(Experiment, Enum):
                 'train_percent': 0.4
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
@@ -2756,7 +2791,9 @@ class Source(Experiment, Enum):
                 'train_percent': 0.3
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
@@ -2767,7 +2804,9 @@ class Source(Experiment, Enum):
                 'train_percent': 0.2
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
@@ -2778,7 +2817,9 @@ class Source(Experiment, Enum):
                 'train_percent': 0.1
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
@@ -2803,7 +2844,9 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'sex': True, 'age': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
         optimizer=Adam,
@@ -2859,6 +2902,7 @@ class Source(Experiment, Enum):
             }
         },
     )
+    RN3_R100_SEX = RN1_SE8_R100_SEX
     CNN1_R_SEX = Experiment(
         description='M_R1_CNN1 from the serial ECGs project. Predicting '
                     'sex using the raw ECG signal.',
@@ -2961,7 +3005,9 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'age': True, 'sex': False},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
         optimizer=Adam,
@@ -2993,6 +3039,19 @@ class Source(Experiment, Enum):
         },
         save_val_pred_history=True
     )
+    RN2_R100_AGE = RN1_R100_AGE._replace(
+        description='Using the RN2 architecture to predict age.',
+        model=resnet_v2
+    )
+    RN3_R100_AGE = RN1_R100_AGE._replace(
+        description='Using RN3 = RN1 + SE8 block to predict age.',
+        model_kwargs={
+            'residual_kwargs': {
+                'use_se_layer': True,
+                'reduction_ratio': 8
+            }
+        },
+    )
     RN1_R100_AGE_SCALED = RN1_R100_AGE._replace(
         description='Scales the age target by a factor 100.',
         extractor_kwargs={
@@ -3001,11 +3060,12 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'age': True, 'sex': False, 'scale_age': True},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
     )
-
     RN1_R100_AGE_SEX = Experiment(
         description='Predict age and sex using the 4-block ResNet.',
         model=resnet_v1,
@@ -3017,7 +3077,9 @@ class Source(Experiment, Enum):
                 'train_percent': 1.0
             },
             'labels': {'age': True, 'sex': True},
-            'features': {'mode': 'raw', 'ribeiro': True},
+            'features': {
+                'ecg_features': {'mode': 'raw', 'ribeiro': True}
+            },
             'fits_in_memory': False
         },
         optimizer=Adam,
@@ -3053,5 +3115,19 @@ class Source(Experiment, Enum):
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
-        }
+        },
+        save_val_pred_history=True
+    )
+    RN2_R100_AGE_SEX = RN1_R100_AGE_SEX._replace(
+        description='Using the RN2 architecture to predict age and sex.',
+        model=resnet_v2
+    )
+    RN3_R100_AGE_SEX = RN1_R100_AGE_SEX._replace(
+        description='Using RN3 = RN1 + SE8 block to predict age and sex.',
+        model_kwargs={
+            'residual_kwargs': {
+                'use_se_layer': True,
+                'reduction_ratio': 8
+            }
+        },
     )

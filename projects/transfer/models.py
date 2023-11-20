@@ -62,7 +62,7 @@ def ribeiros_resnet(train, validation=None, final_mlp_kwargs=None):
         x = mlp_helper(x, **final_mlp_kwargs)
 
     output = Dense(units=1, activation='sigmoid', kernel_regularizer='l2')(x)
-    return keras.Model(inp, output)
+    return keras.Model({'ecg': inp}, output)
 
 
 def resnet_v1(train, validation=None, residual_kwargs=None,
@@ -92,8 +92,10 @@ def resnet_v1(train, validation=None, residual_kwargs=None,
 
     if ecg_mlp_kwargs is not None:
         x = mlp_helper(x, **ecg_mlp_kwargs)
-    if flat_mlp_kwargs is not None:
-        flat_features = mlp_helper(inp['flat_features'], **flat_mlp_kwargs)
+    if 'flat_features' in inp:
+        flat_features = inp['flat_features']
+        if flat_mlp_kwargs is not None:
+            flat_features = mlp_helper(flat_features, **flat_mlp_kwargs)
         x = Concatenate()([x, flat_features])
     if final_mlp_kwargs is not None:
         x = mlp_helper(x, **final_mlp_kwargs)
@@ -120,14 +122,22 @@ def resnet_v1(train, validation=None, residual_kwargs=None,
 
 
 def resnet_v2(
-        train, validation=None, filters=64, residual_kwargs=None
+        train, validation=None, filters=64, residual_kwargs=None,
+        flat_mlp_kwargs=None, ecg_mlp_kwargs=None, final_mlp_kwargs=None
 ):
     if residual_kwargs is None:
         residual_kwargs = {}
 
-    signal = Input(shape=(4096, 8), dtype=np.float16, name='signal')
+    inp = {}
+    if 'flat_features' in train.feature_tensor_shape:
+        inp['flat_features'] = Input(
+            shape=train.feature_tensor_shape['flat_features'],
+        )
+    if 'ecg' in train.feature_tensor_shape:
+        inp['ecg'] = Input(shape=(4096, 8), dtype=np.float16, name='signal')
+
     x = Conv1D(64, 17, padding='same', use_bias=False,
-               kernel_initializer='he_normal')(signal)
+               kernel_initializer='he_normal')(inp['ecg'])
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x, y = ResidualUnitV2(2048, filters, **residual_kwargs)([x, x])
@@ -147,8 +157,35 @@ def resnet_v2(
     x, _ = ResidualUnitV2(16, 8*filters, **residual_kwargs)([x, y])
 
     x = Flatten()(x)
-    output = Dense(1, activation='sigmoid', kernel_initializer='he_normal')(x)
-    model = keras.Model(signal, output)
+
+    if ecg_mlp_kwargs is not None:
+        x = mlp_helper(x, **ecg_mlp_kwargs)
+    if 'flat_features' in inp:
+        flat_features = inp['flat_features']
+        if flat_mlp_kwargs is not None:
+            flat_features = mlp_helper(flat_features, **flat_mlp_kwargs)
+        x = Concatenate()([x, flat_features])
+    if final_mlp_kwargs is not None:
+        x = mlp_helper(x, **final_mlp_kwargs)
+
+    output_layers = []
+    for name in train.target_columns:
+        y = x
+        output_layers.append(
+            Dense(
+                units=1,
+                activation='sigmoid' if name == 'sex' else None,
+                kernel_initializer='he_normal',
+                name=name
+            )(y)
+        )
+
+    if len(output_layers) > 1:
+        output = output_layers
+    else:
+        output = output_layers[0]
+
+    model = keras.Model(inp, output)
     return model
 
 
