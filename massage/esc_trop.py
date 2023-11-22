@@ -11,7 +11,8 @@ from massage.carlson_ecg import (
     expected_lead_names,
     glasgow_vector_names,
     glasgow_scalar_names,
-    glasgow_diagnoses
+    glasgow_diagnoses,
+    glasgow_rhythms
 )
 from mim.cache.decorator import cache
 from mim.util.logs import get_logger
@@ -1258,7 +1259,7 @@ def _extract_glasgow_vector(name, ecgs):
         np.stack(result),
         columns=[f'{name}_{lead}' for lead in expected_lead_names],
         index=ecgs.index
-    )
+    ).astype(int)
 
 
 def _extract_glasgow_scalars(ecgs):
@@ -1272,7 +1273,35 @@ def _extract_glasgow_scalars(ecgs):
         result,
         index=ecgs.index,
         columns=column_names
-    ).sort_index(axis=1)
+    ).sort_index(axis=1).astype(int)
+
+
+def _extract_glasgow_strings(ecgs):
+    def combine_diagnoses_to_one_string(ds):
+        return '\n'.join(
+            [glasgow_diagnoses[i] for i, x in enumerate(ds) if x])
+
+    def combine_rhythms_to_one_string(rs):
+        return '\n'.join(
+            [glasgow_rhythms[i] for i, x in enumerate(rs) if x])
+
+    glasgow_strings = []
+    with h5py.File(ECG_PATH, 'r') as ecg:
+        for ecg_id in tqdm(ecgs):
+            glasgow_strings.append([
+                combine_diagnoses_to_one_string(
+                    ecg['glasgow']['diagnoses'][ecg_id, :]
+                ),
+                combine_rhythms_to_one_string(
+                    ecg['glasgow']['rhythms'][ecg_id, :]
+                ),
+            ])
+
+    return pd.DataFrame(
+        glasgow_strings,
+        index=ecgs.index,
+        columns=['glasgow_diagnoses', 'glasgow_rhythms']
+    )
 
 
 def _make_ecg_paths(index):

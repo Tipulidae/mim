@@ -36,12 +36,11 @@ log = get_logger("Experiment")
 class Experiment(NamedTuple):
     description: str
     extractor: Callable[[Any], Extractor] = None
-    extractor_kwargs: dict = {
-        "index": {},
-        "features": None,
-        "labels": None,
-        "processing": None,
-    }
+    extractor_index: dict = {}
+    extractor_features: dict = {}
+    extractor_labels: dict = {}
+    extractor_processing: dict = {}
+    data_fits_in_memory: bool = True
     augmentation: Callable[[Any], Augmentor] = None
     augmentation_kwargs: dict = {}
     use_predefined_splits: bool = False
@@ -70,7 +69,6 @@ class Experiment(NamedTuple):
     alias: str = ''
     parent_base: str = None
     parent_name: str = None
-    data_fits_in_memory: bool = True
     pre_processor: Any = None
     pre_processor_kwargs: dict = {}
     reduce_lr_on_plateau: Any = None
@@ -245,7 +243,13 @@ class Experiment(NamedTuple):
 
         :return: Extractor object
         """
-        return self.extractor(**self.extractor_kwargs)
+        return self.extractor(
+            index=self.extractor_index,
+            features=self.extractor_features,
+            labels=self.extractor_labels,
+            processing=self.extractor_processing,
+            fits_in_memory=self.data_fits_in_memory
+        )
 
     def augment_data(self, train, validation):
         if self.augmentation is None:
