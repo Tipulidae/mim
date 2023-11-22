@@ -297,6 +297,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -6,
                 'suffix': '_cnn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [10, 100],
@@ -366,6 +367,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -434,6 +436,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -502,6 +505,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -570,6 +574,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -638,6 +643,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -706,6 +712,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -774,6 +781,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -842,6 +850,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -910,6 +919,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -978,6 +988,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -1046,6 +1057,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -1114,6 +1126,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -3,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -1183,6 +1196,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
+                'input_key': 'ecg'
             },
             'ecg_mlp_kwargs': {
                 'sizes': [100],
@@ -1256,6 +1270,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn2',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -1324,6 +1339,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn2',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -1392,6 +1408,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -3,
                 'suffix': '_rn2',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -1460,6 +1477,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn3',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -1528,6 +1546,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn3',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
@@ -1596,6 +1615,7 @@ class Target(Experiment, Enum):
                 'trainable': False,
                 'final_layer_index': -3,
                 'suffix': '_rn3',
+                'input_key': 'ecg'
             },
             'final_mlp_kwargs': {
                 'sizes': [100],
