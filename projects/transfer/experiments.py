@@ -220,7 +220,7 @@ class Target(Experiment, Enum):
             },
         },
         extractor=TargetTask,
-        extractor_kwargs={'train_percent': 1.0},
+        extractor_index={'train_percent': 1.0},
         extractor_features={
             'ecg_features': {'mode': 'raw', 'ribeiro': False},
         },
