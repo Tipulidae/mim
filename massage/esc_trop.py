@@ -1304,6 +1304,228 @@ def _extract_glasgow_strings(ecgs):
     )
 
 
+def _make_glasgow_pacemaker(ecgs):
+    result = []
+    with h5py.File(ECG_PATH, 'r') as ecg:
+        rhythm_strings = list(
+            ecg['meta']['glasgow_rhythms_names'][:].astype(str))
+        diagnosis_strings = list(
+            ecg['meta']['glasgow_diagnoses_names'][:].astype(str))
+        pacemaker_rhythm_index = rhythm_strings.index(
+            'A-V sequential pacemaker')
+        pacemaker_diagnosis_index = diagnosis_strings.index(
+            'Pacemaker rhythm - no further analysis')
+
+        for ecg_id in tqdm(ecgs, desc='Making Glasgow pacemaker'):
+            result.append([
+                ecg['glasgow']['diagnoses'][ecg_id, pacemaker_diagnosis_index],
+                ecg['glasgow']['rhythms'][ecg_id, pacemaker_rhythm_index]
+            ])
+
+    result = pd.DataFrame(
+        result,
+        index=ecgs.index,
+        columns=['pacemaker_diagnosis', 'pacemaker_rhythm']
+    )
+    result['pacemaker'] = result.any(axis=1)
+    return result
+
+
+def _make_glasgow_lvh(ecgs):
+    lvh_diagnoses = [
+        'Ant/septal and lateral ST abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Ant/septal and lateral ST-T abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Ant/septal and lateral T wave abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Anterior T wave abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Anterolateral ST-T abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Anterolateral T wave abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Anteroseptal ST abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Anteroseptal ST-T abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Anteroseptal T wave abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Biventricular hypertrophy',
+        'Inferior and ant/septal ST-T abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Inferior and ant/septal T wave abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Inferior and anterior ST-T abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Inferior and anterior T wave abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Inferior and septal T wave abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Inferior ST abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Inferior ST-T abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Inferior T wave abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Inferior/lateral ST abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Inferior/lateral T wave abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Lateral ST abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Lateral ST-T abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Lateral T wave abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Left ventricular hypertrophy',
+        'Left ventricular hypertrophy by voltage only',
+        'Possible biventricular hypertrophy',
+        'Right ventricular hypertrophy',
+        'Septal and lateral ST-T abnormality is probably due to the '
+        'ventricular hypertrophy',
+        'Septal ST abnormality is probably due to the ventricular hypertrophy',
+        'Septal ST-T abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Septal T wave abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Widespread ST-T abnormality is probably due to the ventricular '
+        'hypertrophy',
+        'Widespread T wave abnormality is probably due to the ventricular '
+        'hypertrophy',
+    ]
+    lvh = _make_glasgow_diagnosis_features(
+        ecgs, lvh_diagnoses, desc='Making Glasgow LVH')
+    lvh['lvh'] = lvh.any(axis=1)
+    return lvh
+
+
+def _make_glasgow_lbbb(ecgs):
+    lbbb_diagnoses = [
+        'Left bundle branch block'
+    ]
+    lbbb = _make_glasgow_diagnosis_features(
+        ecgs, lbbb_diagnoses, desc='Making Glasgow LBBB')
+    lbbb['lbbb'] = lbbb.any(axis=1)
+    return lbbb
+
+
+def _make_glasgow_rbbb(ecgs):
+    rbbb_diagnoses = [
+        'RBBB with left anterior fascicular block',
+        'RBBB with RAD - possible left posterior fascicular block',
+        'Right bundle branch block',
+    ]
+    rbbb = _make_glasgow_diagnosis_features(
+        ecgs, rbbb_diagnoses, desc='Making Glasgow RBBB')
+    rbbb['rbbb'] = rbbb.any(axis=1)
+    return rbbb
+
+
+def _make_glasgow_diagnosis_features(
+        ecgs, diagnoses, desc='Extracting glasgow features'):
+    result = []
+    with h5py.File(ECG_PATH, 'r') as ecg:
+        diagnosis_strings = list(
+            ecg['meta']['glasgow_diagnoses_names'][:].astype(str))
+        if any([diagnose not in diagnosis_strings for diagnose in diagnoses]):
+            raise ValueError("Input diagnoses must match those in "
+                             "glasgow_diagnoses_names")
+        indices = [diagnosis_strings.index(diagnose) for diagnose in diagnoses]
+        for ecg_id in tqdm(ecgs, desc=desc):
+            result.append(ecg['glasgow']['diagnoses'][ecg_id, indices])
+
+    return pd.DataFrame(
+        result,
+        index=ecgs.index,
+        columns=diagnoses
+    )
+
+
+def _make_glasgow_rhythm_scores(ecgs):
+    rhythm_score_lists = [
+        [
+            'Marked sinus bradycardia',
+            'Sinus arrhythmia',
+            'Sinus bradycardia',
+            'Sinus rhythm',
+            'Sinus tachycardia',
+            'sinus arrhythmia',
+            'Probable sinus tachycardia'
+        ],
+        [
+            'Atrial fibrillation',
+            'Atrial flutter',
+            'Probable atrial fibrillation',
+        ],
+        [
+            'A-V sequential pacemaker',
+            'Atrial pacing',
+            'Demand atrial pacing',
+            'Demand pacing',
+            'Ventricular pacing'
+        ],
+        [
+            'Wide QRS tachycardia - possible ventricular tachycardia',
+            'non-sustained ventricular tachycardia',
+        ],
+        [
+            '2:1 A-V block',
+            '2nd degree (Mobitz II) SA block',
+            '2nd degree A-V block, Mobitz I (Wenckebach)',
+            '2nd degree A-V block, Mobitz II',
+            '3:1 A-V block',
+            '4:1 A-V block',
+            'complete A-V block',
+            'high degree A-V block',
+            'varying 2nd degree A-V block',
+            'A-V dissociation'
+        ],
+        [
+            '1st degree A-V block',
+            'borderline 1st degree A-V block'
+        ],
+        [
+            'Possible ectopic atrial tachycardia',
+            'Probable atrial tachycardia',
+            'Probable supraventricular tachycardia',
+            'Regular supraventricular rhythm',
+            'Wide QRS tachycardia - possible supraventricular tachycardia',
+            'Irregular ectopic atrial tachycardia'
+        ],
+        [
+            'Accelerated idioventricular rhythm',
+            'Possible idioventricular rhythm',
+            'paroxysmal idioventricular rhythm',
+            'paroxysmal idioventricular rhythm or aberrant ventricular '
+            'conduction',
+        ],
+        [
+            'Possible accelerated junctional rhythm',
+            'Possible junctional rhythm',
+            'Probable accelerated junctional rhythm',
+            'Probable junctional rhythm',
+        ]
+    ]
+
+    all_rhythms = []
+    with h5py.File(ECG_PATH, 'r') as ecg:
+        glasgow_rhythm_names = list(
+            ecg['meta']['glasgow_rhythms_names'][:].astype(str))
+        rhythm_index = [
+            [glasgow_rhythm_names.index(rhythm) for rhythm in rhythms]
+            for rhythms in rhythm_score_lists
+        ]
+        for ecg_id in tqdm(ecgs, desc='Making glasgow rhythm scores'):
+            all_rhythms.append(ecg['glasgow']['rhythms'][ecg_id, :])
+
+    result = pd.DataFrame(all_rhythms, index=ecgs.index)
+    for k, index in enumerate(rhythm_index):
+        result[f"rhythm_score_{k+1}"] = result.iloc[:, index].any(axis=1)
+
+    return result.iloc[:, len(glasgow_rhythm_names):]
+
+
 def _make_ecg_paths(index):
     """
     Given a dataframe with Alias as index and admission_date as column,
