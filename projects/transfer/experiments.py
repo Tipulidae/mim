@@ -393,7 +393,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -1083,7 +1083,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -1152,7 +1152,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -1503,7 +1503,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -1572,7 +1572,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -1641,7 +1641,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
