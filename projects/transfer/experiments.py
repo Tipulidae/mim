@@ -7,8 +7,10 @@ from keras.optimizers import Adam
 from mim.experiments.experiments import Experiment
 from mim.models.util import CosineDecayWithWarmup
 from projects.transfer.extractor import TargetTask, SourceTask
-from projects.transfer.models import (cnn, resnet_v1, resnet_v2, pretrained,
-                                      ribeiros_resnet)
+from projects.transfer.models import (
+    cnn, resnet_v1, resnet_v2, pretrained, pretrained_parallel,
+    ribeiros_resnet
+)
 
 
 class Target(Experiment, Enum):
@@ -431,7 +433,7 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'RN1_R090_SEX',
-                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
+                'commit': 'e2c0aa67239118c910b263cfbaddb35e8f3fa43b',
                 'epoch': 100,
                 'trainable': False,
                 'final_layer_index': -2,
@@ -462,7 +464,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -500,7 +502,7 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'RN1_R080_SEX',
-                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
+                'commit': 'e2c0aa67239118c910b263cfbaddb35e8f3fa43b',
                 'epoch': 100,
                 'trainable': False,
                 'final_layer_index': -2,
@@ -531,7 +533,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -569,7 +571,7 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'RN1_R070_SEX',
-                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
+                'commit': 'e2c0aa67239118c910b263cfbaddb35e8f3fa43b',
                 'epoch': 100,
                 'trainable': False,
                 'final_layer_index': -2,
@@ -600,7 +602,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -638,7 +640,7 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'RN1_R060_SEX',
-                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
+                'commit': 'e2c0aa67239118c910b263cfbaddb35e8f3fa43b',
                 'epoch': 100,
                 'trainable': False,
                 'final_layer_index': -2,
@@ -669,7 +671,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -707,7 +709,7 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'RN1_R050_SEX',
-                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
+                'commit': 'e2c0aa67239118c910b263cfbaddb35e8f3fa43b',
                 'epoch': 100,
                 'trainable': False,
                 'final_layer_index': -2,
@@ -738,7 +740,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -776,8 +778,8 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'RN1_R040_SEX',
-                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
-                'epoch': 45,
+                'commit': 'e2c0aa67239118c910b263cfbaddb35e8f3fa43b',
+                'epoch': 100,
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
@@ -807,7 +809,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -845,8 +847,8 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'RN1_R030_SEX',
-                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
-                'epoch': 55,
+                'commit': 'e2c0aa67239118c910b263cfbaddb35e8f3fa43b',
+                'epoch': 100,
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
@@ -876,7 +878,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -914,8 +916,8 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'RN1_R020_SEX',
-                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
-                'epoch': 44,
+                'commit': 'e2c0aa67239118c910b263cfbaddb35e8f3fa43b',
+                'epoch': 100,
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
@@ -945,7 +947,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -983,8 +985,8 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'RN1_R010_SEX',
-                'commit': 'dd82f8c595bcf1d3c0e915cffb1d55a008ae7ce2',
-                'epoch': 49,
+                'commit': 'e2c0aa67239118c910b263cfbaddb35e8f3fa43b',
+                'epoch': 100,
                 'trainable': False,
                 'final_layer_index': -2,
                 'suffix': '_rn1',
@@ -1014,7 +1016,7 @@ class Target(Experiment, Enum):
                 'steps_per_epoch': -1
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=512,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -1256,6 +1258,69 @@ class Target(Experiment, Enum):
         extractor_index={'train_percent': 0.2})
     PTS100_RN1_ASR010 = PTS100_RN1_ASR100._replace(
         extractor_index={'train_percent': 0.1})
+
+    PTA100_PTS100_RN1_R100 = Experiment(
+        description='Uses two pre-trained RN1 models in parallel to predict '
+                    'AMI. One model is pre-trained on age, the other on sex.',
+        model=pretrained_parallel,
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
 
     PTS100_RN2_R100 = Experiment(
         description='Uses RN2 model trained to predict sex.',
@@ -2035,6 +2100,61 @@ class Source(Experiment, Enum):
         },
         save_val_pred_history=True
     )
+    RN1_R090_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.9
+        },
+    )
+    RN1_R080_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.8
+        },
+    )
+    RN1_R070_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.7
+        },
+    )
+    RN1_R060_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.6
+        },
+    )
+    RN1_R050_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.5
+        },
+    )
+    RN1_R040_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.4
+        },
+    )
+    RN1_R030_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.3
+        },
+    )
+    RN1_R020_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.2
+        },
+    )
+    RN1_R010_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.1
+        },
+    )
+
     RN2_R100_AGE = RN1_R100_AGE._replace(
         description='Using the RN2 architecture to predict age.',
         model=resnet_v2

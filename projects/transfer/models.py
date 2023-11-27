@@ -56,6 +56,32 @@ def pretrained(train, validation=None, from_xp=None, ecg_mlp_kwargs=None,
     return keras.Model(inp, output)
 
 
+def pretrained_parallel(
+        train, validation=None, from_xp1=None, from_xp2=None,
+        ecg_mlp_kwargs=None, flat_mlp_kwargs=None, final_mlp_kwargs=None):
+    inp = {}
+    if 'flat_features' in train.feature_tensor_shape:
+        inp['flat_features'] = Input(
+            shape=train.feature_tensor_shape['flat_features'],
+        )
+    ecg_inp1, x1 = load_model_from_experiment_result(**from_xp1)
+    ecg_inp2, x2 = load_model_from_experiment_result(**from_xp2)
+    inp['ecg'] = [ecg_inp1, ecg_inp2]
+    x = Concatenate()([x1, x2])
+
+    if ecg_mlp_kwargs is not None:
+        x = mlp_helper(x, **ecg_mlp_kwargs)
+
+    if flat_mlp_kwargs is not None:
+        flat_features = mlp_helper(inp['flat_features'], **flat_mlp_kwargs)
+        x = Concatenate()([x, flat_features])
+
+    if final_mlp_kwargs is not None:
+        x = mlp_helper(x, **final_mlp_kwargs)
+    output = Dense(units=1, activation='sigmoid', kernel_regularizer='l2')(x)
+    return keras.Model(inp, output)
+
+
 def ribeiros_resnet(train, validation=None, final_mlp_kwargs=None):
     inp, x = load_ribeiro_model(freeze_resnet=True, suffix='_rn')
     if final_mlp_kwargs is not None:
