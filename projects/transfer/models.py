@@ -66,7 +66,13 @@ def pretrained_parallel(
         )
     ecg_inp1, x1 = load_model_from_experiment_result(**from_xp1)
     ecg_inp2, x2 = load_model_from_experiment_result(**from_xp2)
-    inp['ecg'] = [ecg_inp1, ecg_inp2]
+    inp['ecg'] = Input(shape=(4096, 8), dtype=np.float16, name='signal')
+
+    m1 = keras.Model(ecg_inp1, x1, name='model1')
+    m2 = keras.Model(ecg_inp2, x2, name='model2')
+
+    x1 = m1(inp['ecg'])
+    x2 = m2(inp['ecg'])
     x = Concatenate()([x1, x2])
 
     if ecg_mlp_kwargs is not None:
