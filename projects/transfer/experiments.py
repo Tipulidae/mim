@@ -1321,6 +1321,24 @@ class Target(Experiment, Enum):
         save_learning_rate=True,
         save_val_pred_history=True
     )
+    PTA100_PTS100_RN1_R090 = PTA100_PTS100_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA100_PTS100_RN1_R080 = PTA100_PTS100_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA100_PTS100_RN1_R070 = PTA100_PTS100_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA100_PTS100_RN1_R060 = PTA100_PTS100_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA100_PTS100_RN1_R050 = PTA100_PTS100_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA100_PTS100_RN1_R040 = PTA100_PTS100_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA100_PTS100_RN1_R030 = PTA100_PTS100_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA100_PTS100_RN1_R020 = PTA100_PTS100_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA100_PTS100_RN1_R010 = PTA100_PTS100_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
 
     PTS100_RN2_R100 = Experiment(
         description='Uses RN2 model trained to predict sex.',
