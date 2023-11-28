@@ -1,7 +1,7 @@
 name: mim-gpu
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
 dependencies:
   - python=3.11
   - pytest
@@ -12,6 +12,7 @@ dependencies:
   - freezegun
   - jupyterlab
   - jupyter_contrib_nbextensions
+  - jupyter_nbextensions_configurator 
   - ipython
   - ipyparallel
   - pip

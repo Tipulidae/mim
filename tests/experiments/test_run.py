@@ -23,14 +23,12 @@ class SmallTestExperiment(Experiment, Enum):
     test_keras = Experiment(
         description='Test small Keras network using fake data',
         extractor=FakeExtractor,
-        extractor_kwargs={
-            "index": {
-                'n_samples': 128,
-                'n_features': 128,
-                'n_informative': 100,
-                'n_classes': 2,
-                'random_state': 1111
-            },
+        extractor_index={
+            'n_samples': 128,
+            'n_features': 128,
+            'n_informative': 100,
+            'n_classes': 2,
+            'random_state': 1111
         },
         model=basic_ff,
         model_kwargs={},
