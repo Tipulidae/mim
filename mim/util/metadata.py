@@ -91,12 +91,12 @@ class Metadata:
         return {f: {'changed': self._file_modified_date(f)} for f in
                 self._all_files()}
 
-    def conda(self):
+    def environment(self):
         """
-        :return: Returns the output from running "conda list", which is to
+        :return: Returns the output from running "micromamba list", which is to
         say, all the installed packages in the currently active environment.
         """
-        return self._bash_command(['conda', 'list'])
+        return self._bash_command(['bash', '-c', '$MAMBA_EXE list'])
 
     @staticmethod
     def _bash_command(array):
@@ -176,7 +176,9 @@ class Validator:
         """
         self._validate_uncommitted_changes(metadata)
         self._validate_same_commit(metadata)
+        self._validate_same_branch(metadata)
         self._validate_timestamp(metadata)
+        self._validate_same_environment(metadata)
         self._validate_files(metadata)
         return True
 
@@ -185,13 +187,13 @@ class Validator:
             for md in metadata:
                 try:
                     if md['has_uncommitted_changes']:
-                        raise MetadataConsistencyError(
+                        raise MetadataConsistencyException(
                             'Uncommitted changes were present!'
                         )
-                except KeyError:
-                    raise MetadataConsistencyError(
+                except KeyError as e:
+                    raise MetadataConsistencyException(
                         'Metadata incomplete! No information about '
-                        'uncommitted changes')
+                        'uncommitted changes') from e
 
     def _validate_same_commit(self, metadata):
         if not self.allow_different_commits:
@@ -199,13 +201,13 @@ class Validator:
             for md in metadata:
                 try:
                     commits.add(md['current_commit'])
-                except KeyError:
-                    raise MetadataConsistencyError(
+                except KeyError as e:
+                    raise MetadataConsistencyException(
                         'Metadata incomplete! No information about '
-                        'current commit.')
+                        'current commit.') from e
 
                 if len(commits) > 1:
-                    raise MetadataConsistencyError(
+                    raise MetadataConsistencyException(
                         f'Commits are different: '
                         f'{commits.pop()} != {commits.pop()}')
 
@@ -215,13 +217,13 @@ class Validator:
             for md in metadata:
                 try:
                     branches.add(md['current_branch'])
-                except KeyError:
-                    raise MetadataConsistencyError(
+                except KeyError as e:
+                    raise MetadataConsistencyException(
                         'Metadata incomplete! No information about '
-                        'current branch.')
+                        'current branch.') from e
 
                 if len(branches) > 1:
-                    raise MetadataConsistencyError(
+                    raise MetadataConsistencyException(
                         f'Branches are different: '
                         f'{branches.pop()} != {branches.pop()}')
 
@@ -230,14 +232,14 @@ class Validator:
             envs = set()
             for md in metadata:
                 try:
-                    envs.add(md['conda'])
-                except KeyError:
-                    raise MetadataConsistencyError(
+                    envs.add(md['environment'])
+                except KeyError as e:
+                    raise MetadataConsistencyException(
                         'Metadata incomplete! No information about '
-                        'conda environment.')
+                        'python environment.') from e
 
                 if len(envs) > 1:
-                    raise MetadataConsistencyError(
+                    raise MetadataConsistencyException(
                         f'Environments are different: '
                         f'{envs.pop()} != {envs.pop()}')
 
@@ -247,13 +249,13 @@ class Validator:
             for md in metadata:
                 try:
                     timestamps.add(pd.Timestamp(md['timestamp']))
-                except KeyError:
-                    raise MetadataConsistencyError(
+                except KeyError as e:
+                    raise MetadataConsistencyException(
                         'Metadata incomplete! No information about '
-                        'timestamps.')
+                        'timestamps.') from e
 
             if max(timestamps) - min(timestamps) > self.max_age_difference:
-                raise MetadataConsistencyError(
+                raise MetadataConsistencyException(
                     f'The age difference between the metadata objects was '
                     f'larger than {self.max_age_difference}!'
                 )
@@ -267,13 +269,13 @@ class Validator:
                     # bit of a hack... Made a custom version just to avoid
                     # problems with differently sorted keys.
                     file_data.add(dict_to_string(md['file_data']))
-                except KeyError:
-                    raise MetadataConsistencyError(
+                except KeyError as e:
+                    raise MetadataConsistencyException(
                         'Metadata incomplete! No information about '
-                        'file_data')
+                        'file_data') from e
 
                 if len(file_data) > 1:
-                    raise MetadataConsistencyError(
+                    raise MetadataConsistencyException(
                         'Files in data folder were different.')
 
 
@@ -285,7 +287,7 @@ def dict_to_string(d):
     return s + '}'
 
 
-class MetadataConsistencyError(Exception):
+class MetadataConsistencyException(Exception):
     pass
 
 
@@ -301,6 +303,7 @@ def save(data, path):
 
 
 def load(path, allow_uncommitted=False):
+    # trunk-ignore(bandit/B301)
     data, meta_data = pd.read_pickle(path)
     v = Validator(allow_uncommitted=allow_uncommitted)
     v.validate_consistency([meta_data])

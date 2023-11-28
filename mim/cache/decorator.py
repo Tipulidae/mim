@@ -1,15 +1,15 @@
 import hashlib
 import inspect
 import os
+import pickle
 from itertools import starmap
 from types import FunctionType
 
 import pandas as pd
-from compress_pickle import dump, load
 
 from mim.util.logs import get_logger
 from mim.config import PATH_TO_CACHE
-from mim.util.metadata import Metadata, MetadataConsistencyError
+from mim.util.metadata import Metadata, MetadataConsistencyException
 from mim.cache import settings
 
 log = get_logger('Cache')
@@ -85,32 +85,29 @@ def cache(f):
 
 def _cache(f, args, kwargs, is_method=False):
     path = function_to_cache_path(f, args, kwargs, is_method=is_method)
-    current_metadata = Metadata().report()
-    try:
-        cached_result, cached_metadata = load(
-            path,
-            compression='bz2',
-            set_default_extension=False
-        )
-        settings.validator.validate_consistency(
-            [current_metadata, cached_metadata])
+    current_metadata = Metadata().report(conda=False)
+    if os.path.isfile(path):
         log.debug(f'Loading cached result for {os.path.basename(path)}.')
-        return cached_result
-    except FileNotFoundError:
+
+        with open(path, 'rb') as file:
+            cached_metadata = pickle.load(file)
+            try:
+                settings.validator.validate_consistency(
+                    [current_metadata, cached_metadata])
+                cached_result = pickle.load(file)
+                log.debug('Cached file successfully loaded!')
+                return cached_result
+            except MetadataConsistencyException as e:
+                log.debug(f'Metadata for {os.path.basename(path)} '
+                          f'inconsistent, re-computing. {e}')
+    else:
         log.debug(f'Cache file {os.path.basename(path)} '
                   f'not found, re-computing!')
-    except MetadataConsistencyError:
-        log.debug(f'Metadata for {os.path.basename(path)} '
-                  f'inconsistent, re-computing!')
 
     results = f(*args, **kwargs)
-    dump(
-        obj=(results, current_metadata),
-        path=path,
-        compression='bz2',
-        set_default_extension=False
-    )
-    # pd.to_pickle((results, current_metadata), path, compression='gz')
+    with open(path, 'wb') as file:
+        pickle.dump(current_metadata, file)
+        pickle.dump(results, file)
     return results
 
 
@@ -146,7 +143,10 @@ def args_and_kwargs_to_string(*args, __max_length__=100, **kwargs):
     kwargs_str = _kwargs_to_string(kwargs)
     result = ', '.join(filter(lambda x: x, [args_str, kwargs_str]))
     if len(result) > __max_length__:
-        result = hashlib.sha1(result.encode('utf-8')).hexdigest()
+        result = hashlib.sha1(
+            result.encode('utf-8'),
+            usedforsecurity=False
+        ).hexdigest()
 
     return result
 
@@ -174,4 +174,4 @@ def _arg_to_str(arg):
 
 def _hash_pandas(df):
     hashed_values = pd.util.hash_pandas_object(df, index=True).values
-    return hashlib.sha1(hashed_values).hexdigest()
+    return hashlib.sha1(hashed_values, usedforsecurity=False).hexdigest()

@@ -2,6 +2,8 @@
 
 import os
 import shutil
+import re
+import math
 from copy import copy
 from time import time
 from pathlib import Path
@@ -17,14 +19,14 @@ from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import PredefinedSplit, KFold
 
-from mim.experiments.extractor import Extractor
+from mim.experiments.extractor import Extractor, Augmentor
 from mim.cross_validation import CrossValidationWrapper, \
     RepeatingCrossValidator
 from mim.config import PATH_TO_TEST_RESULTS
 from mim.model_wrapper import Model, KerasWrapper
 from mim.util.logs import get_logger
 from mim.util.metadata import Metadata, Validator
-from mim.util.util import callable_to_string
+from mim.util.util import callable_to_string, keras_model_summary_as_string
 from mim.experiments.results import ExperimentResult, TestResult, Result
 import mim.experiments.hyper_parameter as hp
 
@@ -34,12 +36,13 @@ log = get_logger("Experiment")
 class Experiment(NamedTuple):
     description: str
     extractor: Callable[[Any], Extractor] = None
-    extractor_kwargs: dict = {
-        "index": {},
-        "features": None,
-        "labels": None,
-        "processing": None,
-    }
+    extractor_index: dict = {}
+    extractor_features: dict = {}
+    extractor_labels: dict = {}
+    extractor_processing: dict = {}
+    data_fits_in_memory: bool = True
+    augmentation: Callable[[Any], Augmentor] = None
+    augmentation_kwargs: dict = {}
     use_predefined_splits: bool = False
     cv: Any = KFold
     cv_kwargs: dict = {}
@@ -49,6 +52,8 @@ class Experiment(NamedTuple):
     save_results: bool = True
     building_model_requires_development_data: bool = False
     optimizer: Any = 'adam'
+    optimizer_kwargs: dict = {}
+    learning_rate: Any = 0.01
     loss: Any = 'binary_crossentropy'
     loss_kwargs: Any = None
     loss_weights: Any = None
@@ -60,21 +65,23 @@ class Experiment(NamedTuple):
     skip_compile: bool = False
     random_state: Union[int, hp.Param] = 123
     scoring: Any = roc_auc_score
-    log_conda_env: bool = True
+    log_environment: bool = True
     alias: str = ''
     parent_base: str = None
     parent_name: str = None
-    data_fits_in_memory: bool = True
     pre_processor: Any = None
     pre_processor_kwargs: dict = {}
     reduce_lr_on_plateau: Any = None
     ignore_callbacks: bool = False
-    save_prediction_history: bool = False
-    save_model_checkpoints: bool = False
+    save_train_pred_history: bool = False
+    save_val_pred_history: bool = False
+    save_model_checkpoints: Union[bool, dict] = False
     use_tensorboard: bool = False
     save_learning_rate: bool = False
+    unfreeze_after_epoch: int = -1
     ensemble: int = 1
     rule_out_logger: bool = False
+    verbose: int = 1
 
     def run(self, action='train', restart=False, splits_to_do=-1):
         try:
@@ -82,6 +89,10 @@ class Experiment(NamedTuple):
             if action == 'train':
                 if restart:
                     self.clear_old_results()
+                    self.make_results_folder()
+                elif not os.path.exists(self.base_path):
+                    self.make_results_folder()
+
                 results = self._train_and_validate(splits_to_do)
                 path = self.train_result_path
             elif action == 'test':
@@ -109,6 +120,7 @@ class Experiment(NamedTuple):
         else:
             log.debug('No old experiment results found.')
 
+    def make_results_folder(self):
         os.makedirs(self.base_path, exist_ok=True)
 
     def _evaluate(self) -> TestResult:
@@ -147,7 +159,7 @@ class Experiment(NamedTuple):
         )
 
         results = TestResult(
-            metadata=Metadata().report(conda=self.log_conda_env),
+            metadata=Metadata().report(conda=self.log_environment),
             targets=targets,
             predictions=predictions
         )
@@ -170,7 +182,7 @@ class Experiment(NamedTuple):
 
         if self.has_train_results:
             results = pd.read_pickle(self.train_result_path)
-            md = Metadata().report(conda=self.log_conda_env)
+            md = Metadata().report(conda=self.log_environment)
             Validator(
                 allow_uncommitted=False,
                 allow_different_commits=False,
@@ -180,7 +192,7 @@ class Experiment(NamedTuple):
         else:
             results = ExperimentResult(
                 feature_names=data.feature_names,
-                metadata=Metadata().report(conda=self.log_conda_env),
+                metadata=Metadata().report(conda=self.log_environment),
                 experiment_summary=self.asdict(),
                 path=self.base_path,
                 total_splits=cv.get_n_splits()
@@ -195,6 +207,7 @@ class Experiment(NamedTuple):
             if i < splits_so_far or i >= splits_to_do + splits_so_far:
                 continue
 
+            train, validation = self.augment_data(train, validation)
             pre_process = self.get_pre_processor(i)
             train, validation = pre_process(train, validation)
             model = self.build_model(train, validation, split_number=i)
@@ -206,9 +219,12 @@ class Experiment(NamedTuple):
                 self.scoring,
                 split_number=i,
                 total_splits=splits_total,
-                save_model=self.save_model
+                save_model=self.save_model,
+                verbose=self.verbose
             )
             results.add(train_result, validation_result)
+            if self.save_results:
+                pd.to_pickle(results, self.train_result_path)
 
         log.info(f'Finished computing scores for {self.name} in '
                  f'{time() - t}s. ')
@@ -227,7 +243,23 @@ class Experiment(NamedTuple):
 
         :return: Extractor object
         """
-        return self.extractor(**self.extractor_kwargs)
+        return self.extractor(
+            index=self.extractor_index,
+            features=self.extractor_features,
+            labels=self.extractor_labels,
+            processing=self.extractor_processing,
+            fits_in_memory=self.data_fits_in_memory
+        )
+
+    def augment_data(self, train, validation):
+        if self.augmentation is None:
+            return train, validation
+
+        log.info('Applying data-augmentation')
+        augmentor = self.augmentation(**self.augmentation_kwargs)
+        train = augmentor.augment_training_data(train)
+        validation = augmentor.augment_validation_data(validation)
+        return train, validation
 
     def get_cross_validation(self, predefined_splits=None):
         if self.use_predefined_splits:
@@ -253,47 +285,56 @@ class Experiment(NamedTuple):
         return CrossValidationWrapper(cv(**cv_kwargs))
 
     def build_model(self, train, validation, split_number):
-        model_kwargs = copy(self.model_kwargs)
+        if self.has_partially_trained_model(split_number):
+            resume_from_epoch, path = self.get_partial_epoch(split_number)
+            model = self.load_partially_trained_model(path)
+            reset_random_generators(self.random_state + split_number)
+        else:
+            resume_from_epoch = 0
+            model_kwargs = copy(self.model_kwargs)
 
-        if self.building_model_requires_development_data:
-            model_kwargs['train'] = train
-            model_kwargs['validation'] = validation
+            if self.building_model_requires_development_data:
+                model_kwargs['train'] = train
+                model_kwargs['validation'] = validation
 
-        # This is kinda ugly, but important that the model is loaded from
-        # the right split, otherwise we peek!
-        if self.model.__name__ == 'load_keras_model':
-            model_kwargs['split_number'] = split_number
+            # This is kinda ugly, but important that the model is loaded from
+            # the right split, otherwise we peek!
+            if self.model.__name__ == 'load_keras_model':
+                model_kwargs['split_number'] = split_number
 
-        # Releases keras global state. Ref:
-        # https://www.tensorflow.org/api_docs/python/tf/keras/backend/clear_session
-        tf.keras.backend.clear_session()
-        rand_state = self.random_state + split_number
-        np.random.seed(rand_state)
-        tf.random.set_seed(rand_state)
-        model = self.model(**model_kwargs)
-        return self._wrap_model(model)
+            reset_random_generators(self.random_state + split_number)
+            model = self.model(**model_kwargs)
 
-    def _wrap_model(self, model):
+        train_size = 0 if train is None else len(train)
+        return self._wrap_model(
+            model, train_size=train_size, resume_from_epoch=resume_from_epoch)
+
+    def _make_optimizer(self, train_size=0):
+        if isinstance(self.learning_rate, float):
+            lr = self.learning_rate
+        else:
+            kwargs = copy(self.learning_rate['kwargs'])
+            if 'steps_per_epoch' in kwargs:
+                kwargs['steps_per_epoch'] = math.ceil(
+                    train_size / self.batch_size)
+
+            lr = self.learning_rate['scheduler'](**kwargs)
+        optimizer = self.optimizer(
+            learning_rate=lr,
+            **self.optimizer_kwargs
+        )
+        return optimizer
+
+    def _wrap_model(self, model, train_size, resume_from_epoch=0, verbose=1):
         if isinstance(model, tf.keras.Model):
-            # TODO: refactor this! :(
-            if isinstance(self.optimizer, dict):
-                optimizer_kwargs = copy(self.optimizer['kwargs'])
-                optimizer = self.optimizer['name']
-                if 'learning_rate' in optimizer_kwargs:
-                    lr = optimizer_kwargs.pop('learning_rate')
-                    if isinstance(lr, dict):
-                        lr = lr['scheduler'](**lr['scheduler_kwargs'])
-                    optimizer_kwargs['learning_rate'] = lr
-                optimizer = optimizer(**optimizer_kwargs)
-            else:
-                optimizer = self.optimizer
+            optimizer = self._make_optimizer(train_size=train_size)
 
             if callable(self.loss):
                 loss = self.loss(**self.loss_kwargs)
             else:
                 loss = self.loss
 
-            return KerasWrapper(
+            wrapped_model = KerasWrapper(
                 model,
                 # TODO: Add data augmentation here maybe, and use in fit
                 checkpoint_path=self.base_path,
@@ -301,21 +342,28 @@ class Experiment(NamedTuple):
                 exp_base_path=self.base_path,
                 batch_size=self.batch_size,
                 epochs=self.epochs,
-                initial_epoch=self.initial_epoch,
+                initial_epoch=self.initial_epoch + resume_from_epoch,
                 optimizer=optimizer,
                 loss=loss,
                 loss_weights=self.loss_weights,
                 class_weight=self.class_weight,
                 metrics=fix_metrics(self.metrics),
-                skip_compile=self.skip_compile,
+                skip_compile=any([self.skip_compile, resume_from_epoch > 0]),
                 ignore_callbacks=self.ignore_callbacks,
-                save_prediction_history=self.save_prediction_history,
+                save_train_prediction_history=self.save_train_pred_history,
+                save_val_prediction_history=self.save_val_pred_history,
                 save_model_checkpoints=self.save_model_checkpoints,
                 use_tensorboard=self.use_tensorboard,
                 save_learning_rate=self.save_learning_rate,
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
-                rule_out_logger=self.rule_out_logger
+                rule_out_logger=self.rule_out_logger,
+                unfreeze_after_epoch=self.unfreeze_after_epoch
             )
+
+            if verbose:
+                log.info("\n\n" + keras_model_summary_as_string(model))
+
+            return wrapped_model
         else:
             return Model(
                 model,
@@ -327,15 +375,45 @@ class Experiment(NamedTuple):
         def _load():
             model_type = path.split('.')[-1]
             if model_type == 'sklearn':
+                # trunk-ignore(bandit/B301)
                 return pd.read_pickle(path)
             elif model_type == 'keras':
                 return keras.models.load_model(filepath=path)
             raise TypeError(f'Unexpected model type {model_type}')
 
-        return self._wrap_model(_load())
+        return self._wrap_model(_load(), verbose=0)
 
     def asdict(self):
         return callable_to_string(self._asdict())
+
+    def has_partially_trained_model(self, split_number):
+        checkpoint_path = os.path.join(
+            self.base_path,
+            f'split_{split_number}',
+            'checkpoints',
+            'epoch_*.h5'
+        )
+        cps = list(glob(checkpoint_path))
+        return 0 < len(cps) < self.epochs
+
+    def get_partial_epoch(self, split_number):
+        checkpoint_path = os.path.join(
+            self.base_path,
+            f'split_{split_number}',
+            'checkpoints',
+            'epoch_*.h5'
+        )
+        cps = list(glob(checkpoint_path))
+        p = re.compile('epoch_0*(\\d+).h5')
+
+        def path_to_epoch(path):
+            return int(p.findall(path)[0])
+
+        latest_path = max(cps, key=path_to_epoch)
+        return path_to_epoch(latest_path), latest_path
+
+    def load_partially_trained_model(self, path):
+        return keras.models.load_model(filepath=path)
 
     @property
     def is_binary(self):
@@ -358,7 +436,7 @@ class Experiment(NamedTuple):
 
     @property
     def base_path(self):
-        parent_base = self.parent_base or ''
+        parent_base = self.parent_base or self.project_name
         parent_name = self.parent_name or str(self.__class__.__name__)
         return os.path.join(
             PATH_TO_TEST_RESULTS,
@@ -366,6 +444,12 @@ class Experiment(NamedTuple):
             parent_name,
             self.name
         )
+
+    @property
+    def project_name(self):
+        # Bit of a hack. self.__class__.__module__ is something like
+        # projects.transfer.experiments.
+        return self.__class__.__module__.split('.')[1]
 
     @property
     def is_trained(self):
@@ -383,32 +467,46 @@ class Experiment(NamedTuple):
 
     @property
     def is_partial(self):
-        if not self.has_train_results:
-            return False
-
-        results = pd.read_pickle(self.train_result_path)
-        return results.num_splits_done < results.total_splits
+        # either there are train results where not all splits are done
+        # OR there is a checkpoints folder with fewer than epochs checkpoints
+        if self.has_partially_trained_model(split_number=0):
+            return True
+        if self.has_train_results:
+            results = pd.read_pickle(self.train_result_path)
+            if results.num_splits_done < results.total_splits:
+                return True
+        return False
 
     @property
     def num_splits_done(self):
         if not self.has_train_results:
             return 0
 
+        # trunk-ignore(bandit/B301)
         results = pd.read_pickle(self.train_result_path)
         return results.num_splits_done
 
     @property
     def validation_scores(self):
         if self.has_train_results:
+            # trunk-ignore(bandit/B301)
             results = pd.read_pickle(self.train_result_path)
             return results.validation_scores
         else:
             return None
 
 
+def reset_random_generators(new_seed):
+    # Releases keras global state. Ref:
+    # https://www.tensorflow.org/api_docs/python/tf/keras/backend/clear_session
+    tf.keras.backend.clear_session()
+    np.random.seed(new_seed)
+    tf.random.set_seed(new_seed)
+
+
 def _history_to_dataframe(history, data):
-    # history is a list of dataframes, and I want to combine them into
-    # one big dataframe
+    # history is a list of array-likes (one for each epoch), and I want to
+    # combine them into one big dataframe.
     return pd.concat(
         map(data.to_dataframe, history),
         axis=1,
@@ -450,15 +548,19 @@ def _split_history(history_dict):
 
 
 def train_model(training_data, validation_data, model, scoring,
-                split_number=None, total_splits=None, save_model=True
+                split_number=None, total_splits=None, save_model=True,
+                verbose=1,
                 ) -> Tuple[Result, Result]:
     t0 = time()
-    log.info(f'\n\nFitting classifier, split {split_number} of {total_splits}')
+    log.info(f'\n\nFitting classifier, split {split_number} of {total_splits}'
+             f'\nTrain size: {len(training_data)}, '
+             f'val size: {len(validation_data)}')
 
     history = model.fit(
         training_data,
         validation_data=validation_data,
-        split_number=split_number
+        split_number=split_number,
+        verbose=verbose,
     )
     train_history, val_history = _split_history(history)
     train_result = gather_results(model, train_history, training_data)

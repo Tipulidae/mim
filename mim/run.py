@@ -176,7 +176,7 @@ if __name__ == '__main__':
         log.info(f"{len(xps_not_conducted)} experiments has status "
                  f"NOT CONDUCTED and can't be evaluated.")
 
-    all_xps_to_run = xps_to_run + xps_to_rerun
+    all_xps_to_run = xps_to_run + xps_to_rerun + xps_to_continue
 
     if args.cache == 'off':
         settings.enabled = False

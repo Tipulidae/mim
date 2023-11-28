@@ -1,10 +1,6 @@
 from tensorflow import keras
-from tensorflow.keras.layers import Input, Concatenate, BatchNormalization, \
-    Dense
-
-# This is just to make PyCharm resolve the import. Otherwise, I should be
-# able to import it straight from tf.keras.layers.
-from tensorflow.python.keras.layers import Normalization
+from keras.layers import Input, Concatenate, BatchNormalization, \
+    Dense, Normalization
 
 from mim.models.load import load_ribeiro_model
 from mim.models.util import cnn_helper, mlp_helper
@@ -62,6 +58,12 @@ def ffnn(
         ecg_layers.append(inp['forberg_ecg_1'])
     if 'forberg_diff' in inp:
         ecg_layers.append(inp['forberg_diff'])
+    if 'johansson_ecg_0' in inp:
+        ecg_layers.append(inp['johansson_ecg_0'])
+    if 'johansson_ecg_1' in inp:
+        ecg_layers.append(inp['johansson_ecg_1'])
+    if 'johansson_diff' in inp:
+        ecg_layers.append(inp['johansson_diff'])
 
     return _ecg_and_flat_feature_combiner(
         inp=inp,
@@ -148,8 +150,13 @@ def _make_input(shape):
 
 
 def _ecg_and_flat_feature_combiner(
-        inp, ecg_layers, ecg_ffnn_kwargs, ecg_comb_ffnn_kwargs, ecg_combiner,
-        flat_ffnn_kwargs, final_ffnn_kwargs, output_size
+        inp, ecg_layers,
+        ecg_ffnn_kwargs=None,
+        ecg_comb_ffnn_kwargs=None,
+        ecg_combiner=None,
+        flat_ffnn_kwargs=None,
+        final_ffnn_kwargs=None,
+        output_size=1
 ):
     assert len(ecg_layers) >= 1
     if ecg_ffnn_kwargs is not None:

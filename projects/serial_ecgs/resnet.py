@@ -1,6 +1,6 @@
 import numpy as np
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (
+from keras.models import Model
+from keras.layers import (
     Input,
     Conv1D,
     MaxPooling1D,
@@ -100,17 +100,26 @@ class ResidualUnit(object):
         n_filters_in = y.shape[2]
         y = self._skip_connection(y, downsample, n_filters_in)
         # 1st layer
-        x = Conv1D(self.n_filters_out, self.kernel_size, padding='same',
-                   use_bias=False, kernel_initializer=self.kernel_initializer)(
-            x)
+        x = Conv1D(
+            self.n_filters_out,
+            self.kernel_size,
+            padding='same',
+            use_bias=False,
+            kernel_initializer=self.kernel_initializer
+        )(x)
         x = self._batch_norm_plus_activation(x)
         if self.dropout_rate > 0:
             x = Dropout(self.dropout_rate)(x)
 
         # 2nd layer
-        x = Conv1D(self.n_filters_out, self.kernel_size, strides=downsample,
-                   padding='same', use_bias=False,
-                   kernel_initializer=self.kernel_initializer)(x)
+        x = Conv1D(
+            self.n_filters_out,
+            self.kernel_size,
+            strides=downsample,
+            padding='same',
+            use_bias=False,
+            kernel_initializer=self.kernel_initializer
+        )(x)
         if self.preactivation:
             x = Add()([x, y])  # Sum skip connection and main connection
             y = x

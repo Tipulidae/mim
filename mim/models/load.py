@@ -21,23 +21,27 @@ def load_keras_model(base_path, split_number, **kwargs):
 
 
 def load_model_from_experiment_result(
-        xp_name, commit=None, which='best', split_number=0, trainable=False,
-        final_layer_index=-1, input_key=None, **kwargs):
-    assert which in ['last', 'best']
+        xp_project, xp_base, xp_name, commit=None, epoch=None, split_number=0,
+        trainable=False, final_layer_index=-1, input_key=None, suffix=None,
+        **kwargs):
     xp_base_path = os.path.join(
         PATH_TO_TEST_RESULTS,
+        xp_project,
+        xp_base,
         xp_name
     )
     xp_results_path = os.path.join(
         xp_base_path,
-        'results.pickle'
+        'train_val_results.pickle'
     )
     xp_model_path = os.path.join(
         xp_base_path,
         f'split_{split_number}',
-        f'{which}.ckpt'
+        'checkpoints',
+        f'epoch_{epoch:03d}.h5'
     )
-    metadata = pd.read_pickle(xp_results_path)['metadata']
+    xp_results = pd.read_pickle(xp_results_path)
+    metadata = xp_results.metadata
     expected_metadata = {
         'has_uncommitted_changes': False,
         'current_commit': commit
@@ -47,19 +51,29 @@ def load_model_from_experiment_result(
         allow_uncommitted=False
     )
     v.validate_consistency([metadata, expected_metadata])
+    log.debug(f'Model path: {xp_model_path}')
 
-    model = keras.models.load_model(filepath=xp_model_path)
+    model = keras.models.load_model(filepath=xp_model_path, compile=False)
     model.trainable = trainable
+
+    if suffix is not None:
+        for layer in model.layers:
+            layer._name += suffix
 
     if input_key is None:
         inp = model.input
     else:
         inp = model.input[input_key]
-    model = keras.Model(inp, model.layers[final_layer_index].output)
-    return model
+
+    return inp, model.layers[final_layer_index].output
 
 
 def load_ribeiro_model(freeze_resnet=False, suffix=None):
+    """Loads the model pre-trained by Ribeiro et al.
+    Ribeiro, A.H., Ribeiro, M.H., Paixão, G.M.M. et al. Automatic
+    diagnosis of the 12-lead ECG using a deep neural network.
+    Nat Commun 11, 1760 (2020). https://doi.org/10.1038/s41467-020-15432-4
+    """
     resnet = keras.models.load_model(
         filepath=os.path.join(PATH_TO_DATA, 'ribeiro_resnet', 'model.hdf5')
     )

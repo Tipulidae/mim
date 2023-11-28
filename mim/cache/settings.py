@@ -28,7 +28,7 @@ SAFE = Validator(
     max_age_difference=None
 )
 
-enabled = True
+enabled = False
 validator = SAFE
 
 

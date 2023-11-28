@@ -6,7 +6,7 @@ from tqdm import tqdm
 import h5py
 
 from massage.ecg import calculate_four_last_leads
-from mim.experiments.extractor import Extractor, DataWrapper
+from mim.experiments.extractor import Extractor, DataWrapper, Data, Container
 from mim.cross_validation import CrossValidationWrapper, ChronologicalSplit
 from mim.util.logs import get_logger
 from massage.esc_trop import (
@@ -18,7 +18,7 @@ from massage.esc_trop import (
     make_mace30_dataframe,
     make_ami30_dataframe,
     make_mace_chapters_dataframe,
-    make_forberg_features,
+    make_forberg_features, make_johansson_features,
 )
 
 log = get_logger("ESC-Trop extractor")
@@ -43,7 +43,7 @@ class EscTrop(Extractor):
 
         assert index.index.equals(df.index)
 
-        return df.values, df.columns
+        return Data(df.values, columns=df.columns)
 
     def make_features(self, index):
         ed_features = make_ed_features(index)
@@ -64,14 +64,14 @@ class EscTrop(Extractor):
         if 'ecgs' in self.features:
             for ecg in [f'ecg_{x}' for x in range(2)]:
                 if ecg in self.features['ecgs']:
-                    x_dict[ecg] = (
+                    x_dict[ecg] = Data(
                         self.make_ecg_data(ecg_features[ecg]),
-                        ECG_COLUMNS
+                        columns=ECG_COLUMNS
                     )
 
         if 'flat_features' in self.features:
             data = features[self.features['flat_features']]
-            x_dict['flat_features'] = data.values, data.columns
+            x_dict['flat_features'] = Data(data.values, columns=data.columns)
 
         if 'forberg' in self.features:
             f0 = make_forberg_features(ecg_features.ecg_0)
@@ -100,18 +100,55 @@ class EscTrop(Extractor):
                     values.append(diff.values)
                     columns += [f"{name}_diff" for name in diff.columns]
 
-                x_dict['forberg_features'] = (
+                x_dict['forberg_features'] = Data(
                     np.concatenate(values, axis=1),
-                    columns
+                    columns=columns
                 )
             else:
                 if 'ecg_0' in self.features['forberg']:
-                    x_dict['forberg_ecg_0'] = (f0.values, f0.columns)
+                    x_dict['forberg_ecg_0'] = Data(
+                        f0.values, columns=f0.columns)
                 if 'ecg_1' in self.features['forberg']:
-                    x_dict['forberg_ecg_1'] = (f1.values, f1.columns)
+                    x_dict['forberg_ecg_1'] = Data(
+                        f1.values, columns=f1.columns)
                 if 'diff' in self.features['forberg']:
-                    x_dict['forberg_diff'] = (diff.values, diff.columns)
+                    x_dict['forberg_diff'] = Data(
+                        diff.values, columns=diff.columns)
 
+        if 'johansson' in self.features:
+            f0 = make_johansson_features(ecg_features.ecg_0)
+            f1 = make_johansson_features(ecg_features.ecg_1)
+            diff = (f1 - f0)
+
+            if 'combine' in self.features['johansson']:
+                values = []
+                columns = []
+                if 'ecg_0' in self.features['johansson']:
+                    values.append(f0.values)
+                    columns += [f"{name}_ecg_0" for name in f0.columns]
+
+                if 'ecg_1' in self.features['johansson']:
+                    values.append(f1.values)
+                    columns += [f"{name}_ecg_1" for name in f1.columns]
+
+                if 'diff' in self.features['johansson']:
+                    values.append(diff.values)
+                    columns += [f"{name}_diff" for name in diff.columns]
+
+                x_dict['johansson_features'] = Data(
+                    np.concatenate(values, axis=1),
+                    columns=columns
+                )
+            else:
+                if 'ecg_0' in self.features['johansson']:
+                    x_dict['johansson_ecg_0'] = Data(
+                        f0.values, columns=f0.columns)
+                if 'ecg_1' in self.features['johansson']:
+                    x_dict['johansson_ecg_1'] = Data(
+                        f1.values, columns=f1.columns)
+                if 'diff' in self.features['johansson']:
+                    x_dict['johansson_diff'] = Data(
+                        diff.values, columns=diff.columns)
         return x_dict
 
     def make_ecg_data(self, ecgs):
@@ -130,9 +167,10 @@ class EscTrop(Extractor):
         feature_dict = self.make_features(index)
 
         data = DataWrapper(
-            features=feature_dict,
+            features=Container(feature_dict),
             labels=labels,
-            index=(index.index, ['Alias']),
+            index=Data(index.index.values, columns=['Alias']),
+            groups=index.index.values,
             fits_in_memory=self.fits_in_memory
         )
 

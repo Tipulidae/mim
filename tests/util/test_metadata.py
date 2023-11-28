@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from freezegun import freeze_time
 
-from mim.util.metadata import Metadata, Validator, MetadataConsistencyError
+from mim.util.metadata import Metadata, Validator, MetadataConsistencyException
 
 
 class TestMetadata:
@@ -50,13 +50,13 @@ class TestMetadata:
 
         md = Metadata()
 
-        assert expected == md.report(conda=False)
+        assert expected == md.report(environment=False)
 
         include = {}
         while expected:
             k, v = expected.popitem()
             include[k] = False
-            assert expected == md.report(conda=False, **include)
+            assert expected == md.report(environment=False, **include)
 
 
 class TestValidator:
@@ -70,12 +70,12 @@ class TestValidator:
         v = Validator(allow_uncommitted=False)
         assert v.validate_consistency([metadata])
 
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             metadata = {'has_uncommitted_changes': True}
             v.validate_consistency([metadata])
 
     def test_missing_uncommitted_changes_metadata_raises_error(self):
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v = Validator(allow_uncommitted=False)
             v.validate_consistency([{}])
 
@@ -86,7 +86,7 @@ class TestValidator:
         assert v.validate_consistency([{'has_uncommitted_changes': False}])
 
     def test_some_missing_uncommitted_changes_metadata_raises_error(self):
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v = Validator(allow_uncommitted=False)
             v.validate_consistency([{'has_uncommitted_changes': True},
                                     {'has_uncommitted_changes': False},
@@ -101,12 +101,12 @@ class TestValidator:
 
     def test_different_commits_raises_error(self):
         v = Validator(allow_different_commits=False)
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v.validate_consistency([
                 {'current_commit': 'abcd'},
                 {'current_commit': 'efgh'}])
 
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v.validate_consistency([
                 {'current_commit': 'abcd'},
                 {'current_commit': 'abcd'},
@@ -127,13 +127,13 @@ class TestValidator:
 
     def test_timestamp_difference_out_of_bounds_raises_error(self):
         v = Validator(max_age_difference=pd.Timedelta(days=10))
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v.validate_consistency([
                 {'timestamp': '2017-01-01'},
                 {'timestamp': '2017-01-21'}
             ])
 
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v.validate_consistency([
                 {'timestamp': '2017-01-01'},
                 {'timestamp': '2017-01-02 12:00:00'},
@@ -164,7 +164,7 @@ class TestValidator:
 
     def test_different_file_data_raises_error(self):
         v = Validator(allow_different_files=False)
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v.validate_consistency([
                 {'file_data': {
                     'patient_list.csv': {'changed': '2017-01-01 10:00:00'},
@@ -175,7 +175,7 @@ class TestValidator:
                     'patient_height.csv': {'changed': '2017-01-01 10:00:01'}
                 }}])
 
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v.validate_consistency([
                 {'file_data': {
                     'patient_list.csv': {'changed': '2017-01-01 10:00:00'},
@@ -187,14 +187,14 @@ class TestValidator:
                     'patient_height2.csv': {'changed': '2017-01-01 10:00:00'}
                 }}])
 
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v.validate_consistency([
                 {'file_data': {}},
                 {'file_data': {
                     'patient_list.csv': {'changed': '2017-01-01 10:00:00'},
                 }}])
 
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v.validate_consistency([
                 {'file_data': {
                     'patient_list.csv': {'changed': '2017-01-01 10:00:00'},
@@ -205,7 +205,7 @@ class TestValidator:
                     'patientheight.csv': {'changed': '2017-01-02 10:02:00'},
                 }}])
 
-        with pytest.raises(MetadataConsistencyError):
+        with pytest.raises(MetadataConsistencyException):
             v.validate_consistency([
                 {'file_data': {
                     'patient_list.csv': {'changed': '2017-01-01 10:00:00'},

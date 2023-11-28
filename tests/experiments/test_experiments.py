@@ -56,6 +56,7 @@ class TestExperiment:
     def test_result_path_for_normal_experiment(self):
         expected_path = os.path.join(
             PATH_TO_TEST_RESULTS,
+            'experiments',  # The module name, which is experiments
             'FakeExperiment',
             'default_experiment',
             'train_val_results.pickle'
@@ -71,6 +72,7 @@ class TestExperiment:
         )
         expected_path = os.path.join(
             PATH_TO_TEST_RESULTS,
+            'experiments',
             'Experiment',
             'bare',
             'train_val_results.pickle'

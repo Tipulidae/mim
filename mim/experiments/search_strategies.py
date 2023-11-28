@@ -231,7 +231,6 @@ class RandomSearch(Searcher):
 
     def search(self):
         for xp in self.experiments():
-            print(xp)
             if xp.is_trained:
                 continue
 
@@ -270,7 +269,7 @@ class EnsembleRandomSearch(Searcher):
 
     def search(self):
         experiments = ...
-        for bracket, (splits, num_models) in enumerate(zip(
+        for _, (splits, num_models) in enumerate(zip(
                 range(self.iterations_per_bracket),
                 range(self.models_per_bracket))):
 

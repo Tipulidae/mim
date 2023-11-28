@@ -49,10 +49,14 @@ regression_scores = {
 
 
 class Presenter:
-    def __init__(self, name, verbose=2):
+    def __init__(self, name, verbose=2, legacy_path=False):
         self.results = dict()
+        if legacy_path:
+            result_name = 'results'
+        else:
+            result_name = 'train_val_results'
         paths = insensitive_iglob(
-            f"{PATH_TO_TEST_RESULTS}/{name}/**/train_val_results.pickle",
+            f"{PATH_TO_TEST_RESULTS}/{name}/**/{result_name}.pickle",
             recursive=True
         )
 
@@ -63,6 +67,7 @@ class Presenter:
             if xp_name in self.results:
                 log.warning(f"Two experiments with the name {xp_name}!")
 
+            # trunk-ignore(bandit/B301)
             self.results[xp_name] = pd.read_pickle(path)
 
         if verbose > 0:
@@ -111,11 +116,16 @@ class Presenter:
             index=['train', 'test']
         )
 
-    def scores(self, like='.*', auc=True, rule_in_out=False):
+    def scores(self, like='.*', auc=True, rule_in_out=False, legacy=False):
         results = []
         for name, xp in list(self._results_that_match_pattern(like)):
-            targets = xp.validation_targets.values.ravel()
-            predictions = xp.validation_predictions.values.ravel()
+            if legacy:
+                targets, predictions = self._target_predictions(name)
+                targets = targets.values.ravel()
+                predictions = predictions.values.ravel()
+            else:
+                targets = xp.validation_targets.values.ravel()
+                predictions = xp.validation_predictions.values.ravel()
 
             data = []
             index = []
@@ -133,7 +143,7 @@ class Presenter:
 
     def scores2(self, like='.*', threshold=None):
         results = {}
-        for name, xp in list(self._results_that_match_pattern(like)):
+        for name, _ in list(self._results_that_match_pattern(like)):
             targets, predictions = self._target_predictions(name)
             results[name] = pd.DataFrame({
                 col: calculate_scores(targets[col], predictions[col],
@@ -143,24 +153,31 @@ class Presenter:
 
         return pd.concat(results.values(), axis=1, keys=results.keys())
 
-    def predictions(self, like='.*'):
+    def predictions(self, like='.*', droplevel=True):
         # Return dataframe with the true targets and predictions for each
         # experiment
         predictions = []
+        keys = []
         the_target = None
         for name, xp in self._results_that_match_pattern(like):
-            target, prediction = self._target_predictions(name)
+            target = xp.validation_targets
+            prediction = xp.validation_predictions
             if the_target is None:
                 the_target = target
 
-            assert the_target.equals(target)
-            predictions.append(
-                prediction.iloc[:, 0].rename(name)
-            )
+            if not the_target.equals(target):
+                raise Exception('Targets differ')
+            predictions.append(prediction)
+            keys.append(name)
 
-        predictions = pd.DataFrame(predictions).T
-        predictions.index = the_target.index
-        return the_target.join(predictions)
+        result = pd.concat(
+            [the_target] + predictions,
+            keys=['target'] + keys,
+            axis=1
+        )
+        if droplevel:
+            result.columns = result.columns.droplevel(1)
+        return result
 
     def prediction_ranks(self, like='.*'):
         predictions = self.predictions(like=like)
@@ -172,7 +189,7 @@ class Presenter:
 
     def threshold_scores(self, like='.*', threshold=0.5):
         results = []
-        for name, xp in self._results_that_match_pattern(like):
+        for name, _ in self._results_that_match_pattern(like):
             targets, predictions = self._threshold_target_predictions(
                 name, threshold)
             results.append(pd.Series(
@@ -211,8 +228,8 @@ class Presenter:
             predictions = pd.concat(r['predictions']['prediction'])
             fpr, tpr, thresholds = roc_curve(targets, predictions)
             auc = roc_auc_score(targets, predictions)
-            l, = plt.plot(fpr, tpr, lw=1, alpha=1)
-            lines.append(l)
+            k, = plt.plot(fpr, tpr, lw=1, alpha=1)
+            lines.append(k)
             labels.append(f'{xp} - AUC = {auc:.4f}')
 
         plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', alpha=.8)
@@ -335,18 +352,15 @@ class Presenter:
         #
         # return history
 
-    def max_auc(self):
+    def max_auc(self, like='.*', column='val_auc'):
         def get_max_auc(xp):
-            return self.history(
-                xp, columns=['val_auc'], folds='first'
-            ).max()[0]
+            return xp.validation_history[0][column].max()
 
-        auc = pd.DataFrame({
-            'final_auc': self.scores()['auc'],
-            'max_auc': {xp: get_max_auc(xp) for xp in self.results},
-        })
-        auc['overfit'] = auc.max_auc - auc.final_auc
-        return auc
+        results = {}
+        for name, xp in self._results_that_match_pattern(like):
+            results[name] = get_max_auc(xp)
+
+        return pd.Series(results)
 
     def best_during_training(self, column='auc', bigger_is_better=True):
         def best_and_final(xp):

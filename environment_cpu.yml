@@ -3,27 +3,32 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - python=3.8
+  - python=3.11
+  - pytest
   - numpy
   - pandas
   - tqdm
   - scikit-learn
-  - pytest
   - freezegun
   - jupyterlab
+  - jupyter_contrib_nbextensions
+  - jupyter_nbextensions_configurator 
   - ipython
   - ipyparallel
   - pip
   - autopep8
   - flake8
   - seaborn
-  - tensorflow=2.4.1
   - graphviz
   - pydot
   - wfdb
-  - jupyter_contrib_nbextensions
-  - jupyter_nbextensions_configurator 
   - pre-commit
+  - xgboost
+  - lxml
+  - h5py
+  - conda-lock
+  - tensorflow-cpu=2.12
   - pip:
     - ecg_plot
+    - compress-pickle
     - silence_tensorflow

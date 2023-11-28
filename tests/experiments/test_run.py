@@ -17,34 +17,30 @@ class SmallTestExperiment(Experiment, Enum):
         model_kwargs={'n_estimators': 10},
         save_model=False,
         save_results=False,
-        log_conda_env=False  # True (which is default) is a little slow
+        log_environment=False  # True (which is default) is a little slow
     )
 
     test_keras = Experiment(
         description='Test small Keras network using fake data',
         extractor=FakeExtractor,
-        extractor_kwargs={
-            "index": {
-                'n_samples': 128,
-                'n_features': 128,
-                'n_informative': 100,
-                'n_classes': 2,
-                'random_state': 1111
-            },
+        extractor_index={
+            'n_samples': 128,
+            'n_features': 128,
+            'n_informative': 100,
+            'n_classes': 2,
+            'random_state': 1111
         },
         model=basic_ff,
         model_kwargs={},
         batch_size=32,
         ignore_callbacks=True,
         epochs=2,
-        optimizer={
-            'name': Adam,
-            'kwargs': {'learning_rate': 1e-2}
-        },
+        optimizer=Adam,
+        learning_rate=1e-2,
         loss='binary_crossentropy',
         metrics=['accuracy'],
         scoring=sparse_categorical_accuracy,
-        log_conda_env=False,
+        log_environment=False,
         save_model=False,
         save_results=False
     )

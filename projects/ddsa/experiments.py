@@ -31,11 +31,13 @@ class DDSA(Experiment, Enum):
             },
             'ffnn_kwargs': {
                 'sizes': [100, 10],
-                'dropouts': [0.3, 0.3],
-                'batch_norms': [False, False],
-                'activity_regularizer': 0.01,
-                'kernel_regularizer': 0.01,
-                'bias_regularizer': 0.01,
+                'dropout': [0.3, 0.3],
+                'batch_norm': [False, False],
+                'regularizer': {
+                    'activity': 0.01,
+                    'kernel': 0.01,
+                    'bias': 0.01
+                }
             },
         },
         extractor=PTBXL,

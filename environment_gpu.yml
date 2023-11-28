@@ -1,9 +1,9 @@
-name: mim
+name: mim-gpu
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
 dependencies:
-  - python=3.9
+  - python=3.11
   - pytest
   - numpy
   - pandas
@@ -11,6 +11,8 @@ dependencies:
   - scikit-learn
   - freezegun
   - jupyterlab
+  - jupyter_contrib_nbextensions
+  - jupyter_nbextensions_configurator 
   - ipython
   - ipyparallel
   - pip
@@ -22,7 +24,10 @@ dependencies:
   - wfdb
   - pre-commit
   - xgboost
-  - tensorflow=2.11
+  - lxml
+  - h5py
+  - conda-lock
+  - tensorflow-gpu=2.12
   - pip:
     - ecg_plot
     - compress-pickle

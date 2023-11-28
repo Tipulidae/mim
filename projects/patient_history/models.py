@@ -4,20 +4,13 @@ from keras.layers import (
     Dense, LSTM, Dropout
 )
 
-from mim.models.util import mlp_helper
-
-
-def _make_input(shape):
-    if isinstance(shape, dict):
-        return {key: _make_input(value) for key, value in shape.items()}
-    else:
-        return Input(shape=shape)
+from mim.models.util import mlp_helper, make_input
 
 
 def mlp1(train, validation=None, history_mlp_kwargs=None,
          lisa_mlp_kwargs=None, basic_mlp_kwargs=None,
          final_mlp_kwargs=None):
-    inp = _make_input(train.feature_tensor_shape)
+    inp = make_input(train.feature_tensor_shape)
     layers = []
     if 'history' in inp:
         history = inp['history']
@@ -43,7 +36,7 @@ def mlp1(train, validation=None, history_mlp_kwargs=None,
 
 
 def mlp2(train, validation=None, mlp_kwargs=None):
-    inp = _make_input(train.feature_tensor_shape)
+    inp = make_input(train.feature_tensor_shape)
 
     x = Concatenate()(inp.values())
     if mlp_kwargs:

@@ -19,7 +19,7 @@ class Data:
             data,
             index=None,
             columns=None,
-            dtype=tf.int64,
+            dtype=None,
             fits_in_memory=True,
             groups=None,
             predefined_splits=None,
@@ -31,7 +31,14 @@ class Data:
             self._columns = list(range(num_features))
         else:
             self._columns = columns
-        self.dtype = dtype
+
+        if dtype is None:
+            self.dtype = infer_dtype(data)
+        elif isinstance(dtype, dict):
+            self.dtype = dtype
+        else:
+            self.dtype = tf.as_dtype(dtype)
+
         self.groups = groups
         self.predefined_splits = predefined_splits
         self._fits_in_memory = fits_in_memory
@@ -59,10 +66,6 @@ class Data:
                 self.predefined_splits[i] for i in index]
 
         return new_data
-
-    # def lazy_partition(self, xs):
-    #     for p in partition(xs):
-    #         yield self.lazy_slice(p)
 
     @property
     def index(self):
@@ -274,18 +277,8 @@ class DataWrapper:
         :param predefined_splits:
         :param fits_in_memory:
         """
-
-        def wrap_as_data(x):
-            if isinstance(x, dict):
-                return Container({k: wrap_as_data(v) for k, v in x.items()})
-            else:
-                return Data(x[0], columns=list(x[1]))
-
         self.data = Container(
             {
-                # 'x': wrap_as_data(features),
-                # 'y': wrap_as_data(labels),
-                # 'index': wrap_as_data(index),
                 'x': features,
                 'y': labels,
                 'index': index,
@@ -356,15 +349,16 @@ class DataWrapper:
             columns = list(itertools.chain(*columns.values()))
         return pd.DataFrame(y, index=index, columns=columns)
 
-    def as_dataset(self, batch_size=1, prefetch=0, **kwargs):
-        x = self.data['x'].as_dataset(shuffle=True)
-        y = self.data['y'].as_dataset(shuffle=True)
+    def as_dataset(self, batch_size=1, prefetch=0, shuffle=True, **kwargs):
+        x = self.data['x'].as_dataset(shuffle=shuffle)
+        y = self.data['y'].as_dataset(shuffle=shuffle)
+        # index = tf.data.Dataset.from_tensors(list(range(len(y))))
         fixed_data = tf.data.Dataset.zip((x, y))
 
         # If the data _does_ fit in memory, we can use the tf shuffling
         # instead. This would be bad if data doesn't fit in memory though,
         # because tf will load the entire dataset in memory before shuffling.
-        if self.data.fits_in_memory:
+        if shuffle and self.data.fits_in_memory:
             fixed_data = fixed_data.shuffle(len(self.data))
 
         fixed_data = fixed_data.batch(batch_size)
@@ -377,6 +371,27 @@ class DataWrapper:
     def as_numpy(self):
         x = self.data['x'].as_flat_numpy()
         y = self.data['y'].as_numpy().ravel()
+        return x, y
+
+    def as_dataframe(self):
+        x = self.data['x'].as_flat_numpy()
+        y = self.data['y'].as_numpy()
+
+        index = pd.Index(
+            self.data['index'].as_numpy(),
+            name=self.data['index'].columns[0]
+        )
+        x_columns = self.data['x'].columns
+        if isinstance(x_columns, dict):
+            x_columns = list(itertools.chain(*x_columns.values()))
+
+        y_columns = self.data['y'].columns
+        if isinstance(y_columns, dict):
+            y_columns = list(itertools.chain(*y_columns.values()))
+
+        x = pd.DataFrame(x, index=index, columns=x_columns)
+        y = pd.DataFrame(y, index=index, columns=y_columns)
+
         return x, y
 
     def split(self, index_a, index_b):
@@ -403,6 +418,19 @@ def infer_shape(data):
         return None
 
     return list(shape[1:])
+
+
+def infer_dtype(data):
+    if hasattr(data, 'dtype'):
+        return tf.as_dtype(data.dtype)
+    elif isinstance(data, list):
+        return infer_dtype(data[0])
+    elif isinstance(data, float):
+        return tf.float64
+    elif isinstance(data, bool):
+        return tf.bool
+    else:
+        return tf.int64
 
 
 def sklearn_process(split_number=0, **processors):
@@ -627,7 +655,7 @@ class ECGData(Data):
 
 class Extractor:
     def __init__(self, index=None, features=None, labels=None,
-                 processing=None, fits_in_memory=True, cv_kwargs=None):
+                 processing=None, fits_in_memory=None, cv_kwargs=None):
         self.index = {} if index is None else index
         self.features = {} if features is None else features
         self.labels = {} if labels is None else labels
@@ -640,3 +668,14 @@ class Extractor:
 
     def get_test_data(self) -> DataWrapper:
         raise NotImplementedError
+
+
+class Augmentor:
+    def __init__(self, **settings):
+        self.settings = settings
+
+    def augment_training_data(self, data: DataWrapper) -> DataWrapper:
+        raise NotImplementedError
+
+    def augment_validation_data(self, data: DataWrapper) -> DataWrapper:
+        return data
