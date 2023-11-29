@@ -1261,7 +1261,8 @@ class Target(Experiment, Enum):
 
     PTA100_PTS100_RN1_R100 = Experiment(
         description='Uses two pre-trained RN1 models in parallel to predict '
-                    'AMI. One model is pre-trained on age, the other on sex.',
+                    'AMI. One model is pre-trained on age, the other on sex.'
+                    'batch-size reduced to fit model in memory.',
         model=pretrained_parallel,
         model_kwargs={
             'from_xp1': {
@@ -1311,7 +1312,7 @@ class Target(Experiment, Enum):
             }
         },
         epochs=400,
-        batch_size=512,
+        batch_size=256,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
         use_predefined_splits=True,
