@@ -4096,7 +4096,7 @@ class TargetGridSearch(Experiment, Enum):
             },
             'ecg_dropout': 0.0,
             'final_mlp_kwargs': {
-                'sizes': [100],
+                'sizes': [50],
                 'dropout': 0.3,
                 'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
             }
