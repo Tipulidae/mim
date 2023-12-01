@@ -1115,6 +1115,627 @@ class Target(Experiment, Enum):
     PTA100_RN1_R010 = PTA100_RN1_R100._replace(
         extractor_index={'train_percent': 0.1})
 
+    PTA090_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R090_AGE',
+                'commit': '137320612fe5986419f0f5420c034202958acbf5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA090_RN1_R090 = PTA090_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA090_RN1_R080 = PTA090_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA090_RN1_R070 = PTA090_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA090_RN1_R060 = PTA090_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA090_RN1_R050 = PTA090_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA090_RN1_R040 = PTA090_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA090_RN1_R030 = PTA090_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA090_RN1_R020 = PTA090_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA090_RN1_R010 = PTA090_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA080_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R080_AGE',
+                'commit': '137320612fe5986419f0f5420c034202958acbf5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA080_RN1_R090 = PTA080_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA080_RN1_R080 = PTA080_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA080_RN1_R070 = PTA080_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA080_RN1_R060 = PTA080_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA080_RN1_R050 = PTA080_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA080_RN1_R040 = PTA080_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA080_RN1_R030 = PTA080_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA080_RN1_R020 = PTA080_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA080_RN1_R010 = PTA080_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA070_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R070_AGE',
+                'commit': '137320612fe5986419f0f5420c034202958acbf5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA070_RN1_R090 = PTA070_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA070_RN1_R080 = PTA070_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA070_RN1_R070 = PTA070_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA070_RN1_R060 = PTA070_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA070_RN1_R050 = PTA070_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA070_RN1_R040 = PTA070_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA070_RN1_R030 = PTA070_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA070_RN1_R020 = PTA070_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA070_RN1_R010 = PTA070_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA060_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R060_AGE',
+                'commit': '137320612fe5986419f0f5420c034202958acbf5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA060_RN1_R090 = PTA060_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA060_RN1_R080 = PTA060_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA060_RN1_R070 = PTA060_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA060_RN1_R060 = PTA060_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA060_RN1_R050 = PTA060_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA060_RN1_R040 = PTA060_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA060_RN1_R030 = PTA060_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA060_RN1_R020 = PTA060_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA060_RN1_R010 = PTA060_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA050_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R050_AGE',
+                'commit': '137320612fe5986419f0f5420c034202958acbf5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA050_RN1_R090 = PTA050_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA050_RN1_R080 = PTA050_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA050_RN1_R070 = PTA050_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA050_RN1_R060 = PTA050_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA050_RN1_R050 = PTA050_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA050_RN1_R040 = PTA050_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA050_RN1_R030 = PTA050_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA050_RN1_R020 = PTA050_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA050_RN1_R010 = PTA050_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA040_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R040_AGE',
+                'commit': '137320612fe5986419f0f5420c034202958acbf5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA040_RN1_R090 = PTA040_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA040_RN1_R080 = PTA040_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA040_RN1_R070 = PTA040_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA040_RN1_R060 = PTA040_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA040_RN1_R050 = PTA040_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA040_RN1_R040 = PTA040_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA040_RN1_R030 = PTA040_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA040_RN1_R020 = PTA040_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA040_RN1_R010 = PTA040_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA030_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R030_AGE',
+                'commit': '137320612fe5986419f0f5420c034202958acbf5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA030_RN1_R090 = PTA030_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA030_RN1_R080 = PTA030_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA030_RN1_R070 = PTA030_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA030_RN1_R060 = PTA030_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA030_RN1_R050 = PTA030_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA030_RN1_R040 = PTA030_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA030_RN1_R030 = PTA030_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA030_RN1_R020 = PTA030_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA030_RN1_R010 = PTA030_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA020_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R020_AGE',
+                'commit': '137320612fe5986419f0f5420c034202958acbf5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA020_RN1_R090 = PTA020_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA020_RN1_R080 = PTA020_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA020_RN1_R070 = PTA020_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA020_RN1_R060 = PTA020_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA020_RN1_R050 = PTA020_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA020_RN1_R040 = PTA020_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA020_RN1_R030 = PTA020_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA020_RN1_R020 = PTA020_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA020_RN1_R010 = PTA020_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA010_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R010_AGE',
+                'commit': '137320612fe5986419f0f5420c034202958acbf5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=512,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA010_RN1_R090 = PTA010_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA010_RN1_R080 = PTA010_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA010_RN1_R070 = PTA010_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA010_RN1_R060 = PTA010_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA010_RN1_R050 = PTA010_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA010_RN1_R040 = PTA010_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA010_RN1_R030 = PTA010_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA010_RN1_R020 = PTA010_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA010_RN1_R010 = PTA010_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
     PTAS100_RN1_R100 = Experiment(
         description='Uses RN1 model trained to predict age & sex.',
         model=pretrained,
@@ -1817,6 +2438,2819 @@ class Target(Experiment, Enum):
         extractor_index={'train_percent': 0.2})
     PT_RIBEIRO_R010 = PT_RIBEIRO_R100._replace(
         extractor_index={'train_percent': 0.1})
+
+
+class TargetGridSearch(Experiment, Enum):
+    TEST = Experiment(
+        description='sanity check',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 20,
+                'decay_epochs': 80,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=500,
+        batch_size=512,
+        unfreeze_after_epoch=100,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+
+    A100_D3_FC50_L20_D0 = Experiment(
+        description='',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 20,
+                'decay_epochs': 80,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=500,
+        batch_size=512,
+        unfreeze_after_epoch=100,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    A100_D3_FC50_L20_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC50_L21_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC50_L21_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC50_L22_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC50_L22_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC100_L20_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC100_L20_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC100_L21_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC100_L21_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC100_L22_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC100_L22_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC200_L20_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC200_L20_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC200_L21_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC200_L21_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC200_L22_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D3_FC200_L22_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC50_L20_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC50_L20_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC50_L21_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC50_L21_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC50_L22_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC50_L22_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC100_L20_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC100_L20_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC100_L21_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC100_L21_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC100_L22_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC100_L22_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC200_L20_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC200_L20_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC200_L21_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC200_L21_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC200_L22_D0 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_D6_FC200_L22_D3 = A100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+
+    S100_D3_FC50_L20_D0 = Experiment(
+        description='',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 20,
+                'decay_epochs': 80,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=500,
+        batch_size=512,
+        unfreeze_after_epoch=100,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    S100_D3_FC50_L20_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC50_L21_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC50_L21_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC50_L22_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC50_L22_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC100_L20_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC100_L20_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC100_L21_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC100_L21_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC100_L22_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC100_L22_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC200_L20_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC200_L20_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC200_L21_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC200_L21_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC200_L22_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D3_FC200_L22_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC50_L20_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC50_L20_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC50_L21_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC50_L21_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC50_L22_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC50_L22_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC100_L20_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC100_L20_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC100_L21_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC100_L21_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC100_L22_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC100_L22_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC200_L20_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC200_L20_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC200_L21_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC200_L21_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC200_L22_D0 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    S100_D6_FC200_L22_D3 = S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+
+    A100_S100_D3_FC50_L20_D0 = Experiment(
+        description='',
+        model=pretrained_parallel,
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 20,
+                'decay_epochs': 80,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=500,
+        batch_size=512,
+        unfreeze_after_epoch=100,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    A100_S100_D3_FC50_L20_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC50_L21_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC50_L21_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC50_L22_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC50_L22_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC100_L20_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC100_L20_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC100_L21_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC100_L21_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC100_L22_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC100_L22_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC200_L20_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC200_L20_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC200_L21_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC200_L21_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC200_L22_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D3_FC200_L22_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.3,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC50_L20_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC50_L20_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC50_L21_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC50_L21_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC50_L22_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC50_L22_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [50],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC100_L20_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC100_L20_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC100_L21_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC100_L21_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC100_L22_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC100_L22_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC200_L20_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC200_L20_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 0.0, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC200_L21_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC200_L21_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-4, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC200_L22_D0 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.0,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
+    A100_S100_D6_FC200_L22_D3 = A100_S100_D3_FC50_L20_D0._replace(
+        model_kwargs={
+            'from_xp1': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_AGE',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_age',
+                'input_key': 'ecg'
+            },
+            'from_xp2': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R100_SEX',
+                'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1_sex',
+                'input_key': 'ecg'
+            },
+            'ecg_dropout': 0.3,
+            'final_mlp_kwargs': {
+                'sizes': [200],
+                'dropout': 0.6,
+                'regularizer': {'activity': 1e-3, 'kernel': 0.0, 'bias': 0.0}
+            }
+        },
+    )
 
 
 class Source(Experiment, Enum):

@@ -7,7 +7,8 @@ from keras.layers import (
     Activation,
     Flatten,
     Dense,
-    Concatenate
+    Concatenate,
+    Dropout
 )
 
 from mim.models.load import (
@@ -34,7 +35,7 @@ def cnn(
 
 
 def pretrained(train, validation=None, from_xp=None, ecg_mlp_kwargs=None,
-               flat_mlp_kwargs=None, final_mlp_kwargs=None):
+               flat_mlp_kwargs=None, final_mlp_kwargs=None, ecg_dropout=0.0):
     inp = {}
     if 'flat_features' in train.feature_tensor_shape:
         inp['flat_features'] = Input(
@@ -42,6 +43,7 @@ def pretrained(train, validation=None, from_xp=None, ecg_mlp_kwargs=None,
         )
     ecg_inp, x = load_model_from_experiment_result(**from_xp)
     inp['ecg'] = ecg_inp
+    x = Dropout(ecg_dropout)(x)
 
     if ecg_mlp_kwargs is not None:
         x = mlp_helper(x, **ecg_mlp_kwargs)
@@ -58,7 +60,8 @@ def pretrained(train, validation=None, from_xp=None, ecg_mlp_kwargs=None,
 
 def pretrained_parallel(
         train, validation=None, from_xp1=None, from_xp2=None,
-        ecg_mlp_kwargs=None, flat_mlp_kwargs=None, final_mlp_kwargs=None):
+        ecg_mlp_kwargs=None, flat_mlp_kwargs=None, final_mlp_kwargs=None,
+        ecg_dropout=0.0):
     inp = {}
     if 'flat_features' in train.feature_tensor_shape:
         inp['flat_features'] = Input(
@@ -74,6 +77,7 @@ def pretrained_parallel(
     x1 = m1(inp['ecg'])
     x2 = m2(inp['ecg'])
     x = Concatenate()([x1, x2])
+    x = Dropout(ecg_dropout)(x)
 
     if ecg_mlp_kwargs is not None:
         x = mlp_helper(x, **ecg_mlp_kwargs)
