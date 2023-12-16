@@ -1,10 +1,13 @@
 from enum import Enum
 
 from sklearn.metrics import roc_auc_score, r2_score
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GroupShuffleSplit
+from sklearn.linear_model import LogisticRegression
 from keras.optimizers import Adam
 
 from mim.experiments.experiments import Experiment
+from mim.experiments.extractor import sklearn_process
 from mim.models.util import CosineDecayWithWarmup
 from projects.transfer.extractor import TargetTask, SourceTask
 from projects.transfer.models import (
@@ -2439,6 +2442,112 @@ class Target(Experiment, Enum):
     PT_RIBEIRO_R010 = PT_RIBEIRO_R100._replace(
         extractor_index={'train_percent': 0.1})
 
+    LR_ASR100 = Experiment(
+        description='Predict AMI with only age and sex',
+        model=LogisticRegression,
+        model_kwargs={
+            'class_weight': 'balanced',
+            'random_state': 123,
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+        },
+        data_fits_in_memory=True,
+        use_predefined_splits=True,
+        scoring=roc_auc_score,
+    )
+    LR_PTA100_RN1_R100 = Experiment(
+        description='Uses the age predictions from the RN1 network as input '
+                    'to predict AMI.',
+        model=LogisticRegression,
+        model_kwargs={
+            'class_weight': 'balanced',
+            'random_state': 123,
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        extractor_processing={
+            'process_with_xps': [
+                {
+                    'xp_project': 'transfer',
+                    'xp_base': 'Source',
+                    'xp_name': 'RN1_R100_AGE',
+                    'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                    'epoch': 100,
+                    'input_key': 'ecg'
+                }
+            ]
+        },
+        pre_processor=sklearn_process,
+        pre_processor_kwargs={
+            'RN1_R100_AGE': {
+                'processor': StandardScaler
+            }
+        },
+        data_fits_in_memory=True,
+        use_predefined_splits=True,
+        scoring=roc_auc_score,
+    )
+    LR_PTS100_RN1_R100 = LR_PTA100_RN1_R100._replace(
+        description='Uses the sex predictions from the RN1 network as input '
+                    'to predict AMI.',
+        extractor_processing={
+            'process_with_xps': [
+                {
+                    'xp_project': 'transfer',
+                    'xp_base': 'Source',
+                    'xp_name': 'RN1_R100_SEX',
+                    'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                    'epoch': 100,
+                    'input_key': 'ecg'
+                }
+            ]
+        },
+        pre_processor=None
+    )
+    LR_PTA100_RN1_PTS100_RN1_R100 = LR_PTA100_RN1_R100._replace(
+        description='Uses age prediction from RN1 and sex prediction from '
+                    'another RN1 to predict AMI.',
+        extractor_processing={
+            'process_with_xps': [
+                {
+                    'xp_project': 'transfer',
+                    'xp_base': 'Source',
+                    'xp_name': 'RN1_R100_AGE',
+                    'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                    'epoch': 100,
+                    'input_key': 'ecg'
+                },
+                {
+                    'xp_project': 'transfer',
+                    'xp_base': 'Source',
+                    'xp_name': 'RN1_R100_SEX',
+                    'commit': 'b5c829281bb845ff5d810a9de370a9512ea548b5',
+                    'epoch': 100,
+                    'input_key': 'ecg'
+                }
+            ]
+        },
+        pre_processor_kwargs={
+            'RN1_R100_AGE': {
+                'processor': StandardScaler
+            }
+        },
+    )
+    LR_PTA100_RN1_PTS100_RN1_ASR100 = LR_PTA100_RN1_PTS100_RN1_R100._replace(
+        description='Uses the age & sex predictions from the RN1 network as '
+                    'input to predict AMI. Adds the real age and sex as well.',
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+            'flat_features': {'age': True, 'sex': True, 'scale_age': True}
+        },
+    )
+
 
 class TargetGridSearch(Experiment, Enum):
     TEST = Experiment(
@@ -4121,7 +4230,7 @@ class TargetGridSearch(Experiment, Enum):
             }
         },
         epochs=500,
-        batch_size=512,
+        batch_size=256,
         unfreeze_after_epoch=100,
         building_model_requires_development_data=True,
         use_predefined_splits=True,

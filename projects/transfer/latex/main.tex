@@ -1,0 +1,123 @@
+\documentclass[journal,twoside,web]{ieeecolor}
+\usepackage{generic}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{algorithm,algorithmic}
+\usepackage{hyperref}
+\hypersetup{hidelinks=true}
+\usepackage{textcomp}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\markboth{\hskip25pc IEEE JOURNAL OF BIOMEDICAL AND HEALTH INFORMATICS}
+{Author \MakeLowercase{\textit{et al.}}: Title}
+\begin{document}
+\title{Transfer Learning for Predicting Acute Myocardial Infarction Using Electrocardiograms}
+\author{Axel Nyström, Anders Björkelund, Jakob Lundager Forberg, Mattias Ohlsson, Jonas Björk, and Ulf Ekelund
+\thanks{Manuscript received ???. This work was part of the AIR Lund (Artificially Intelligent use of Registers at Lund University) research environment, and received funding from the Swedish Research Council (VR; grant no. 2019-00198). The study also received funding from the Swedish Heart-Lung Foundation (2018-0173) and Sweden's innovation agency (Vinnova; DNR 2018-0192). (\textit{Corresponding author: Axel Nyström}.)}
+\thanks{Axel Nyström is with the Department of Laboratory Medicine, Lund University, Lund, Sweden (e-mail: axel.nystrom@med.lu.se).}
+\thanks{Anders Björkelund is with the Center for Environmental and Climate Science, Lund University, Lund, Sweden (e-mail: anders.bjorkelund@cec.lu.se).}
+\thanks{Jakob Lundager Forberg is with the Department of Clinical Sciences, Lund University, Lund, Sweden, and also with the Department of Emergency Medicine, Helsingborg Hospital, Helsingborg, Sweden (e-mail: jakob.lundager-forberg@skane.se).}
+\thanks{Mattias Ohlsson is with the Center for Environmental and Climate Science, Lund University, Lund, Sweden, and also with the Center for Applied Intelligent Systems Research (CAISR), Halmstad University, Halmstad, Sweden (e-mail: mattias.ohlsson@cec.lu.se).}
+\thanks{Jonas Björk is with the Department of Laboratory Medicine, Lund University, Lund, Sweden, and also with Clinical Studies Sweden, Forum South, Skåne University Hospital, Lund, Sweden (e-mail: jonas.bjork@med.lu.se).}
+\thanks{Ulf Ekelund is with the department of Internal and Emergency Medicine, Skåne University Hospital, Lund, Sweden, and also with the Department of Clinical Sciences, Lund University, Lund, Sweden.}
+}
+
+\maketitle
+
+\begin{abstract}
+Should be 150 -- 250 words, doesn't have to be "structured". Should indicate the objective of the study, methods, major results, conclusions, and one sentence significance to biomedical research.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Machine learning, transfer learning, electrocardiography, cardiovascular diseases
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:introduction}
+\IEEEPARstart{W}{hen} it comes to machine learning, more data is almost always better. Large models are more capable of learning, but require more data to achieve good results than smaller models. In transfer learning, a model is first trained to solve a "source task" in a step called pretraining, and the pretrained model can then be finetuned to the "target" or downstream task. Transfer learning can be viewed as a way to increase the effective model size without having to obtain more data, or by exploiting other data sources that can't be otherwise used in the downstream learning task. The relationship between performance, model size, and data size depends on the details of the data and the task itself.
+
+In this work we explore this relationship and the interplay with supervised transfer learning, for the specific target task of using electrocardiograms (ECGs) to predict acute myocardial infarction (AMI) within 30 days of arriving at the emergency department (ED) with chest pain. 
+
+More specifically, we train and evaluate three different ResNet models that achieved state of the art on various ECG related classification tasks and compare their performance on our downstream task (predicting AMI) both with and without pretraining. We consider different sizes of both the source and target datasets, and compare different pretraining strategies. We also compare the ResNet models with a simple baseline CNN.
+
+Our target dataset contains 38631 ECGs (one ECG per ED chest pain episode) from 32892 consecutive ED chest pain patients, where the incidence of AMI was 5.8\%. The source dataset contains 877197 ECGs from 167458 consecutive non chest pain ED patients, from which we include a two year history of ECGs collected from any health-care visit in the region. The source dataset does not include any ECGs from any patients that have been included in the target dataset. All the ECGs are 12-lead 10s ECGs with a frequency of 500 Hz. 
+
+Our results confirm that when labeled data is scarce and pretraining is not available, smaller models outperform bigger ones. Whereas all models are improved by pretraining, the larger models are improved more, and with enough source data to use for pretraining, they will overtake the smaller models. From the pretraining task under consideration, age regression works best, with the best model achieving a target AUC of 83\%, which is 8 percentage points better than the best model that is not using pretraining (baseline CNN, AUC 75\%).
+
+
+% In this work we explore a simple, supervised pretraining scheme and the relationship between model size, source data size, target data size and classification performance for the specific task of using electrocardiograms (ECGs) to predict acute myocardial infarction (AMI) within 30 days of arriving at the emergency department (ED) with chest pain. 
+
+
+
+% For a given dataset and task, one is faced with the challenge of selecting a model of appropriate size. When labeled data is scarce, transfer learning can sometimes be employed to increase the effective model size 
+
+% one is faced with a balancing act between acquiring more data on the one hand, and
+% A few things are well known to correlate with the performance of machine learning models in general. Increasing the amount of high-quality data is one of them. In supervised learning, we are primarily interested in labeled data, which tends to be more difficult and expensive to get, since it often requires manual work to annotate and verify the labels. In the absense of labeled data, one can instead make use of unlabeled data or data from a neighboring domain in what is known as transfer learning.
+
+% Explanation of transfer learning.
+
+% In this project, we explore the relationship between model complexity and data size when using ECGs to predict AMI within 30 days of arriving at the ED with chest pain. We train and evaluate three different ResNet models that achieved state of the art on various ECG related classification tasks and compare their performance on our downstream task both with and without pretraining. We consider different sizes of both the source (i.e. pretraining task) and target (downstream task) datasets, and compare different pretraining strategies. We also compare the ResNet models with a simple baseline CNN.
+
+% The target dataset contains 38631 ECGs (one ECG per ED chest-pain episode) from 32892 consecutive ED patients, where the incidence of AMI was 5.8\%. The source dataset contains 877197k ECGs from 167458 consecutive non-chest pain ED patients. The source dataset does not include any ECGs from any patients that have been included in the target dataset. 
+
+% Our results indicate that when labeled data is scarce and pretraining is not available, smaller models outperform bigger ones. Whereas all models are improved by pretraining, the larger models are improved more, and with enough source data to use for pretraining, they will overtake the smaller models. All the models were similarly improved by increasing the amount of target data. 
+
+% As a final experiment, we 
+
+% 
+
+\section{Related work}
+Strodthoff ResNet (xresnet50) \cite{mehari2022}
+
+Ribeiro ResNet \cite{ribeiro2020}
+
+Gustafsson ResNet \cite{gustafsson2022}
+
+S4 models \cite{mehari2023}
+
+PTB-XL \cite{wagner2020}
+
+PTB-XL benchmarks and insights \cite{strodthoff2020}
+
+
+% Strodthoff et al.
+% Published the PTBXL dataset as well as a series of benchmarks
+% Has investigated different self-supervised learning frameworks (CPC, BYOL and SimCLR) in \cite{mehari2022} as a means to alleviate the challenge of limited data availability. Compares the impact of self-supervised pretraining on finetuned ECG classifiers. Comprehensive assessment of self-supervised pretraining in the ECG domain carried out exclusively on publicly available datasets. 
+
+% In \cite{mehari2022}, the authors indicate that self-supervised pretraining improves downstream performance, downstream data efficiency, and robustness of downstream classifiers (in particular, robustness against input perturbations). 
+% The self-supervised strategies are orthogonal (I think) to the model architecture used. That is to say, one can pick a generic prediction model and plug it into any of the self-supervised strategies. In this work, the authors use an "xres-net architecture" and state that "xresnet1d50" is similar in performance to "xresnet1d101" which they used in a previous work (benchmarks and insights). As downstream task, they predict all 71 labels in PTBXL and evaluate the macro-averaged AUC. 
+
+% In \cite{mehari2023} the authors introduce S4 (Structured State Space Sequence) models as a new type of model architecture, and use it in conjunction with self-supervised pretraining (in particular, CPC, which they showed in \cite{mehari2022} to perform best of a number of alternative self-supervised strategies). 
+% Again, the authors use PTB-XL and focus on the comprehensive ECG classification tasks (71 PTBXL labels). They also show that introducing patient metadata further increases performance. Furthermore, the authors find that downsampling the ECG from 500Hz to 100Hz has no discernible effect on the results, although this result might not hold for individual labels. 
+
+
+% What is linear evaluation performance??? It is the performance of freezing the model and using the learned representation directly, analogous I think to using the pre-trained model as a feature-extractor and feeding the features to a logistic regression model. 
+
+% Idea: it might be interesting to use our models to also evaluate the performance on PTBXL. That would make things more easily comparable with the strodthoff papers. 
+% Idea: Try to run some of our experiments on data downsampled to 100Hz (RN1 now uses 400Hz). Although this might require changing the model architecture to accomodate the change. 
+% Idea: The Mehari/Strodthoff papers describe a finetuning strategy in which the model is divided into several parts (head, body, stem/encoder), and have different learning rate for each part. Like us, they begin by freezing everything except the classification head, but unlike us, they also unfreeze batch-normalization. Then after a set number of epochs, they unfreeze the rest, but with different learning rates. I can try this also maybe (looks like it is feasible with tensorflow_addons: tfa.optimizers.MultiOptimizer. 
+
+\section{Methods}
+\subsection{Data sources}
+\subsubsection{Target data}
+\subsubsection{Source data}
+\subsection{Models}
+\subsection{Pretraining tasks}
+\subsubsection{Predicting age}
+\subsubsection{Predicting sex}
+\subsubsection{Predicting age and sex simultaneously}
+
+
+\section{Results and Discussion}
+We achieve a mean absolute error (MAE) of 6.62 years for the age regression pretraining task, which is in line with previous studies (Lima \textit{et al.} achieves a MAE of 8.38 \cite{lima2021}. Strodthoff \textit{et al.} achieves a MAE of 6.86 years on PTB-XL for healthy subjects and 7.38 years for non-healthy subjects \cite{strodthoff2020}. Attia \textit{et al.} achieves a MAE of 6.9 years \cite{attia2019}.)
+
+\subsection{Limitations}
+
+\section{Conclusions}
+
+\bibliographystyle{IEEEtran}
+\bibliography{main}
+
+\end{document}

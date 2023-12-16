@@ -340,10 +340,18 @@ class DataWrapper:
         :param y:
         :return:
         """
-        index = pd.Index(
-            self.data['index'].as_numpy(),
-            name=self.data['index'].columns[0]
-        )
+        index_data = self.data['index'].as_numpy()
+        if len(index_data.shape) > 1:
+            index = pd.MultiIndex.from_arrays(
+                list(index_data.T),
+                names=self.data['index'].columns
+            )
+        else:
+            index = pd.Index(
+                index_data,
+                name=self.data['index'].columns[0]
+            )
+
         columns = self.data['y'].columns
         if isinstance(columns, dict):
             columns = list(itertools.chain(*columns.values()))

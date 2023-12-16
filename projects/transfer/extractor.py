@@ -1,7 +1,10 @@
+import math
+
 import h5py
 import scipy
 import numpy as np
 import pandas as pd
+import keras
 from tqdm import tqdm
 from sklearn.model_selection import GroupShuffleSplit
 
@@ -11,6 +14,7 @@ from massage.ecg import calculate_four_last_leads
 from massage.muse_ecg import expected_lead_names
 from mim.util.logs import get_logger
 from mim.cache.decorator import cache
+from mim.models.load import load_model_from_experiment_result
 
 
 log = get_logger("Transfer-learning extractor")
@@ -60,18 +64,27 @@ def hold_out_split(index, temporal_test_percent, random_test_percent,
     )
     dev, random_test = next(splitter.split(remainder, groups=remainder.Alias))
 
-    test_set = pd.concat([remainder.iloc[random_test, :], temporal_test])
+    test_set = remainder.iloc[random_test, :], temporal_test
     development_set = remainder.iloc[dev, :]
     return development_set, test_set
-    # return development_set, remainder.iloc[random_test, :], temporal_test
 
 
 def temporal_split(index, percent, exclude_test_aliases):
-    n = len(index)
-    test_size = int(percent * n)
-    remainder_size = n - test_size
-    test = index.sort_values(by=['admission_date']).iloc[remainder_size:, :]
-    remainder = index.iloc[:remainder_size, :]
+    n = len(index.Alias.unique())
+    target_alias_count = math.ceil(percent * n)
+    index = index.sort_values(by=['admission_date'], ascending=False)
+
+    cutoff = 0
+    aliases = set()
+    for alias in index.Alias:
+        cutoff += 1
+        aliases.add(alias)
+        if len(aliases) == target_alias_count:
+            break
+
+    test = index.iloc[:cutoff, :].sort_values(by='Alias')
+    remainder = index.iloc[cutoff:, :].sort_values(by='Alias')
+
     if exclude_test_aliases:
         remainder = remainder.loc[~remainder.Alias.isin(test.Alias), :]
 
@@ -169,7 +182,8 @@ def make_source_index(
 ):
     source = sk1718.make_ecg_table()  # We start with all the ECGs
     target = make_target_index(source)  # All target ECGs before any splits
-    train, val, test = train_val_test_split(target)
+    train, val, (test_rand, test_temp) = train_val_test_split(target)
+    test = pd.concat([test_rand, test_temp], axis=0)
     source = source.reset_index()
 
     def exclude(column, df, msg):
@@ -252,6 +266,13 @@ def resample_and_pad(data, dtype):
     return data.astype(dtype)
 
 
+def preprocess_ecgs_using_xp(ecgs, load_model_kwargs):
+    inp, layers = load_model_from_experiment_result(**load_model_kwargs)
+    model = keras.Model(inp, layers)
+    results = model.predict(ecgs)
+    return results
+
+
 class TargetTask(Extractor):
     def get_development_data(self) -> DataWrapper:
         ecg_table = sk1718.make_ecg_table()
@@ -263,10 +284,20 @@ class TargetTask(Extractor):
 
         data_dict = {}
         if 'ecg_features' in self.features:
-            data_dict['ecg'] = Data(
-                make_ecg_data(dev.ecg_id, **self.features['ecg_features']),
-                columns=expected_lead_names,
+            ecg_data = make_ecg_data(
+                dev.ecg_id,
+                **self.features['ecg_features']
             )
+            if 'process_with_xps' in self.processing:
+                for kwargs in self.processing['process_with_xps']:
+                    data_dict[kwargs['xp_name']] = Data(
+                        preprocess_ecgs_using_xp(ecg_data, kwargs)
+                    )
+            else:
+                data_dict['ecg'] = Data(
+                    ecg_data,
+                    columns=expected_lead_names,
+                )
         if 'flat_features' in self.features:
             flat_features = make_source_labels(
                 dev.loc[:, ['Alias', 'ecg_date']],
@@ -290,17 +321,36 @@ class TargetTask(Extractor):
     def get_test_data(self) -> DataWrapper:
         ecg_table = sk1718.make_ecg_table()
         brsm_ecgs = make_target_index(ecg_table)
-        _, _, test = train_val_test_split(brsm_ecgs, **self.index)
+        _, _, (random_test, temporal_test) = train_val_test_split(
+            brsm_ecgs, **self.index)
 
+        random_test['split'] = 'random'
+        temporal_test['split'] = 'temporal'
+        test = pd.concat([random_test, temporal_test], axis=0)
         y = make_target_labels(test, **self.labels)
 
-        return DataWrapper(
-            features=Data(
-                data=make_ecg_data(test.ecg_id, self.features['ecg_mode']),
+        data_dict = {}
+        if 'ecg_features' in self.features:
+            data_dict['ecg'] = Data(
+                make_ecg_data(test.ecg_id, **self.features['ecg_features']),
                 columns=expected_lead_names,
-            ),
-            labels=Data(y.values, columns=['sex']),
-            index=Data(test.ecg_id.values, columns=['ecg_id']),
+            )
+        if 'flat_features' in self.features:
+            flat_features = make_source_labels(
+                test.loc[:, ['Alias', 'ecg_date']],
+                **self.features['flat_features']
+            )
+            data_dict['flat_features'] = Data(
+                flat_features.values,
+                columns=list(flat_features)
+            )
+
+        return DataWrapper(
+            features=Container(data=data_dict),
+            labels=Data(y.values, columns=list(y)),
+            index=Data(
+                test[['split', 'ecg_id']].values,
+                columns=['split', 'ecg_id']),
             groups=test.Alias.values,
             fits_in_memory=True
         )
@@ -333,4 +383,4 @@ class SourceTask(Extractor):
         )
 
     def get_test_data(self) -> DataWrapper:
-        raise NotImplementedError
+        raise NotImplementedError()
