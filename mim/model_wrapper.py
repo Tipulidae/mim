@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 from enum import Enum
-# from time import time
+from time import time
 from copy import deepcopy
 
 import numpy as np
@@ -342,7 +342,7 @@ class KerasWrapper(Model):
                                 'checkpoints')
             if isinstance(self.save_model_checkpoints, dict):
                 callbacks.append(ModelCheckpoint(
-                    filepath=os.path.join(path, 'epoch_{epoch:03d}.h5'),
+                    filepath=os.path.join(path, 'epoch_{epoch:03d}.keras'),
                     **self.save_model_checkpoints
                 ))
             else:
@@ -381,14 +381,14 @@ class KerasWrapper(Model):
         return False
 
     def save(self, split_number):
-        name = "model.tf"
+        name = "model.keras"
         if split_number is None:
             split_folder = ""
         else:
             split_folder = f'split_{split_number}'
 
         checkpoint = os.path.join(self.checkpoint_path, split_folder)
-        self.model.save(os.path.join(checkpoint, name), save_format='tf')
+        self.model.save(os.path.join(checkpoint, name), save_format='keras')
 
     def _prediction(self, x):
         prediction = self.model.predict(x.batch(self.batch_size))
@@ -441,23 +441,12 @@ class TorchWrapper(Model):
         )
         device = get_torch_device()
         predictions = []
-        for _, (x, y) in enumerate(dataloader):
+        for _, (x, _) in enumerate(dataloader):
             x = x.to(device)
             predictions.append(self.model(x).numpy(force=True))
 
-        # x = torch.utils.data.Dataloader(
-        #     data.data['x'], batch_size=1, shuffle=False
-        # )
         predictions = np.concatenate(predictions, axis=0)
-        # print(predictions, predictions.shape)
         return predictions
-        # x = data.x(self.can_use_tf_dataset)
-        # prediction = self._prediction(x)
-
-        # if self.only_last_prediction_column_is_used:
-        #     prediction = prediction[:, 1]
-
-        # return data.to_dataframe(prediction)
 
     def fit(self, training_data, validation_data=None, verbose=0,
             split_number=0):
@@ -475,12 +464,19 @@ class TorchWrapper(Model):
         device = get_torch_device()
         history = {'loss': [], 'val_loss': []}
         for epoch in range(self.epochs):
-            print(f"Epoch {epoch + 1}\n---------")
-            history['loss'].append(self.training_loop(train, device))
-            history['val_loss'].append(self.validation_loop(val, device))
+            t0 = time()
+            print(f"Epoch {epoch + 1}/{self.epochs}")
+            train_loss = self.training_loop(train, device)
+            val_loss = self.validation_loop(val, device)
+            history['loss'].append(train_loss)
+            history['val_loss'].append(val_loss)
+            elapsed_time = time() - t0
+            print(f"{len(train)}/{len(train):>} "
+                  f"[==============================]"
+                  f" - {elapsed_time:.1f}s - "
+                  f" - loss: {train_loss} - val_loss: {val_loss}")
 
         print("Finished training pytorch model!")
-        # should return the training history as a dict.
         return history
 
     def training_loop(self, dataloader, device):
@@ -490,6 +486,7 @@ class TorchWrapper(Model):
         loss_avg = 0
         steps_total = 0
         for batch, (x, y) in enumerate(dataloader):
+            t0 = time()
             x = x.to(device)
             y = y.to(device)
             pred = self.model(x)
@@ -502,8 +499,11 @@ class TorchWrapper(Model):
             steps_total += len(x)
             loss_avg = loss_sum / steps_total
 
-            print(f"Loss: {loss_avg:>7f} "
-                  f"[{batch + 1:>5d} / {num_batches:>5d}]")
+            progress = progress_string(batch, num_batches)
+            elapsed_time = time() - t0
+            print(f"\r{progress} - {elapsed_time:.1f}s/epoch - "
+                  f"loss: {loss_avg:.4f}",
+                  end='')
 
         return loss_avg
 
@@ -518,9 +518,21 @@ class TorchWrapper(Model):
                 loss_sum += self.loss(pred, y).item()
 
         loss_avg = loss_sum / len(dataloader.dataset)
-        print(f"Validation loss: {loss_avg}")
         return loss_avg
 
     @property
     def summary(self):
         return str(self.model)
+
+
+def progress_string(current_batch, total_batches):
+    batch_offset = len(str(total_batches))
+    bar = progress_bar(current_batch, total_batches)
+    return f"{current_batch:>{batch_offset}}/{total_batches} - {bar}"
+
+
+def progress_bar(current_batch, total_batches):
+    bar_length = 30
+    done = round((bar_length - 1) * current_batch / total_batches)
+    remaining = bar_length - 1 - done
+    return "[" + "="*done + ">" + "."*remaining + "]"

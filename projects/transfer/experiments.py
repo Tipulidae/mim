@@ -320,6 +320,58 @@ class Target(Experiment, Enum):
     PTS100_CNN1_R010 = PTS100_CNN1_R100._replace(
         extractor_index={'train_percent': 0.1})
 
+    PTS010_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R010_SEX',
+                'commit': '98e923a7bcba4fd1794f4b4cc317d43c3beed86a',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=Adam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+
     PTS100_RN1_R100 = Experiment(
         description='Uses RN1 model trained to predict sex.',
         model=pretrained,

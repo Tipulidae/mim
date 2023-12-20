@@ -21,8 +21,11 @@ from mim.models.util import (
 
 
 def cnn(train, validation=None, cnn_kwargs=None, ffnn_kwargs=None):
-    inp = Input(shape=train.feature_tensor_shape)
-    x = cnn_helper(inp, **cnn_kwargs)
+    inp = {
+        key: Input(shape=value, name=key)
+        for key, value in train.feature_tensor_shape.items()
+    }
+    x = cnn_helper(inp['ecg'], **cnn_kwargs)
     if ffnn_kwargs:
         x = mlp_helper(x, **ffnn_kwargs)
 

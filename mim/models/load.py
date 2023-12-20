@@ -38,7 +38,7 @@ def load_model_from_experiment_result(
         xp_base_path,
         f'split_{split_number}',
         'checkpoints',
-        f'epoch_{epoch:03d}.h5'
+        f'epoch_{epoch:03d}.keras'
     )
     xp_results = pd.read_pickle(xp_results_path)
     metadata = xp_results.metadata
