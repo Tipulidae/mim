@@ -4,6 +4,7 @@ import os
 import shutil
 import re
 import math
+import random
 from copy import copy
 from time import time
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Any, Tuple, NamedTuple, Callable, Union
 
 import numpy as np
 import pandas as pd
+import torch
 import silence_tensorflow.auto  # noqa: F401
 import tensorflow as tf
 from tensorflow import keras
@@ -23,7 +25,7 @@ from mim.experiments.extractor import Extractor, Augmentor
 from mim.cross_validation import CrossValidationWrapper, \
     RepeatingCrossValidator
 from mim.config import PATH_TO_TEST_RESULTS
-from mim.model_wrapper import Model, KerasWrapper
+from mim.model_wrapper import Model, KerasWrapper, TorchWrapper
 from mim.util.logs import get_logger
 from mim.util.metadata import Metadata, Validator
 from mim.util.util import callable_to_string, keras_model_summary_as_string
@@ -364,6 +366,50 @@ class Experiment(NamedTuple):
                 log.info("\n\n" + keras_model_summary_as_string(model))
 
             return wrapped_model
+        elif isinstance(model, torch.nn.Module):
+
+            if callable(self.loss):
+                if 'reduction' not in self.loss_kwargs:
+                    loss = self.loss(reduction='sum', **self.loss_kwargs)
+                else:
+                    if self.loss_kwargs['reduction'] != 'sum':
+                        log.warning(
+                            f"Loss reduction was set to "
+                            f"{self.loss_kwargs['reduction']} instead of sum, "
+                            f"this might not be what you want. Make sure the "
+                            f"loss is averaged correctly."
+                        )
+                    loss = self.loss(**self.loss_kwargs)
+            else:
+                loss = self.loss
+
+            wrapped_model = TorchWrapper(
+                model,
+                checkpoint_path=self.base_path,
+                # tensorboard_path=self.base_path,
+                # exp_base_path=self.base_path,
+                batch_size=self.batch_size,
+                epochs=self.epochs,
+                # initial_epoch=self.initial_epoch + resume_from_epoch,
+                optimizer=self.optimizer,
+                optimizer_kwargs=self.optimizer_kwargs,
+                learning_rate=self.learning_rate,
+                loss=loss,
+                # loss_weights=self.loss_weights,
+                # class_weight=self.class_weight,
+                # metrics=fix_metrics(self.metrics),
+                # skip_compile=any([self.skip_compile, resume_from_epoch > 0]),
+                # ignore_callbacks=self.ignore_callbacks,
+                save_train_prediction_history=self.save_train_pred_history,
+                save_val_prediction_history=self.save_val_pred_history,
+                # save_model_checkpoints=self.save_model_checkpoints,
+                # use_tensorboard=self.use_tensorboard,
+                save_learning_rate=self.save_learning_rate,
+                # reduce_lr_on_plateau=self.reduce_lr_on_plateau,
+                # rule_out_logger=self.rule_out_logger,
+                # unfreeze_after_epoch=self.unfreeze_after_epoch
+            )
+            return wrapped_model
         else:
             return Model(
                 model,
@@ -502,6 +548,8 @@ def reset_random_generators(new_seed):
     tf.keras.backend.clear_session()
     np.random.seed(new_seed)
     tf.random.set_seed(new_seed)
+    random.seed(new_seed)
+    torch.manual_seed(new_seed)
 
 
 def _history_to_dataframe(history, data):

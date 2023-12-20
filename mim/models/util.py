@@ -2,15 +2,14 @@ import math
 from typing import Union, List
 
 import tensorflow as tf
-from keras.saving.object_registration import register_keras_serializable
+from keras.saving import register_keras_serializable
 from keras.layers import (
     AveragePooling1D, Conv1D, BatchNormalization, ReLU, MaxPooling1D,
     Dropout, Flatten, Dense, Input, Add, Activation, GlobalAveragePooling1D,
     multiply, Reshape
 )
 from keras.regularizers import l2
-from keras.optimizers.schedules.learning_rate_schedule import \
-    LearningRateSchedule
+from keras.optimizers.schedules import LearningRateSchedule
 
 from mim.util.util import interpolate
 

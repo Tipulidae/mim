@@ -1,3 +1,4 @@
+import numpy as np
 from sklearn.datasets import make_classification
 
 from mim.experiments.extractor import DataWrapper, Extractor, Data
@@ -13,8 +14,8 @@ class FakeExtractor(Extractor):
         feature_names = [f"x{i}" for i in range(n_features)]
         index = list(range(n_samples))
         data = DataWrapper(
-            features=Data(x, columns=feature_names),
-            labels=Data(y, columns=['y']),
+            features=Data(x.astype(np.float32), columns=feature_names),
+            labels=Data(y.astype(np.float32), columns=['y']),
             index=Data(index, columns=['index']),
             fits_in_memory=self.fits_in_memory
         )

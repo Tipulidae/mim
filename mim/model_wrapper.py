@@ -8,6 +8,7 @@ from copy import deepcopy
 
 import numpy as np
 import pandas as pd
+import torch
 import tensorflow as tf
 from tensorflow import keras
 from keras.callbacks import TensorBoard, ReduceLROnPlateau, \
@@ -54,6 +55,7 @@ class Model:
 
         if hasattr(model, "random_state"):
             model.random_state = random_state
+        self.random_state = random_state
 
     def predict(self, data: DataWrapper):
         x = data.x(self.can_use_tf_dataset)
@@ -391,3 +393,134 @@ class KerasWrapper(Model):
     def _prediction(self, x):
         prediction = self.model.predict(x.batch(self.batch_size))
         return _fix_prediction(prediction)
+
+
+def get_torch_device():
+    if torch.cuda.is_available():
+        return 'cuda'
+    else:
+        return 'cpu'
+
+
+class TorchWrapper(Model):
+    def __init__(
+            self,
+            model,
+            checkpoint_path=None,
+            batch_size=1,
+            epochs=1,
+            optimizer=None,
+            optimizer_kwargs={},
+            learning_rate=1e-3,
+            loss=None,
+            save_train_prediction_history=False,
+            save_val_prediction_history=False,
+            save_learning_rate=False,
+            prefetch=None,
+            random_state=123):
+        super().__init__(model, can_use_tf_dataset=False,
+                         random_state=random_state)
+        device = get_torch_device()
+        log.debug(f'Using pytorch on {device}')
+        self.model.to(device)
+        self.loss = loss
+        self.optimizer = optimizer(
+            model.parameters(), lr=learning_rate, **optimizer_kwargs)
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.save_train_prediction_history = save_train_prediction_history
+        self.save_val_prediction_history = save_val_prediction_history
+        self.save_learning_rate = save_learning_rate
+        self.prefetch = prefetch
+
+    def predict(self, data: DataWrapper):
+        dataloader = data.as_dataloader(
+            batch_size=self.batch_size,
+            prefetch=self.prefetch,
+            shuffle=False,
+        )
+        device = get_torch_device()
+        predictions = []
+        for _, (x, y) in enumerate(dataloader):
+            x = x.to(device)
+            predictions.append(self.model(x).numpy(force=True))
+
+        # x = torch.utils.data.Dataloader(
+        #     data.data['x'], batch_size=1, shuffle=False
+        # )
+        predictions = np.concatenate(predictions, axis=0)
+        # print(predictions, predictions.shape)
+        return predictions
+        # x = data.x(self.can_use_tf_dataset)
+        # prediction = self._prediction(x)
+
+        # if self.only_last_prediction_column_is_used:
+        #     prediction = prediction[:, 1]
+
+        # return data.to_dataframe(prediction)
+
+    def fit(self, training_data, validation_data=None, verbose=0,
+            split_number=0):
+        train = training_data.as_dataloader(
+            batch_size=self.batch_size,
+            prefetch=self.prefetch,
+            shuffle=True,
+            random_seed=self.random_state
+        )
+        val = validation_data.as_dataloader(
+            batch_size=self.batch_size,
+            prefetch=self.prefetch,
+            shuffle=False,
+        )
+        device = get_torch_device()
+        history = {'loss': [], 'val_loss': []}
+        for epoch in range(self.epochs):
+            print(f"Epoch {epoch + 1}\n---------")
+            history['loss'].append(self.training_loop(train, device))
+            history['val_loss'].append(self.validation_loop(val, device))
+
+        print("Finished training pytorch model!")
+        # should return the training history as a dict.
+        return history
+
+    def training_loop(self, dataloader, device):
+        self.model.train()
+        num_batches = len(dataloader)
+        loss_sum = 0.0
+        loss_avg = 0
+        steps_total = 0
+        for batch, (x, y) in enumerate(dataloader):
+            x = x.to(device)
+            y = y.to(device)
+            pred = self.model(x)
+            train_loss = self.loss(pred, y)
+            train_loss.backward()
+            self.optimizer.step()
+            self.optimizer.zero_grad()
+
+            loss_sum += train_loss.item()
+            steps_total += len(x)
+            loss_avg = loss_sum / steps_total
+
+            print(f"Loss: {loss_avg:>7f} "
+                  f"[{batch + 1:>5d} / {num_batches:>5d}]")
+
+        return loss_avg
+
+    def validation_loop(self, dataloader, device):
+        self.model.eval()
+        loss_sum = 0
+        with torch.no_grad():
+            for x, y in dataloader:
+                x = x.to(device)
+                y = y.to(device)
+                pred = self.model(x)
+                loss_sum += self.loss(pred, y).item()
+
+        loss_avg = loss_sum / len(dataloader.dataset)
+        print(f"Validation loss: {loss_avg}")
+        return loss_avg
+
+    @property
+    def summary(self):
+        return str(self.model)

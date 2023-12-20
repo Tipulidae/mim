@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from tensorflow import keras
 from keras.layers import (
     Input,
@@ -19,18 +20,13 @@ from mim.models.util import (
 )
 
 
-def cnn(
-        train,
-        validation=None,
-        cnn_kwargs=None,
-        ffnn_kwargs=None,
-):
+def cnn(train, validation=None, cnn_kwargs=None, ffnn_kwargs=None):
     inp = Input(shape=train.feature_tensor_shape)
     x = cnn_helper(inp, **cnn_kwargs)
     if ffnn_kwargs:
         x = mlp_helper(x, **ffnn_kwargs)
-    output = Dense(units=1, activation='sigmoid', kernel_regularizer='l2')(x)
 
+    output = _final_layer(x, train.target_columns)
     return keras.Model(inp, output)
 
 
@@ -115,7 +111,6 @@ def resnet_v1(train, validation=None, residual_kwargs=None,
     if 'ecg' in train.feature_tensor_shape:
         inp['ecg'] = Input(shape=(4096, 8), dtype=np.float16, name='signal')
 
-    # signal = Input(shape=(4096, 8), dtype=np.float16, name='signal')
     x = Conv1D(64, 17, padding='same', use_bias=False,
                kernel_initializer='he_normal')(inp['ecg'])
     x = BatchNormalization()(x)
@@ -136,23 +131,7 @@ def resnet_v1(train, validation=None, residual_kwargs=None,
     if final_mlp_kwargs is not None:
         x = mlp_helper(x, **final_mlp_kwargs)
 
-    output_layers = []
-    for name in train.target_columns:
-        y = x
-        output_layers.append(
-            Dense(
-                units=1,
-                activation='sigmoid' if name == 'sex' else None,
-                kernel_initializer='he_normal',
-                name=name
-            )(y)
-        )
-
-    if len(output_layers) > 1:
-        output = output_layers
-    else:
-        output = output_layers[0]
-
+    output = _final_layer(x, train.target_columns)
     model = keras.Model(inp, output)
     return model
 
@@ -204,16 +183,25 @@ def resnet_v2(
     if final_mlp_kwargs is not None:
         x = mlp_helper(x, **final_mlp_kwargs)
 
+    output = _final_layer(x, train.target_columns)
+    model = keras.Model(inp, output)
+    return model
+
+
+def _final_layer(x, target_columns):
     output_layers = []
-    for name in train.target_columns:
-        y = x
+    for name in target_columns:
+        if name not in ['age', 'sex']:
+            raise ValueError(f"Target column must be either age or sex, "
+                             f"but it was {name}.")
         output_layers.append(
             Dense(
                 units=1,
                 activation='sigmoid' if name == 'sex' else None,
                 kernel_initializer='he_normal',
+                kernel_regularizer='l2',
                 name=name
-            )(y)
+            )(x)
         )
 
     if len(output_layers) > 1:
@@ -221,19 +209,32 @@ def resnet_v2(
     else:
         output = output_layers[0]
 
-    model = keras.Model(inp, output)
-    return model
+    return output
 
 
-def mlp(
-        train,
-        validation=None,
-        mlp_kwargs=None,
-):
+def mlp(train, validation=None, mlp_kwargs=None):
     inp = Input(shape=train.feature_tensor_shape)
     x = mlp_helper(inp, **mlp_kwargs)
     output = Dense(units=1, activation='sigmoid', kernel_regularizer='l2')(x)
     return keras.Model(inp, output)
+
+
+def simple_mlp_tf(validation=None, **kwargs):
+    inp = Input(100)
+    x = Dense(50, activation='relu')(inp)
+    output = Dense(1, activation='sigmoid', kernel_regularizer='l2')(x)
+    return keras.Model(inp, output)
+
+
+def simple_mlp_pt(validation=None, **kwargs):
+    model = torch.nn.Sequential(
+        torch.nn.Linear(100, 50),
+        torch.nn.ReLU(),
+        torch.nn.Linear(50, 1),
+        torch.nn.Sigmoid(),
+        torch.nn.Flatten(start_dim=0)
+    )
+    return model
 
 
 def _make_input(shape):

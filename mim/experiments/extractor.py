@@ -1,16 +1,25 @@
 import random
 import itertools
 from copy import copy
-from typing import Dict
+from typing import Dict, TypeVar, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import torch
 import h5py
+from torch.utils.data import Dataset
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 
 from mim.util.util import infer_categorical
+
+
+T_co = TypeVar('T_co', covariant=True)
+T = TypeVar('T')
+T_dict = Dict[str, T_co]
+T_tuple = Tuple[T_co, ...]
+T_stack = TypeVar('T_stack', T_tuple, T_dict)
 
 
 class Data:
@@ -376,6 +385,30 @@ class DataWrapper:
 
         return fixed_data
 
+    def as_dataloader(self, batch_size=1, prefetch=None, shuffle=True,
+                      random_seed=123, **kwargs):
+        # This will automatically convert any numpy arrays etc to
+        # pytorch Tensors
+        # Might have to use pin_memory and pin_memory_device to work on the
+        # GPU properly.
+        # TODO: when torch 2.1+ is working,
+        # we can change this to torch.utils.data.StackDataset and get rid of
+        # the copy-pasted version here.
+        data = StackDataset(
+            self.data['x'], self.data['y']
+        )
+        if shuffle:
+            g = torch.Generator()
+            g.manual_seed(random_seed)
+        else:
+            g = None
+
+        dataloader = torch.utils.data.DataLoader(
+            data, batch_size=batch_size, shuffle=shuffle, generator=g,
+            prefetch_factor=prefetch, **kwargs
+        )
+        return dataloader
+
     def as_numpy(self):
         x = self.data['x'].as_flat_numpy()
         y = self.data['y'].as_numpy().ravel()
@@ -687,3 +720,55 @@ class Augmentor:
 
     def augment_validation_data(self, data: DataWrapper) -> DataWrapper:
         return data
+
+
+# Copy-pasted from pytorch 2.1, which isn't compatible yet with tensorflow
+# https://pytorch.org/docs/2.1/_modules/torch/utils/data/dataset.html#StackDataset
+class StackDataset(Dataset[T_stack]):
+    r"""Dataset as a stacking of multiple datasets.
+
+    This class is useful to assemble different parts of complex input data,
+    given as datasets.
+
+    Example:
+        >>> # xdoctest: +SKIP
+        >>> images = ImageDataset()
+        >>> texts = TextDataset()
+        >>> tuple_stack = StackDataset(images, texts)
+        >>> tuple_stack[0] == (images[0], texts[0])
+        >>> dict_stack = StackDataset(image=images, text=texts)
+        >>> dict_stack[0] == {'image': images[0], 'text': texts[0]}
+
+    Args:
+        *args (Dataset): Datasets for stacking returned as tuple.
+        **kwargs (Dataset): Datasets for stacking returned as dict.
+    """
+    datasets: Union[tuple, dict]
+
+    def __init__(self, *args: Dataset[T_co], **kwargs: Dataset[T_co]) -> None:
+        if args:
+            if kwargs:
+                raise ValueError(
+                    "Supported either ``tuple``- (via ``args``) or"
+                    "``dict``- (via ``kwargs``) like input/output, but"
+                    " both types are given.")
+            self._length = len(args[0])  # type: ignore[arg-type]
+            if any(self._length != len(dataset) for dataset in args):
+                raise ValueError("Size mismatch between datasets")
+            self.datasets = args
+        elif kwargs:
+            tmp = list(kwargs.values())
+            self._length = len(tmp[0])  # type: ignore[arg-type]
+            if any(self._length != len(dataset) for dataset in tmp):
+                raise ValueError("Size mismatch between datasets")
+            self.datasets = kwargs
+        else:
+            raise ValueError("At least one dataset should be passed")
+
+    def __getitem__(self, index):
+        if isinstance(self.datasets, dict):
+            return {k: dataset[index] for k, dataset in self.datasets.items()}
+        return tuple(dataset[index] for dataset in self.datasets)
+
+    def __len__(self):
+        return self._length
