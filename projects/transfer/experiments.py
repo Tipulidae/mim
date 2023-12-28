@@ -4,6 +4,7 @@ from sklearn.metrics import roc_auc_score, r2_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from keras.optimizers import Adam
+from keras.optimizers.legacy import Adam as LegacyAdam
 
 from mim.experiments.experiments import Experiment
 from mim.experiments.extractor import sklearn_process
@@ -257,7 +258,7 @@ class Target(Experiment, Enum):
             'from_xp': {
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
-                'xp_name': 'CNN1_R_SEX',
+                'xp_name': 'CNN1_R100_SEX',
                 'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
                 'epoch': 200,
                 'trainable': False,
@@ -277,7 +278,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': False},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -347,7 +348,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': False},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -398,7 +399,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -467,7 +468,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -536,7 +537,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -605,7 +606,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -674,7 +675,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -743,7 +744,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -812,7 +813,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -881,7 +882,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -950,7 +951,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1019,7 +1020,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1088,7 +1089,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1157,7 +1158,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1226,7 +1227,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1295,7 +1296,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1364,7 +1365,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1433,7 +1434,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1502,7 +1503,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1571,7 +1572,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1640,7 +1641,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1709,7 +1710,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1778,7 +1779,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1847,7 +1848,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1916,7 +1917,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -1985,7 +1986,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -2028,6 +2029,282 @@ class Target(Experiment, Enum):
     PTA010_RN1_R010 = PTA010_RN1_R100._replace(
         extractor_index={'train_percent': 0.1})
 
+    PTA008_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R008_AGE',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA008_RN1_R090 = PTA008_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA008_RN1_R080 = PTA008_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA008_RN1_R070 = PTA008_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA008_RN1_R060 = PTA008_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA008_RN1_R050 = PTA008_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA008_RN1_R040 = PTA008_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA008_RN1_R030 = PTA008_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA008_RN1_R020 = PTA008_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA008_RN1_R010 = PTA008_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA006_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R006_AGE',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA006_RN1_R090 = PTA006_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA006_RN1_R080 = PTA006_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA006_RN1_R070 = PTA006_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA006_RN1_R060 = PTA006_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA006_RN1_R050 = PTA006_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA006_RN1_R040 = PTA006_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA006_RN1_R030 = PTA006_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA006_RN1_R020 = PTA006_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA006_RN1_R010 = PTA006_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA004_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R004_AGE',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA004_RN1_R090 = PTA004_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA004_RN1_R080 = PTA004_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA004_RN1_R070 = PTA004_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA004_RN1_R060 = PTA004_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA004_RN1_R050 = PTA004_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA004_RN1_R040 = PTA004_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA004_RN1_R030 = PTA004_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA004_RN1_R020 = PTA004_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA004_RN1_R010 = PTA004_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA002_RN1_R100 = Experiment(
+        description='Uses RN1 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN1_R002_AGE',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA002_RN1_R090 = PTA002_RN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA002_RN1_R080 = PTA002_RN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA002_RN1_R070 = PTA002_RN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA002_RN1_R060 = PTA002_RN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA002_RN1_R050 = PTA002_RN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA002_RN1_R040 = PTA002_RN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA002_RN1_R030 = PTA002_RN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA002_RN1_R020 = PTA002_RN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA002_RN1_R010 = PTA002_RN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
     PTAS100_RN1_R100 = Experiment(
         description='Uses RN1 model trained to predict age & sex.',
         model=pretrained,
@@ -2054,7 +2331,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -2129,7 +2406,7 @@ class Target(Experiment, Enum):
             'flat_features': {'age': True, 'sex': True, 'scale_age': True}
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -2211,7 +2488,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -2280,7 +2557,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -2349,7 +2626,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -2418,7 +2695,7 @@ class Target(Experiment, Enum):
             'ecg_features': {'mode': 'raw', 'ribeiro': True},
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -2480,7 +2757,7 @@ class Target(Experiment, Enum):
             }
         },
         data_fits_in_memory=True,
-        optimizer=Adam,
+        optimizer=LegacyAdam,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
