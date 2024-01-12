@@ -194,13 +194,14 @@ def resnet_v2(
 def _final_layer(x, target_columns):
     output_layers = []
     for name in target_columns:
-        if name not in ['age', 'sex']:
-            raise ValueError(f"Target column must be either age or sex, "
+        if name not in ['age', 'sex', 'ami']:
+            raise ValueError(f"Target column must be either age, sex, or ami "
                              f"but it was {name}.")
+        binary_target = name in ['sex', 'ami']
         output_layers.append(
             Dense(
                 units=1,
-                activation='sigmoid' if name == 'sex' else None,
+                activation='sigmoid' if binary_target else None,
                 kernel_initializer='he_normal',
                 kernel_regularizer='l2',
                 name=name

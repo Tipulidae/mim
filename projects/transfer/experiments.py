@@ -85,7 +85,7 @@ class Target(Experiment, Enum):
                 'decay_steps': -1,
                 'initial_learning_rate': 0.0,
                 'warmup_target': 5e-4,
-                'alpha': 1e-6,
+                'alpha': 0.01,
                 'warmup_epochs': 10,
                 'decay_epochs': 90,
                 'steps_per_epoch': -1
@@ -128,7 +128,7 @@ class Target(Experiment, Enum):
                 'decay_steps': -1,
                 'initial_learning_rate': 0.0,
                 'warmup_target': 5e-4,
-                'alpha': 1e-6,
+                'alpha': 0.01,
                 'warmup_epochs': 10,
                 'decay_epochs': 190,
             }
@@ -182,7 +182,7 @@ class Target(Experiment, Enum):
                 'decay_steps': -1,
                 'initial_learning_rate': 0.0,
                 'warmup_target': 5e-4,
-                'alpha': 1e-6,
+                'alpha': 0.01,
                 'warmup_epochs': 10,
                 'decay_epochs': 90,
                 'steps_per_epoch': -1
@@ -321,6 +321,566 @@ class Target(Experiment, Enum):
     PTS100_CNN1_R010 = PTS100_CNN1_R100._replace(
         extractor_index={'train_percent': 0.1})
 
+    PTS090_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R090_SEX',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTS090_CNN1_R090 = PTS090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS090_CNN1_R080 = PTS090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS090_CNN1_R070 = PTS090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS090_CNN1_R060 = PTS090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS090_CNN1_R050 = PTS090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS090_CNN1_R040 = PTS090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS090_CNN1_R030 = PTS090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS090_CNN1_R020 = PTS090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS090_CNN1_R010 = PTS090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTS080_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R080_SEX',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTS080_CNN1_R090 = PTS080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS080_CNN1_R080 = PTS080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS080_CNN1_R070 = PTS080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS080_CNN1_R060 = PTS080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS080_CNN1_R050 = PTS080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS080_CNN1_R040 = PTS080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS080_CNN1_R030 = PTS080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS080_CNN1_R020 = PTS080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS080_CNN1_R010 = PTS080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTS070_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R070_SEX',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTS070_CNN1_R090 = PTS070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS070_CNN1_R080 = PTS070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS070_CNN1_R070 = PTS070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS070_CNN1_R060 = PTS070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS070_CNN1_R050 = PTS070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS070_CNN1_R040 = PTS070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS070_CNN1_R030 = PTS070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS070_CNN1_R020 = PTS070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS070_CNN1_R010 = PTS070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTS060_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R010_SEX',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTS060_CNN1_R090 = PTS060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS060_CNN1_R080 = PTS060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS060_CNN1_R070 = PTS060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS060_CNN1_R060 = PTS060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS060_CNN1_R050 = PTS060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS060_CNN1_R040 = PTS060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS060_CNN1_R030 = PTS060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS060_CNN1_R020 = PTS060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS060_CNN1_R010 = PTS060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTS050_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R050_SEX',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTS050_CNN1_R090 = PTS050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS050_CNN1_R080 = PTS050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS050_CNN1_R070 = PTS050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS050_CNN1_R060 = PTS050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS050_CNN1_R050 = PTS050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS050_CNN1_R040 = PTS050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS050_CNN1_R030 = PTS050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS050_CNN1_R020 = PTS050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS050_CNN1_R010 = PTS050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTS040_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R040_SEX',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTS040_CNN1_R090 = PTS040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS040_CNN1_R080 = PTS040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS040_CNN1_R070 = PTS040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS040_CNN1_R060 = PTS040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS040_CNN1_R050 = PTS040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS040_CNN1_R040 = PTS040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS040_CNN1_R030 = PTS040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS040_CNN1_R020 = PTS040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS040_CNN1_R010 = PTS040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTS030_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R030_SEX',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTS030_CNN1_R090 = PTS030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS030_CNN1_R080 = PTS030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS030_CNN1_R070 = PTS030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS030_CNN1_R060 = PTS030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS030_CNN1_R050 = PTS030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS030_CNN1_R040 = PTS030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS030_CNN1_R030 = PTS030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS030_CNN1_R020 = PTS030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS030_CNN1_R010 = PTS030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTS020_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R020_SEX',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTS020_CNN1_R090 = PTS020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS020_CNN1_R080 = PTS020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS020_CNN1_R070 = PTS020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS020_CNN1_R060 = PTS020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS020_CNN1_R050 = PTS020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS020_CNN1_R040 = PTS020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS020_CNN1_R030 = PTS020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS020_CNN1_R020 = PTS020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS020_CNN1_R010 = PTS020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
     PTS010_CNN1_R100 = Experiment(
         description='Uses CNN1 model pre-trained on sex.',
         model=pretrained,
@@ -372,6 +932,164 @@ class Target(Experiment, Enum):
         save_learning_rate=True,
         save_val_pred_history=True
     )
+    PTS010_CNN1_R090 = PTS010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS010_CNN1_R080 = PTS010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS010_CNN1_R070 = PTS010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS010_CNN1_R060 = PTS010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS010_CNN1_R050 = PTS010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS010_CNN1_R040 = PTS010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS010_CNN1_R030 = PTS010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS010_CNN1_R020 = PTS010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS010_CNN1_R010 = PTS010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA100_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R100_AGE',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA100_CNN1_R090 = PTA100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA100_CNN1_R080 = PTA100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA100_CNN1_R070 = PTA100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA100_CNN1_R060 = PTA100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA100_CNN1_R050 = PTA100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA100_CNN1_R040 = PTA100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA100_CNN1_R030 = PTA100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA100_CNN1_R020 = PTA100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA100_CNN1_R010 = PTA100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTAS100_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age and sex.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R100_AGE_SEX',
+                'commit': '05ee85195684bba26db810ed61cbd7830bc09e95',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -7,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTAS100_CNN1_R090 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTAS100_CNN1_R080 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTAS100_CNN1_R070 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTAS100_CNN1_R060 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTAS100_CNN1_R050 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTAS100_CNN1_R040 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTAS100_CNN1_R030 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTAS100_CNN1_R020 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTAS100_CNN1_R010 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
 
     PTS100_RN1_R100 = Experiment(
         description='Uses RN1 model trained to predict sex.',
@@ -5834,6 +6552,32 @@ class Source(Experiment, Enum):
             'exclude_train_aliases': True,
             'train_percent': 0.1
         },
+    )
+
+    CNN1_LR_TEST = CNN1_R100_SEX._replace(
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'steps_per_epoch': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90,
+            }
+        },
+        save_model_checkpoints=False,
+        epochs=100
+    )
+    CNN1_LR_TEST2 = CNN1_R100_SEX._replace(
+        learning_rate=3e-5,
+        save_model_checkpoints=False,
+        epochs=200
+    )
+    CNN1_LR_TEST3 = CNN1_R100_SEX._replace(
+        save_model_checkpoints=False,
+        epochs=500
     )
 
     CNN1_R100_AGE = Experiment(
