@@ -6577,6 +6577,18 @@ class Source(Experiment, Enum):
     )
     CNN1_LR_TEST3 = CNN1_R100_SEX._replace(
         save_model_checkpoints=False,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'steps_per_epoch': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-4,
+                'alpha': 1e-2,
+                'warmup_epochs': 10,
+                'decay_epochs': 490,
+            }
+        },
         epochs=500
     )
 
