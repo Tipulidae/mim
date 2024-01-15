@@ -131,6 +131,7 @@ class Target(Experiment, Enum):
                 'alpha': 0.01,
                 'warmup_epochs': 10,
                 'decay_epochs': 190,
+                'steps_per_epoch': -1
             }
         },
         epochs=200,
