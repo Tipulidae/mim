@@ -130,6 +130,7 @@ def make_target_labels(index):
         .join(ami.set_index('KontaktId').ami, on='KontaktId', how='left')
         .loc[:, ['ami']]
         .fillna(False)
+        .astype(np.float32)
     )
 
 
@@ -222,7 +223,7 @@ def make_source_index(
 
 @cache
 def make_ecg_data(ecgs, mode, ribeiro=False, precision=16, scale=1.0,
-                  original_ribeiro=False, **kwargs):
+                  original_ribeiro=False, transpose=False, **kwargs):
     with h5py.File(sk1718.ECG_PATH, 'r') as f:
         data = np.array([f[mode][ecg] for ecg in tqdm(ecgs, 'loading ecgs')])
 
@@ -254,6 +255,9 @@ def make_ecg_data(ecgs, mode, ribeiro=False, precision=16, scale=1.0,
             fixed_data[i] = ecg[:, [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5]]
 
         data = fixed_data
+
+    if transpose:
+        data = np.transpose(data, (0, 2, 1))
 
     return data
 

@@ -5,6 +5,7 @@ from pathlib import Path
 from enum import Enum
 from time import time
 from copy import deepcopy
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,8 @@ import tensorflow as tf
 from tensorflow import keras
 from keras.callbacks import TensorBoard, ReduceLROnPlateau, \
     ModelCheckpoint
-from sklearn.metrics import roc_auc_score
+from torch.utils.tensorboard import SummaryWriter
+from sklearn.metrics import roc_auc_score, accuracy_score
 
 from mim.util.logs import get_logger
 from mim.util.util import keras_model_summary_as_string
@@ -402,6 +404,144 @@ def get_torch_device():
         return 'cpu'
 
 
+class History:
+    def __init__(self, tensorboard_path, split_number=0, train_targets=None,
+                 val_targets=None, save_train_prediction_history=False,
+                 save_val_prediction_history=True, metrics=None,
+                 save_learning_rate=False):
+        split_folder = '' if split_number is None else f'split_{split_number}'
+        self.train_writer = SummaryWriter(
+            log_dir=os.path.join(tensorboard_path, split_folder, 'train')
+        )
+        self.val_writer = SummaryWriter(
+            log_dir=os.path.join(tensorboard_path, split_folder, 'validation')
+        )
+        self.history = defaultdict(list)
+        self.train_targets = train_targets
+        self.val_targets = val_targets
+        self.save_train_prediction_history = save_train_prediction_history
+        self.save_val_prediction_history = save_val_prediction_history
+        self.save_learning_rate = save_learning_rate
+
+        available_metrics = {
+            'auc': roc_auc_score,
+            'accuracy': accuracy_score
+        }
+        self.metrics = {
+            metric: available_metrics[metric] for metric in metrics
+        }
+
+    def log(self, train_loss, val_loss, train_predictions, val_predictions,
+            learning_rate, epoch):
+        log_strings = []
+        self.history['loss'].append(train_loss)
+        self.train_writer.add_scalar('epoch_loss', train_loss,
+                                     global_step=epoch)
+        log_strings.append(f"loss: {train_loss:.4f}")
+        for name, func in self.metrics.items():
+            metric = func(
+                self.train_targets,
+                train_predictions.ravel()
+            )
+            self.history[name].append(metric)
+            self.train_writer.add_scalar(
+                f'epoch_{name}',
+                metric,
+                global_step=epoch
+            )
+            log_strings.append(f"{name}: {metric:.4f}")
+
+        self.history['val_loss'].append(val_loss)
+        self.val_writer.add_scalar('epoch_loss', val_loss, global_step=epoch)
+        log_strings.append(f"val_loss: {val_loss:.4f}")
+        for name, func in self.metrics.items():
+            metric = func(
+                self.val_targets, val_predictions.ravel())
+            self.history[f"val_{name}"].append(metric)
+            self.val_writer.add_scalar(
+                f'epoch_{name}',
+                metric,
+                global_step=epoch
+            )
+            log_strings.append(f"val_{name}: {metric:.4f}")
+
+        if self.save_learning_rate:
+            self.history['lr'].append(learning_rate)
+            self.train_writer.add_scalar('epoch_lr', learning_rate,
+                                         global_step=epoch)
+            log_strings.append(f'lr: {learning_rate:.4E}')
+
+        if self.save_train_prediction_history:
+            self.history['predictions'].append(train_predictions)
+        if self.save_val_prediction_history:
+            self.history['val_predictions'].append(val_predictions)
+
+        return " - ".join(log_strings)
+
+    def flush(self):
+        self.train_writer.flush()
+        self.val_writer.flush()
+
+    def __del__(self):
+        self.val_writer.close()
+        self.train_writer.close()
+
+
+class NullScheduler:
+    def __init__(self, lr):
+        self.lr = lr
+
+    def step(self):
+        pass
+
+    def get_last_lr(self):
+        return [self.lr]
+
+
+def init_optimizer_and_scheduler(
+        model_parameters, optimizer_fn, optimizer_kwargs, learning_rate):
+
+    if isinstance(learning_rate, float):
+        optimizer = optimizer_fn(
+            model_parameters, lr=learning_rate, **optimizer_kwargs)
+        scheduler = NullScheduler(learning_rate)
+
+    elif learning_rate is None:
+        if 'lr' not in optimizer_kwargs:
+            raise ValueError(
+                "Must specify learning rate, either as 'lr' in "
+                "optimizer_kwargs or by setting learning_rate to a "
+                "float value."
+            )
+        optimizer = optimizer_fn(model_parameters, **optimizer_kwargs)
+        scheduler = NullScheduler(optimizer_kwargs['lr'])
+    else:
+        if 'scheduler' not in learning_rate:
+            raise ValueError(
+                "When supplying non-float learning-rate to pytorch "
+                "models, you need to include a scheduler as a keyword "
+                "argument to learning_rate."
+            )
+        if 'kwargs' not in learning_rate:
+            raise ValueError(
+                "When supplying non-float learning-rate to pytorch "
+                "models, you need to include a kwargs dict for the "
+                "scheduler in learning_rate."
+            )
+        if 'lr' in optimizer_kwargs:
+            raise ValueError(
+                "Don't set the lr parameter manually when using a scheduler."
+            )
+
+        optimizer = optimizer_fn(model_parameters, lr=1.0, **optimizer_kwargs)
+        scheduler = learning_rate['scheduler'](
+            optimizer,
+            **learning_rate['kwargs']
+        )
+
+    return optimizer, scheduler
+
+
 class TorchWrapper(Model):
     def __init__(
             self,
@@ -416,22 +556,32 @@ class TorchWrapper(Model):
             save_train_prediction_history=False,
             save_val_prediction_history=False,
             save_learning_rate=False,
+            save_model_checkpoints=False,
             prefetch=None,
+            tensorboard_path=None,
+            metrics=None,
             random_state=123):
         super().__init__(model, can_use_tf_dataset=False,
+                         checkpoint_path=checkpoint_path,
                          random_state=random_state)
         device = get_torch_device()
         log.debug(f'Using pytorch on {device}')
         self.model.to(device)
         self.loss = loss
-        self.optimizer = optimizer(
-            model.parameters(), lr=learning_rate, **optimizer_kwargs)
+
+        self.optimizer, self.scheduler = init_optimizer_and_scheduler(
+            model.parameters(), optimizer, optimizer_kwargs, learning_rate
+        )
+
         self.epochs = epochs
         self.batch_size = batch_size
         self.save_train_prediction_history = save_train_prediction_history
         self.save_val_prediction_history = save_val_prediction_history
         self.save_learning_rate = save_learning_rate
+        self.save_model_checkpoints = save_model_checkpoints
         self.prefetch = prefetch
+        self.tensorboard_path = tensorboard_path
+        self.metrics = metrics
 
     def predict(self, data: DataWrapper):
         dataloader = data.as_dataloader(
@@ -441,12 +591,18 @@ class TorchWrapper(Model):
         )
         device = get_torch_device()
         predictions = []
-        for _, (x, _) in enumerate(dataloader):
-            x = x.to(device)
-            predictions.append(self.model(x).numpy(force=True))
+        self.model.eval()
+        with torch.no_grad():
+            for _, (x, _, _) in enumerate(dataloader):
+                if isinstance(x, dict):
+                    x = {key: value.to(device) for key, value in x.items()}
+                else:
+                    x = x.to(device)
+
+                predictions.append(self.model(x).numpy(force=True))
 
         predictions = np.concatenate(predictions, axis=0)
-        return predictions
+        return data.to_dataframe(predictions)
 
     def fit(self, training_data, validation_data=None, verbose=0,
             split_number=0):
@@ -462,22 +618,44 @@ class TorchWrapper(Model):
             shuffle=False,
         )
         device = get_torch_device()
-        history = {'loss': [], 'val_loss': []}
+        history = History(
+            self.tensorboard_path,
+            split_number=split_number,
+            train_targets=training_data.y,
+            val_targets=validation_data.y,
+            save_train_prediction_history=self.save_train_prediction_history,
+            save_val_prediction_history=self.save_val_prediction_history,
+            save_learning_rate=self.save_learning_rate,
+            metrics=self.metrics
+        )
         for epoch in range(self.epochs):
             t0 = time()
             print(f"Epoch {epoch + 1}/{self.epochs}")
-            train_loss = self.training_loop(train, device)
-            val_loss = self.validation_loop(val, device)
-            history['loss'].append(train_loss)
-            history['val_loss'].append(val_loss)
-            elapsed_time = time() - t0
-            print(f"{len(train)}/{len(train):>} "
-                  f"[==============================]"
-                  f" - {elapsed_time:.1f}s - "
-                  f" - loss: {train_loss} - val_loss: {val_loss}")
+            lr = self.scheduler.get_last_lr()[0]
+            train_loss, train_preds = self.training_loop(train, device)
+            val_loss, val_preds = self.validation_loop(val, device)
 
+            log_string = history.log(
+                train_loss=train_loss,
+                val_loss=val_loss,
+                train_predictions=train_preds,
+                val_predictions=val_preds,
+                learning_rate=lr,
+                epoch=epoch,
+            )
+
+            self.save_model_checkpoint(epoch, split_number)
+
+            elapsed_time = time() - t0
+            print(
+                f"\r{len(train)}/{len(train):>} "
+                f"[==============================]"
+                f" - {elapsed_time:.1f}s - {log_string}"
+            )
+
+        history.flush()
         print("Finished training pytorch model!")
-        return history
+        return history.history
 
     def training_loop(self, dataloader, device):
         self.model.train()
@@ -485,9 +663,15 @@ class TorchWrapper(Model):
         loss_sum = 0.0
         loss_avg = 0
         steps_total = 0
-        for batch, (x, y) in enumerate(dataloader):
+        predictions = []
+        indices = []
+        for batch, (x, y, idx) in enumerate(dataloader):
             t0 = time()
-            x = x.to(device)
+            if isinstance(x, dict):
+                x = {key: value.to(device) for key, value in x.items()}
+            else:
+                x = x.to(device)
+
             y = y.to(device)
             pred = self.model(x)
             train_loss = self.loss(pred, y)
@@ -504,21 +688,60 @@ class TorchWrapper(Model):
             print(f"\r{progress} - {elapsed_time:.1f}s/epoch - "
                   f"loss: {loss_avg:.4f}",
                   end='')
+            predictions.append(pred.detach().cpu().numpy())
+            indices.append(idx.numpy())
 
-        return loss_avg
+        # Updates the learning-rate according to our scheduler
+        self.scheduler.step()
+        # The indices are collected in order to undo the shuffling so we can
+        # use the predictions to calculate (global) metrics like AUC.
+        indices = np.concatenate(indices).astype(int)
+        predictions = np.concatenate(predictions)[indices.argsort()]
+        return loss_avg, predictions
 
     def validation_loop(self, dataloader, device):
         self.model.eval()
         loss_sum = 0
+        predictions = []
         with torch.no_grad():
-            for x, y in dataloader:
-                x = x.to(device)
+            for x, y, _ in dataloader:
+                if isinstance(x, dict):
+                    x = {key: value.to(device) for key, value in x.items()}
+                else:
+                    x = x.to(device)
                 y = y.to(device)
                 pred = self.model(x)
                 loss_sum += self.loss(pred, y).item()
+                predictions.append(pred.detach().cpu().numpy())
 
         loss_avg = loss_sum / len(dataloader.dataset)
-        return loss_avg
+        return loss_avg, np.concatenate(predictions)
+
+    def save(self, split_number):
+        name = "model.pt"
+        if split_number is None:
+            split_folder = ""
+        else:
+            split_folder = f'split_{split_number}'
+
+        path = os.path.join(self.checkpoint_path, split_folder, name)
+        torch.save(self.model, path)
+        log.debug(f"Saved model to {path}")
+
+    def save_model_checkpoint(self, epoch, split_number):
+        if not self.save_model_checkpoints:
+            return
+
+        path = os.path.join(
+            self.checkpoint_path,
+            f"split_{split_number}",
+            "checkpoints",
+        )
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
+        model_path = os.path.join(path, f"epoch_{epoch+1:03d}.pt")
+        torch.save(self.model, model_path)
 
     @property
     def summary(self):
@@ -528,7 +751,7 @@ class TorchWrapper(Model):
 def progress_string(current_batch, total_batches):
     batch_offset = len(str(total_batches))
     bar = progress_bar(current_batch, total_batches)
-    return f"{current_batch:>{batch_offset}}/{total_batches} - {bar}"
+    return f"{current_batch:>{batch_offset}}/{total_batches} {bar}"
 
 
 def progress_bar(current_batch, total_batches):

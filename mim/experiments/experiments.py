@@ -57,7 +57,7 @@ class Experiment(NamedTuple):
     optimizer_kwargs: dict = {}
     learning_rate: Any = 0.01
     loss: Any = 'binary_crossentropy'
-    loss_kwargs: Any = None
+    loss_kwargs: Any = {}
     loss_weights: Any = None
     class_weight: Union[dict, hp.Param] = None
     epochs: Union[int, hp.Param] = None
@@ -386,7 +386,7 @@ class Experiment(NamedTuple):
             wrapped_model = TorchWrapper(
                 model,
                 checkpoint_path=self.base_path,
-                # tensorboard_path=self.base_path,
+                tensorboard_path=self.base_path,
                 # exp_base_path=self.base_path,
                 batch_size=self.batch_size,
                 epochs=self.epochs,
@@ -395,6 +395,7 @@ class Experiment(NamedTuple):
                 optimizer_kwargs=self.optimizer_kwargs,
                 learning_rate=self.learning_rate,
                 loss=loss,
+                metrics=self.metrics,
                 # loss_weights=self.loss_weights,
                 # class_weight=self.class_weight,
                 # metrics=fix_metrics(self.metrics),
@@ -402,7 +403,7 @@ class Experiment(NamedTuple):
                 # ignore_callbacks=self.ignore_callbacks,
                 save_train_prediction_history=self.save_train_pred_history,
                 save_val_prediction_history=self.save_val_pred_history,
-                # save_model_checkpoints=self.save_model_checkpoints,
+                save_model_checkpoints=self.save_model_checkpoints,
                 # use_tensorboard=self.use_tensorboard,
                 save_learning_rate=self.save_learning_rate,
                 # reduce_lr_on_plateau=self.reduce_lr_on_plateau,
@@ -421,10 +422,11 @@ class Experiment(NamedTuple):
         def _load():
             model_type = path.split('.')[-1]
             if model_type == 'sklearn':
-                # trunk-ignore(bandit/B301)
                 return pd.read_pickle(path)
             elif model_type == 'keras':
                 return keras.models.load_model(filepath=path)
+            elif model_type == 'torch':
+                return torch.load(path)
             raise TypeError(f'Unexpected model type {model_type}')
 
         return self._wrap_model(_load(), verbose=0)

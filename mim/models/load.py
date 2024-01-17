@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+import torch
 from tensorflow import keras
 
 from mim.experiments.extractor import Data, Container
@@ -18,6 +19,11 @@ def load_keras_model(base_path, split_number, **kwargs):
         "last.ckpt"
     )
     return keras.models.load_model(filepath=path)
+
+
+def load_torch_model(base_path, split_number, **kwargs):
+    path = os.path.join(base_path, f"split_{split_number}", "model.pt")
+    return torch.load(path)
 
 
 def load_model_from_experiment_result(

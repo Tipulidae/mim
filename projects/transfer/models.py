@@ -18,6 +18,7 @@ from mim.models.load import (
 from mim.models.util import (
     cnn_helper, mlp_helper, ResidualUnit, ResidualUnitV2
 )
+from .xresnet import XResNet1d
 
 
 def cnn(train, validation=None, cnn_kwargs=None, ffnn_kwargs=None):
@@ -236,7 +237,6 @@ def simple_mlp_pt(validation=None, **kwargs):
         torch.nn.ReLU(),
         torch.nn.Linear(50, 1),
         torch.nn.Sigmoid(),
-        torch.nn.Flatten(start_dim=0)
     )
     return model
 
@@ -246,3 +246,7 @@ def _make_input(shape):
         return {key: _make_input(value) for key, value in shape.items()}
     else:
         return Input(shape=shape)
+
+
+def xrn50(validation=None, **kwargs):
+    return XResNet1d(expansion=4, blocks=[3, 4,  6, 3], inp_dim=8, out_dim=1)

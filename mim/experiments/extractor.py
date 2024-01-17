@@ -395,7 +395,7 @@ class DataWrapper:
         # we can change this to torch.utils.data.StackDataset and get rid of
         # the copy-pasted version here.
         data = StackDataset(
-            self.data['x'], self.data['y']
+            self.data['x'], self.data['y'], self.data.index
         )
         if shuffle:
             g = torch.Generator()

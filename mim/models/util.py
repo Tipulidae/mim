@@ -2,6 +2,7 @@ import math
 from typing import Union, List
 
 import tensorflow as tf
+import torch
 from keras.saving import register_keras_serializable
 from keras.layers import (
     AveragePooling1D, Conv1D, BatchNormalization, ReLU, MaxPooling1D,
@@ -11,7 +12,10 @@ from keras.layers import (
 from keras.regularizers import l2
 from keras.optimizers.schedules import LearningRateSchedule
 
+from mim.util.logs import get_logger
 from mim.util.util import interpolate
+
+log = get_logger('Models util')
 
 
 def cnn_helper(
@@ -653,3 +657,53 @@ class CosineDecayWithWarmup(LearningRateSchedule):
             "warmup_target": self.warmup_target,
             "warmup_steps": self.warmup_steps
         }
+
+
+def cosine_decay_with_warmup_torch(
+        optimizer, initial_learning_rate, warmup_target, alpha, warmup_epochs,
+        decay_epochs):
+    """
+    Example:
+    initial_learning_rate = 0.2, warmup_target = 1, alpha = 0.01,
+    warmup_epochs = 5, decay_epochs = 5, (total_epochs = 15)
+
+    epoch   lr for that epoch
+    1       0.2
+    2       0.4
+    3       0.6
+    4       0.8
+    5       1.0
+    6       0.9055
+    7       0.6580
+    8       0.3520
+    9       0.1045
+    10      0.01
+    11      0.01
+    12      0.01
+    13      0.01
+    14      0.01
+    15      0.01
+    """
+    def warmup(epoch):
+        return (
+            initial_learning_rate +
+            (warmup_target - initial_learning_rate) *
+            (epoch / (warmup_epochs - 1))
+        )
+
+    def cosine_decay(epoch):
+        return (
+            warmup_target * alpha +
+            0.5 * warmup_target * (1 - alpha) *
+            (1 + math.cos(epoch / decay_epochs * math.pi))
+        )
+
+    def warmup_cosine(epoch):
+        if epoch < warmup_epochs:
+            return warmup(epoch)
+        elif epoch < warmup_epochs + decay_epochs:
+            return cosine_decay(epoch + 1 - warmup_epochs)
+        else:
+            return warmup_target * alpha
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, warmup_cosine)

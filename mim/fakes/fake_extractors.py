@@ -13,6 +13,9 @@ class FakeExtractor(Extractor):
         n_samples, n_features = x.shape
         feature_names = [f"x{i}" for i in range(n_features)]
         index = list(range(n_samples))
+        if len(y.shape) == 1:
+            y = np.expand_dims(y, axis=1)
+
         data = DataWrapper(
             features=Data(x.astype(np.float32), columns=feature_names),
             labels=Data(y.astype(np.float32), columns=['y']),
