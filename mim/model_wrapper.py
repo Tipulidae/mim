@@ -15,7 +15,8 @@ from tensorflow import keras
 from keras.callbacks import TensorBoard, ReduceLROnPlateau, \
     ModelCheckpoint
 from torch.utils.tensorboard import SummaryWriter
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.metrics import roc_auc_score, accuracy_score, r2_score, \
+    mean_absolute_error
 
 from mim.util.logs import get_logger
 from mim.util.util import keras_model_summary_as_string
@@ -425,45 +426,79 @@ class History:
 
         available_metrics = {
             'auc': roc_auc_score,
-            'accuracy': accuracy_score
+            'accuracy': accuracy_score,
+            'r2': r2_score,
+            'mae': mean_absolute_error
         }
-        self.metrics = {
-            metric: available_metrics[metric] for metric in metrics
-        }
+        if isinstance(metrics, dict):
+            self.metrics = {}
+            for target, metric_list in metrics.items():
+                self.metrics[target] = {
+                    metric: available_metrics[metric] for metric in metric_list
+                }
+        else:
+            self.metrics = {}
+            for target in train_targets.columns:
+                self.metrics[target] = {
+                    metric: available_metrics[metric] for metric in metrics
+                }
+
+    def _log_metric(self, metrics, targets, predictions, epoch,
+                    target_name=None, validation=False):
+        log_strings = []
+        writer = self.val_writer if validation else self.train_writer
+        for metric_name, func in metrics.items():
+            metric = func(targets, predictions.ravel())
+            if target_name is None:
+                history_label = metric_name
+            else:
+                history_label = f'{target_name}_{metric_name}'
+
+            writer.add_scalar(
+                f"epoch_{history_label}", metric, global_step=epoch)
+
+            if validation:
+                history_label = "val_" + history_label
+
+            self.history[history_label].append(metric)
+            log_strings.append(f"{history_label}: {metric:.4f}")
+
+        return log_strings
 
     def log(self, train_loss, val_loss, train_predictions, val_predictions,
             learning_rate, epoch):
         log_strings = []
         self.history['loss'].append(train_loss)
-        self.train_writer.add_scalar('epoch_loss', train_loss,
-                                     global_step=epoch)
+        self.train_writer.add_scalar(
+            'epoch_loss', train_loss, global_step=epoch)
         log_strings.append(f"loss: {train_loss:.4f}")
-        for name, func in self.metrics.items():
-            metric = func(
-                self.train_targets,
-                train_predictions.ravel()
+
+        for i, target_name in enumerate(self.train_targets.columns):
+            log_strings.extend(
+                self._log_metric(
+                    self.metrics[target_name],
+                    self.train_targets[target_name],
+                    train_predictions[:, i],
+                    epoch,
+                    target_name=target_name
+                )
             )
-            self.history[name].append(metric)
-            self.train_writer.add_scalar(
-                f'epoch_{name}',
-                metric,
-                global_step=epoch
-            )
-            log_strings.append(f"{name}: {metric:.4f}")
 
         self.history['val_loss'].append(val_loss)
         self.val_writer.add_scalar('epoch_loss', val_loss, global_step=epoch)
         log_strings.append(f"val_loss: {val_loss:.4f}")
-        for name, func in self.metrics.items():
-            metric = func(
-                self.val_targets, val_predictions.ravel())
-            self.history[f"val_{name}"].append(metric)
-            self.val_writer.add_scalar(
-                f'epoch_{name}',
-                metric,
-                global_step=epoch
+
+        for i, target_name in enumerate(self.val_targets.columns):
+            log_strings.extend(
+                self._log_metric(
+                    self.metrics[target_name],
+                    self.val_targets[target_name],
+                    val_predictions[:, i],
+                    epoch,
+                    target_name=target_name,
+                    validation=True
+                )
             )
-            log_strings.append(f"val_{name}: {metric:.4f}")
 
         if self.save_learning_rate:
             self.history['lr'].append(learning_rate)
@@ -496,6 +531,40 @@ class NullScheduler:
 
     def get_last_lr(self):
         return [self.lr]
+
+
+class MultiLoss:
+    def __init__(self, loss_dict, target_columns, loss_kwargs=None,
+                 loss_weights=None):
+        if loss_kwargs is None:
+            loss_kwargs = {
+                loss_name: {'reduction': 'sum'} for loss_name in loss_dict
+            }
+        if loss_weights is None:
+            loss_weights = {loss_name: 1.0 for loss_name in loss_dict}
+
+        if loss_dict.keys() != loss_kwargs.keys() != loss_weights.keys():
+            raise ValueError("The loss_dict, loss_kwargs and loss_weights "
+                             "dicts must contain the same set of keys.")
+        if target_columns.keys() != loss_dict.keys():
+            raise ValueError("The loss_dict must contain the same keys as "
+                             "the targets.")
+
+        self.loss_dict = {
+            loss_name: loss_fn(**loss_kwargs[loss_name])
+            for loss_name, loss_fn in loss_dict.items()
+        }
+        self.loss_weights = loss_weights
+        self.target_order = target_columns
+
+    def __call__(self, predictions, targets):
+        losses = []
+        for i, name in enumerate(self.target_order):
+            losses.append(
+                self.loss_dict[name](predictions[:, i], targets[:, i]) *
+                self.loss_weights[name]
+            )
+        return sum(losses)
 
 
 def init_optimizer_and_scheduler(
@@ -553,10 +622,14 @@ class TorchWrapper(Model):
             optimizer_kwargs={},
             learning_rate=1e-3,
             loss=None,
+            loss_kwargs=None,
+            loss_weights=None,
+            target_columns=None,
             save_train_prediction_history=False,
             save_val_prediction_history=False,
             save_learning_rate=False,
             save_model_checkpoints=False,
+            unfreeze_after_epoch=-1,
             prefetch=None,
             tensorboard_path=None,
             metrics=None,
@@ -567,7 +640,16 @@ class TorchWrapper(Model):
         device = get_torch_device()
         log.debug(f'Using pytorch on {device}')
         self.model.to(device)
-        self.loss = loss
+        if isinstance(loss, dict):
+            self.loss = MultiLoss(
+                loss, target_columns,
+                loss_kwargs=loss_kwargs,
+                loss_weights=loss_weights,
+            )
+        elif loss_kwargs is None:
+            self.loss = loss(reduction='sum')
+        else:
+            self.loss = loss(**loss_kwargs)
 
         self.optimizer, self.scheduler = init_optimizer_and_scheduler(
             model.parameters(), optimizer, optimizer_kwargs, learning_rate
@@ -582,6 +664,7 @@ class TorchWrapper(Model):
         self.prefetch = prefetch
         self.tensorboard_path = tensorboard_path
         self.metrics = metrics
+        self.unfreeze_after_epoch = unfreeze_after_epoch
 
     def predict(self, data: DataWrapper):
         dataloader = data.as_dataloader(
@@ -594,12 +677,9 @@ class TorchWrapper(Model):
         self.model.eval()
         with torch.no_grad():
             for _, (x, _, _) in enumerate(dataloader):
-                if isinstance(x, dict):
-                    x = {key: value.to(device) for key, value in x.items()}
-                else:
-                    x = x.to(device)
-
-                predictions.append(self.model(x).numpy(force=True))
+                x = to_device(x, device)
+                with torch.autocast(device_type=device):
+                    predictions.append(self.model(x).numpy(force=True))
 
         predictions = np.concatenate(predictions, axis=0)
         return data.to_dataframe(predictions)
@@ -632,6 +712,7 @@ class TorchWrapper(Model):
             t0 = time()
             print(f"Epoch {epoch + 1}/{self.epochs}")
             lr = self.scheduler.get_last_lr()[0]
+            self.unfreeze_layers_maybe(epoch)
             train_loss, train_preds = self.training_loop(train, device)
             val_loss, val_preds = self.validation_loop(val, device)
 
@@ -667,27 +748,26 @@ class TorchWrapper(Model):
         indices = []
         for batch, (x, y, idx) in enumerate(dataloader):
             t0 = time()
-            if isinstance(x, dict):
-                x = {key: value.to(device) for key, value in x.items()}
-            else:
-                x = x.to(device)
+            x = to_device(x, device)
+            y = to_device(y, device, force_float=True)
+            with torch.autocast(device_type=device):
+                pred = self.model(x)
+                train_loss = self.loss(pred, y)
 
-            y = y.to(device)
-            pred = self.model(x)
-            train_loss = self.loss(pred, y)
             train_loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
 
             loss_sum += train_loss.item()
-            steps_total += len(x)
+            steps_total += len(idx)
             loss_avg = loss_sum / steps_total
 
             progress = progress_string(batch, num_batches)
             elapsed_time = time() - t0
-            print(f"\r{progress} - {elapsed_time:.1f}s/epoch - "
+            print(f"\r{progress} - {elapsed_time:.1e}s/batch - "
                   f"loss: {loss_avg:.4f}",
                   end='')
+
             predictions.append(pred.detach().cpu().numpy())
             indices.append(idx.numpy())
 
@@ -705,17 +785,25 @@ class TorchWrapper(Model):
         predictions = []
         with torch.no_grad():
             for x, y, _ in dataloader:
-                if isinstance(x, dict):
-                    x = {key: value.to(device) for key, value in x.items()}
-                else:
-                    x = x.to(device)
-                y = y.to(device)
-                pred = self.model(x)
-                loss_sum += self.loss(pred, y).item()
+                x = to_device(x, device)
+                y = to_device(y, device, force_float=True)
+                with torch.autocast(device_type=device):
+                    pred = self.model(x)
+                    loss_sum += self.loss(pred, y).item()
+
                 predictions.append(pred.detach().cpu().numpy())
 
         loss_avg = loss_sum / len(dataloader.dataset)
         return loss_avg, np.concatenate(predictions)
+
+    def unfreeze_layers_maybe(self, epoch):
+        # This happens before the training loop for epoch starts. Epoch is
+        # zero indexed, but if I say "unfreeze after epoch 4, I mean 4 as in
+        # not zero-indexed. So train 4 epochs frozen, then unfreeze for epochs
+        # 5 and above.
+        if epoch == self.unfreeze_after_epoch:
+            for param in self.model.parameters():
+                param.requires_grad = True
 
     def save(self, split_number):
         name = "model.pt"
@@ -746,6 +834,19 @@ class TorchWrapper(Model):
     @property
     def summary(self):
         return str(self.model)
+
+
+def to_device(x, device, force_float=False):
+    if isinstance(x, dict):
+        return {
+            k: to_device(v, device, force_float=force_float)
+            for k, v in x.items()
+        }
+    else:
+        if force_float:
+            return x.float().to(device)
+        else:
+            return x.to(device)
 
 
 def progress_string(current_batch, total_batches):

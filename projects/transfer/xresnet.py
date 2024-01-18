@@ -1,9 +1,11 @@
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
 
 """
 Code adapted from https://github.com/tmehari/ssm_ecg
-by Temsegen Mehari & Nils Strodthoff.
+by Temesgen Mehari & Nils Strodthoff.
 This is a refactored and cleaned up version with only the xresnet50
 architecture.
 
@@ -122,18 +124,28 @@ class XResNet1d(nn.Sequential):
         ])
 
         head = nn.Sequential(
-            AdaptiveConcatPool1d(),
-            nn.Flatten(),
-            nn.BatchNorm1d(2*64*expansion),
-            nn.Dropout(0.5),
-            nn.Linear(2*64*expansion, out_dim),
-            nn.Sigmoid(),
+            OrderedDict(
+                concat_pool=AdaptiveConcatPool1d(),
+                flatten=nn.Flatten(),
+                classifier=nn.Sequential(
+                    nn.BatchNorm1d(2*64*expansion),
+                    nn.Dropout(0.5),
+                    nn.Linear(2*64*expansion, out_dim),
+                ),
+            )
         )
 
+        # Using OrderedDict, we can name the various parts of the network
+        # and later access (and modify) them as attributes of the model.
+        # This makes the trained model much easier to use with transfer
+        # learning. In my case, I particularly want to replace the 'classifier'
+        # part of the 'head' during finetuning.
         super().__init__(
-            *stem,
-            *res_segments,
-            head,
+            OrderedDict(
+                stem=nn.Sequential(*stem),
+                res_segments=nn.Sequential(*res_segments),
+                head=head
+            )
         )
         init_cnn(self)
 
@@ -143,6 +155,3 @@ class XResNet1d(nn.Sequential):
             res_blocks.append(ResBlock(self.expansion, 64, 64, stride=1))
 
         return nn.Sequential(*res_blocks)
-
-    def forward(self, input):
-        return super().forward(input['ecg'])

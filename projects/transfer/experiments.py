@@ -5,14 +5,17 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from keras.optimizers import Adam
 from keras.optimizers.legacy import Adam as LegacyAdam
+import torch
 
 from mim.experiments.experiments import Experiment
 from mim.experiments.extractor import sklearn_process
-from mim.models.util import CosineDecayWithWarmup
+from mim.models.util import (
+    CosineDecayWithWarmup, cosine_decay_with_warmup_torch
+)
 from projects.transfer.extractor import TargetTask, SourceTask
 from projects.transfer.models import (
-    cnn, resnet_v1, resnet_v2, pretrained, pretrained_parallel,
-    ribeiros_resnet
+    cnn, resnet_v1, resnet_v2, pretrained, pretrained_pt, pretrained_parallel,
+    ribeiros_resnet, xrn50
 )
 
 
@@ -250,6 +253,95 @@ class Target(Experiment, Enum):
     CNN1_R030 = CNN1_R100._replace(extractor_index={'train_percent': 0.3})
     CNN1_R020 = CNN1_R100._replace(extractor_index={'train_percent': 0.2})
     CNN1_R010 = CNN1_R100._replace(extractor_index={'train_percent': 0.1})
+
+    XRN50_TEST = Experiment(
+        description='Initial test of the xresnet model',
+        model=xrn50,
+        model_kwargs={},
+        extractor=TargetTask,
+        extractor_index={'train_percent': 0.1},
+        extractor_features={
+            'ecg_features': {
+                'mode': 'raw',
+                'ribeiro': False
+            }
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        optimizer_kwargs={
+            'weight_decay': 0.01,
+        },
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 5e-5,
+                'warmup_target': 5e-4,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=3,
+        batch_size=256,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=False,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    XRN50_TEST_PT = Experiment(
+        description='Testing pretrained models',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Target',
+                'xp_name': 'XRN50_TEST',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 3,
+                'trainable': False,
+            },
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 0.1},
+        extractor_features={
+            'ecg_features': {
+                'mode': 'raw',
+                'ribeiro': False
+            }
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        optimizer_kwargs={
+            'weight_decay': 0.01,
+        },
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 5e-5,
+                'warmup_target': 5e-4,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=10,
+        batch_size=256,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=False,
+        use_tensorboard=True,
+        save_model=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
 
     # EXPERIMENTS USING PRE-TRAINED NETWORKS:
     PTS100_CNN1_R100 = Experiment(
@@ -6773,6 +6865,93 @@ class Source(Experiment, Enum):
         },
         scoring=r2_score,
         use_tensorboard=True,
+        save_val_pred_history=True
+    )
+
+    XRN50_R100_AGE = Experiment(
+        description='Using the xresnet50 architecture to predict age.',
+        model=xrn50,
+        model_kwargs={},
+        extractor=SourceTask,
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 1.0
+        },
+        extractor_labels={'sex': False, 'age': True},
+        extractor_features={'mode': 'raw', 'ribeiro': False},
+        data_fits_in_memory=False,
+        optimizer=torch.optim.Adam,
+        optimizer_kwargs={
+            'weight_decay': 0.01,
+        },
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 5e-5,
+                'warmup_target': 5e-4,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss=torch.nn.L1Loss,
+        scoring=r2_score,
+        metrics=['r2'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+
+    XRN50_R100_AGE_SEX = Experiment(
+        description='Using the xresnet50 architecture to predict age & sex.',
+        model=xrn50,
+        model_kwargs={},
+        extractor=SourceTask,
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 1.0
+        },
+        extractor_labels={'sex': True, 'age': True},
+        extractor_features={'mode': 'raw', 'ribeiro': False},
+        data_fits_in_memory=False,
+        optimizer=torch.optim.Adam,
+        optimizer_kwargs={
+            'weight_decay': 0.01,
+        },
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 5e-5,
+                'warmup_target': 5e-4,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss={
+            'sex': torch.nn.BCEWithLogitsLoss,
+            'age': torch.nn.L1Loss
+        },
+        loss_weights={'sex': 1.0, 'age': 0.045},
+        scoring=r2_score,
+        metrics={
+            'sex': ['auc'],
+            'age': ['mae', 'r2']
+        },
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
         save_val_pred_history=True
     )
 

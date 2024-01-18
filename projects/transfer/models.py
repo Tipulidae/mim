@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import numpy as np
 import torch
 from tensorflow import keras
@@ -13,12 +15,13 @@ from keras.layers import (
 )
 
 from mim.models.load import (
-    load_model_from_experiment_result, load_ribeiro_model
+    load_model_from_experiment_result, load_model_from_experiment_result_pt,
+    load_ribeiro_model
 )
 from mim.models.util import (
     cnn_helper, mlp_helper, ResidualUnit, ResidualUnitV2
 )
-from .xresnet import XResNet1d
+from .xresnet import XResNet1d, init_cnn
 
 
 def cnn(train, validation=None, cnn_kwargs=None, ffnn_kwargs=None):
@@ -248,5 +251,56 @@ def _make_input(shape):
         return Input(shape=shape)
 
 
-def xrn50(validation=None, **kwargs):
-    return XResNet1d(expansion=4, blocks=[3, 4,  6, 3], inp_dim=8, out_dim=1)
+class FixInput(torch.nn.Module):
+    def forward(self, x):
+        return torch.transpose(x['ecg'], 1, 2)
+
+
+class MultiClassifier(torch.nn.Module):
+    def __init__(self, target_columns):
+        super().__init__()
+        self.classifiers = torch.nn.ModuleDict({
+            target: torch.nn.Sequential(
+                torch.nn.BatchNorm1d(512),
+                torch.nn.Dropout(0.5),
+                torch.nn.Linear(512, 1),
+            ) for target in target_columns
+        })
+        self.targets = target_columns
+
+    def forward(self, input):
+        return torch.cat(
+            [self.classifiers[target](input) for target in self.targets],
+            dim=1
+        )
+
+
+def xrn50(train, validation=None, **kwargs):
+    resnet = XResNet1d(expansion=4, blocks=[3, 4, 6, 3], inp_dim=8, out_dim=1)
+
+    if len(train.target_columns) > 1:
+        resnet.head.classifier = MultiClassifier(train.target_columns)
+        init_cnn(resnet.head.classifier)
+
+    model = torch.nn.Sequential(
+        OrderedDict(
+            input=FixInput(),
+            resnet=resnet
+        )
+    )
+    return model
+
+
+def pretrained_pt(*args, from_xp=None, **kwargs):
+    model = load_model_from_experiment_result_pt(**from_xp)
+
+    new_classifier_head = torch.nn.Sequential(
+        torch.nn.Linear(in_features=512, out_features=100, bias=True),
+        torch.nn.ReLU(),
+        torch.nn.Dropout(p=0.3),
+        torch.nn.Linear(in_features=100, out_features=1, bias=True)
+    )
+
+    model[1].head.classifier = new_classifier_head
+    init_cnn(new_classifier_head)
+    return model

@@ -57,7 +57,7 @@ class Experiment(NamedTuple):
     optimizer_kwargs: dict = {}
     learning_rate: Any = 0.01
     loss: Any = 'binary_crossentropy'
-    loss_kwargs: Any = {}
+    loss_kwargs: Any = None
     loss_weights: Any = None
     class_weight: Union[dict, hp.Param] = None
     epochs: Union[int, hp.Param] = None
@@ -309,7 +309,9 @@ class Experiment(NamedTuple):
 
         train_size = 0 if train is None else len(train)
         return self._wrap_model(
-            model, train_size=train_size, resume_from_epoch=resume_from_epoch)
+            model, train_size=train_size, resume_from_epoch=resume_from_epoch,
+            target_columns=train.target_columns
+        )
 
     def _make_optimizer(self, train_size=0):
         if isinstance(self.learning_rate, float):
@@ -327,7 +329,8 @@ class Experiment(NamedTuple):
         )
         return optimizer
 
-    def _wrap_model(self, model, train_size, resume_from_epoch=0, verbose=1):
+    def _wrap_model(self, model, train_size, target_columns,
+                    resume_from_epoch=0, verbose=1):
         if isinstance(model, tf.keras.Model):
             optimizer = self._make_optimizer(train_size=train_size)
 
@@ -367,22 +370,6 @@ class Experiment(NamedTuple):
 
             return wrapped_model
         elif isinstance(model, torch.nn.Module):
-
-            if callable(self.loss):
-                if 'reduction' not in self.loss_kwargs:
-                    loss = self.loss(reduction='sum', **self.loss_kwargs)
-                else:
-                    if self.loss_kwargs['reduction'] != 'sum':
-                        log.warning(
-                            f"Loss reduction was set to "
-                            f"{self.loss_kwargs['reduction']} instead of sum, "
-                            f"this might not be what you want. Make sure the "
-                            f"loss is averaged correctly."
-                        )
-                    loss = self.loss(**self.loss_kwargs)
-            else:
-                loss = self.loss
-
             wrapped_model = TorchWrapper(
                 model,
                 checkpoint_path=self.base_path,
@@ -394,9 +381,11 @@ class Experiment(NamedTuple):
                 optimizer=self.optimizer,
                 optimizer_kwargs=self.optimizer_kwargs,
                 learning_rate=self.learning_rate,
-                loss=loss,
+                loss=self.loss,
+                loss_kwargs=self.loss_kwargs,
+                loss_weights=self.loss_weights,
+                target_columns=target_columns,
                 metrics=self.metrics,
-                # loss_weights=self.loss_weights,
                 # class_weight=self.class_weight,
                 # metrics=fix_metrics(self.metrics),
                 # skip_compile=any([self.skip_compile, resume_from_epoch > 0]),
@@ -408,7 +397,7 @@ class Experiment(NamedTuple):
                 save_learning_rate=self.save_learning_rate,
                 # reduce_lr_on_plateau=self.reduce_lr_on_plateau,
                 # rule_out_logger=self.rule_out_logger,
-                # unfreeze_after_epoch=self.unfreeze_after_epoch
+                unfreeze_after_epoch=self.unfreeze_after_epoch
             )
             return wrapped_model
         else:
