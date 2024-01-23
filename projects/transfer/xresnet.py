@@ -47,12 +47,15 @@ class AdaptiveConcatPool1d(nn.Module):
 class ConvLayer(nn.Sequential):
     def __init__(
             self, ni, nf, ks=3, stride=1, bn_weight_init=1., act_cls=nn.ReLU,
-            bias=False):
+            padding=None, bias=False):
+
+        if padding is None:
+            padding = (ks - 1) // 2
 
         layers = []
         conv = nn.Conv1d(
             ni, nf, kernel_size=ks, bias=bias, stride=stride,
-            padding=((ks-1)//2)
+            padding=padding
         )
         layers.append(conv)
 
@@ -100,14 +103,25 @@ class ResBlock(nn.Module):
 
 
 class XResNet1d(nn.Sequential):
-    def __init__(self, expansion, blocks, inp_dim=12, out_dim=1):
+    def __init__(self, expansion, blocks, inp_dim=12, out_dim=1,
+                 sample_rate=100):
         self.expansion = expansion
 
         # Not sure if we really want bias for the first conv-layer, but
         # that's what the original does. It just happens in the most
         # roundabout way, and I'm not sure it was intentional.
+        if sample_rate == 100:
+            first_conv_layer = ConvLayer(
+                inp_dim, 32, ks=5, stride=2, padding=2, bias=True)
+        elif sample_rate == 500:
+            first_conv_layer = ConvLayer(
+                inp_dim, 32, ks=25, stride=10, padding=10, bias=True)
+        else:
+            raise ValueError(
+                f"sample_rate must be either 100 or 500, was {sample_rate}.")
+
         stem = [
-            ConvLayer(inp_dim, 32, ks=5, stride=2, bias=True),
+            first_conv_layer,
             ConvLayer(32, 32, ks=5, stride=1),
             ConvLayer(32, 64, ks=5, stride=1),
             nn.MaxPool1d(kernel_size=3, stride=2, padding=1)

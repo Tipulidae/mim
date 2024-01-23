@@ -1,3 +1,4 @@
+import random
 from collections import OrderedDict
 
 import numpy as np
@@ -275,19 +276,80 @@ class MultiClassifier(torch.nn.Module):
         )
 
 
-def xrn50(train, validation=None, **kwargs):
-    resnet = XResNet1d(expansion=4, blocks=[3, 4, 6, 3], inp_dim=8, out_dim=1)
+class AugmentECG(torch.nn.Sequential):
+    def __init__(self, *args, random_seed=123, mode='batch', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.batch_mode = mode == 'batch'
+        self.random_generator = random.Random(random_seed)
 
-    if len(train.target_columns) > 1:
-        resnet.head.classifier = MultiClassifier(train.target_columns)
-        init_cnn(resnet.head.classifier)
+    def forward(self, input):
+        input = torch.transpose(input['ecg'], 1, 2)
+        resolution = input.shape[-1]
+        window_size = resolution // 4
+        eval_steps = 10
+        batch_size = input.shape[0]
+        if self.training:
+            random_ecgs = []
+            if self.batch_mode:
+                idx = self.random_generator.randint(0, window_size * 3)
+                random_slice = input[:, :, idx:idx + window_size]
+            else:
+                for i in range(batch_size):
+                    idx = self.random_generator.randint(0, window_size * 3)
+                    random_slice = input[i, :, idx:idx + window_size]
+                    random_ecgs.append(random_slice)
+                random_slice = torch.stack(random_ecgs)
+            return super().forward(random_slice)
+        else:
+            slices = [
+                input[:, :, i:i + window_size]
+                for i in np.linspace(
+                    0, resolution - window_size, eval_steps).astype(int)
+            ]
+            preds = []
+            for slice in slices:
+                preds.append(super().forward(slice))
 
-    model = torch.nn.Sequential(
-        OrderedDict(
-            input=FixInput(),
-            resnet=resnet
-        )
+            predictions = torch.stack(preds)
+            return torch.max(predictions, 0)[0]
+
+
+def xrn50(train, validation=None, initial_bn=False,
+          augmentation=None, **kwargs):
+    ecg_shape = train.feature_tensor_shape['ecg']
+    sample_rate = ecg_shape[0] // 10
+    num_leads = ecg_shape[1]
+    resnet = XResNet1d(
+        expansion=4,
+        blocks=[3, 4, 6, 3],
+        inp_dim=num_leads,
+        out_dim=train.output_size,
+        sample_rate=sample_rate
     )
+
+    if augmentation not in [None, 'sample', 'batch']:
+        raise ValueError("augmentation should be either None, "
+                         "'sample' or 'batch'")
+
+    # if len(train.target_columns) > 1:
+    #     resnet.head.classifier = MultiClassifier(train.target_columns)
+    #     init_cnn(resnet.head.classifier)
+
+    layers = OrderedDict()
+    if augmentation is None:
+        layers['input'] = FixInput()
+    if initial_bn:
+        bn = torch.nn.BatchNorm1d(8)
+        bn.weight.data.fill_(1.0)
+        layers['normalization'] = bn
+
+    layers['resnet'] = resnet
+
+    if augmentation is None:
+        model = torch.nn.Sequential(layers)
+    else:
+        model = AugmentECG(layers, mode=augmentation)
+
     return model
 
 
@@ -300,7 +362,6 @@ def pretrained_pt(*args, from_xp=None, **kwargs):
         torch.nn.Dropout(p=0.3),
         torch.nn.Linear(in_features=100, out_features=1, bias=True)
     )
-
-    model[1].head.classifier = new_classifier_head
     init_cnn(new_classifier_head)
+    model.resnet.head.classifier = new_classifier_head
     return model

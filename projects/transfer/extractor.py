@@ -9,7 +9,7 @@ from tqdm import tqdm
 from sklearn.model_selection import GroupShuffleSplit
 
 from mim.experiments.extractor import DataWrapper, Data, Container, Extractor
-from massage import sk1718
+from massage import sk1718, ptbxl
 from massage.ecg import calculate_four_last_leads
 from massage.muse_ecg import expected_lead_names
 from mim.util.logs import get_logger
@@ -384,3 +384,45 @@ class SourceTask(Extractor):
 
     def get_test_data(self) -> DataWrapper:
         raise NotImplementedError()
+
+
+def make_development_index(size=-1):
+    index = ptbxl.load_info()
+    index = index[index.strat_fold < 10]
+    if 0 < size <= len(index):
+        index = index.iloc[:size, :]
+
+    return index
+
+
+def make_test_index():
+    index = ptbxl.load_info()
+    index = index[index.strat_fold == 10]
+    return index
+
+
+class PTBXL(Extractor):
+    def get_development_data(self) -> DataWrapper:
+        index = make_development_index(**self.index)
+        return self._make_data(index)
+
+    def get_test_data(self) -> DataWrapper:
+        index = make_test_index()
+        return self._make_data(index)
+
+    def _make_data(self, index):
+        ecgs, columns = ptbxl.process_ptbxl_ecgs(index, **self.features)
+        labels = ptbxl.make_labels(index, **self.labels)
+        return DataWrapper(
+            features=Container(
+                data={
+                    'ecg': Data(data=ecgs.astype(np.float16), columns=columns)
+                },
+            ),
+            labels=Data(data=labels.values, columns=list(labels)),
+            index=Data(index.index.values, columns=[index.index.name]),
+            groups=index.patient_id.values,
+            predefined_splits=index.strat_fold.map(
+                lambda x: -1 if x < 9 else 0).values,
+            fits_in_memory=True
+        )

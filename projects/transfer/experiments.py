@@ -13,6 +13,7 @@ from mim.models.util import (
     CosineDecayWithWarmup, cosine_decay_with_warmup_torch
 )
 from projects.transfer.extractor import TargetTask, SourceTask
+from projects.transfer.extractor import PTBXL as PTBXLExtractor
 from projects.transfer.models import (
     cnn, resnet_v1, resnet_v2, pretrained, pretrained_pt, pretrained_parallel,
     ribeiros_resnet, xrn50
@@ -6907,6 +6908,45 @@ class Source(Experiment, Enum):
         save_learning_rate=True,
         save_val_pred_history=True
     )
+    XRN50_R100_AGE_V2 = Experiment(
+        description='Using the xresnet50 architecture to predict age.',
+        model=xrn50,
+        model_kwargs={},
+        extractor=SourceTask,
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 1.0
+        },
+        extractor_labels={'sex': False, 'age': True},
+        extractor_features={'mode': 'raw', 'ribeiro': False},
+        data_fits_in_memory=False,
+        optimizer=torch.optim.Adam,
+        optimizer_kwargs={
+            'weight_decay': 0.01,
+        },
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-5,
+                'warmup_target': 1e-4,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 190
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        loss=torch.nn.L1Loss,
+        scoring=r2_score,
+        metrics=['r2'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
 
     XRN50_R100_AGE_SEX = Experiment(
         description='Using the xresnet50 architecture to predict age & sex.',
@@ -7333,4 +7373,73 @@ class Source(Experiment, Enum):
     RN2_R100_AGE_SEX = RN1_R100_AGE_SEX._replace(
         description='Using the RN2 architecture to predict age and sex.',
         model=resnet_v2
+    )
+
+
+class PTBXL(Experiment, Enum):
+    # {model}_{sample_rate}_{targets}
+    XRN50_V1_100HZ_ALL = Experiment(
+        description='Using the xresnet50 architecture to predict all 71 '
+                    'labels in PTBXL',
+        model=xrn50,
+        model_kwargs={
+            'initial_bn': True,
+            'augmentation': 'sample',
+        },
+        extractor=PTBXLExtractor,
+        extractor_features={'leads': 8, 'resolution': 'low'},
+        data_fits_in_memory=True,
+        optimizer=torch.optim.AdamW,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    XRN50_V2_100HZ_ALL = XRN50_V1_100HZ_ALL._replace(
+        description='Change augmentation to batch-wise sliding windows.',
+        model_kwargs={
+            'initial_bn': True,
+            'augmentation': 'batch'
+        }
+    )
+    XRN50_V3_100HZ_ALL = XRN50_V1_100HZ_ALL._replace(
+        description='Turn off augmentation.',
+        model_kwargs={
+            'initial_bn': True,
+            'augmentation': None
+        }
+    )
+    XRN50_V4_100HZ_ALL = XRN50_V1_100HZ_ALL._replace(
+        description='Turn off initial batch-norm layer.',
+        model_kwargs={
+            'initial_bn': False,
+            'augmentation': 'sample'
+        }
+    )
+    XRN50_V5_100HZ_ALL = XRN50_V1_100HZ_ALL._replace(
+        description='Change from AdamW to Adam optimizer.',
+        optimizer=torch.optim.Adam
+    )
+    XRN50_V1_500HZ_ALL = XRN50_V1_100HZ_ALL._replace(
+        description='Use the high-resolution ECGs instead (this automatically '
+                    'adjusts the initial conv-layer settings)',
+        extractor_features={'leads': 8, 'resolution': 'high'},
     )

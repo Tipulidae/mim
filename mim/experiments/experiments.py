@@ -149,7 +149,7 @@ class Experiment(NamedTuple):
         targets = test.y
         predictions = []
         for path in self._model_paths():
-            model = self.load_model(path)
+            model = self.load_model(path, target_columns=test.target_columns)
             prediction = model.predict(test)
             predictions.append(prediction)
 
@@ -329,7 +329,7 @@ class Experiment(NamedTuple):
         )
         return optimizer
 
-    def _wrap_model(self, model, train_size, target_columns,
+    def _wrap_model(self, model, train_size=0, target_columns=None,
                     resume_from_epoch=0, verbose=1):
         if isinstance(model, tf.keras.Model):
             optimizer = self._make_optimizer(train_size=train_size)
@@ -407,18 +407,19 @@ class Experiment(NamedTuple):
                 random_state=self.random_state
             )
 
-    def load_model(self, path):
+    def load_model(self, path, target_columns):
         def _load():
             model_type = path.split('.')[-1]
             if model_type == 'sklearn':
                 return pd.read_pickle(path)
             elif model_type == 'keras':
                 return keras.models.load_model(filepath=path)
-            elif model_type == 'torch':
+            elif model_type == 'pt':
                 return torch.load(path)
             raise TypeError(f'Unexpected model type {model_type}')
 
-        return self._wrap_model(_load(), verbose=0)
+        return self._wrap_model(_load(), target_columns=target_columns,
+                                verbose=0)
 
     def asdict(self):
         return callable_to_string(self._asdict())
