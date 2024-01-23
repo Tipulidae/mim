@@ -322,7 +322,6 @@ class AugmentECG(torch.nn.Sequential):
                 preds.append(super().forward(slice))
 
             predictions = torch.stack(preds)
-            torch.mean()
             return self.reduction(predictions, 0)
 
 
