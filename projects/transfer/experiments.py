@@ -344,6 +344,62 @@ class Target(Experiment, Enum):
         save_val_pred_history=True
     )
 
+    XRN50_R100 = Experiment(
+        description='xresnet50 without augmentation, predicting AMI',
+        model=xrn50,
+        model_kwargs={
+            'initial_bn': False,
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {
+                'mode': 'raw',
+                'ribeiro': False
+            }
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    XRN50V2_R100 = XRN50_R100._replace(
+        description='Adds batch sliding window augmentation with max '
+                    'reduction.',
+        model_kwargs={
+            'initial_bn': False,
+            'augmentation': {'mode': 'batch', 'reduction': 'max'}
+        },
+    )
+    XRN50V3_R100 = XRN50_R100._replace(
+        description='Adds batch sliding window augmentation with mean '
+                    'reduction.',
+        model_kwargs={
+            'initial_bn': False,
+            'augmentation': {'mode': 'batch', 'reduction': 'mean'}
+        },
+    )
+
     # EXPERIMENTS USING PRE-TRAINED NETWORKS:
     PTS100_CNN1_R100 = Experiment(
         description='Uses CNN1 model pre-trained on sex.',
@@ -7384,7 +7440,7 @@ class PTBXL(Experiment, Enum):
         model=xrn50,
         model_kwargs={
             'initial_bn': True,
-            'augmentation': 'sample',
+            'augmentation': {'mode': 'sample'},
         },
         extractor=PTBXLExtractor,
         extractor_features={'leads': 8, 'resolution': 'low'},
@@ -7417,21 +7473,20 @@ class PTBXL(Experiment, Enum):
         description='Change augmentation to batch-wise sliding windows.',
         model_kwargs={
             'initial_bn': True,
-            'augmentation': 'batch'
+            'augmentation': {'mode': 'batch'},
         }
     )
     XRN50_V3_100HZ_ALL = XRN50_V1_100HZ_ALL._replace(
         description='Turn off augmentation.',
         model_kwargs={
             'initial_bn': True,
-            'augmentation': None
         }
     )
     XRN50_V4_100HZ_ALL = XRN50_V1_100HZ_ALL._replace(
         description='Turn off initial batch-norm layer.',
         model_kwargs={
             'initial_bn': False,
-            'augmentation': 'sample'
+            'augmentation': {'mode': 'sample'}
         }
     )
     XRN50_V5_100HZ_ALL = XRN50_V1_100HZ_ALL._replace(

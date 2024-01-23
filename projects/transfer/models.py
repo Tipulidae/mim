@@ -277,9 +277,20 @@ class MultiClassifier(torch.nn.Module):
 
 
 class AugmentECG(torch.nn.Sequential):
-    def __init__(self, *args, random_seed=123, mode='batch', **kwargs):
+    def __init__(self, *args, random_seed=123, mode='batch', reduction='max',
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.batch_mode = mode == 'batch'
+        if mode not in ['batch', 'sample']:
+            raise ValueError(
+                f"mode should be 'batch' or 'sample', was {mode}")
+        if reduction not in ['max', 'mean']:
+            raise ValueError(
+                f"reduction should be 'max' or 'mean', was {reduction}")
+
+        # torch.max returns a tuple of the max and the corresponding indices,
+        # while torch.amax only returns the maxima, which is what I want here.
+        self.reduction = torch.mean if reduction == 'mean' else torch.amax
         self.random_generator = random.Random(random_seed)
 
     def forward(self, input):
@@ -311,7 +322,8 @@ class AugmentECG(torch.nn.Sequential):
                 preds.append(super().forward(slice))
 
             predictions = torch.stack(preds)
-            return torch.max(predictions, 0)[0]
+            torch.mean()
+            return self.reduction(predictions, 0)
 
 
 def xrn50(train, validation=None, initial_bn=False,
@@ -326,11 +338,6 @@ def xrn50(train, validation=None, initial_bn=False,
         out_dim=train.output_size,
         sample_rate=sample_rate
     )
-
-    if augmentation not in [None, 'sample', 'batch']:
-        raise ValueError("augmentation should be either None, "
-                         "'sample' or 'batch'")
-
     # if len(train.target_columns) > 1:
     #     resnet.head.classifier = MultiClassifier(train.target_columns)
     #     init_cnn(resnet.head.classifier)
@@ -348,7 +355,7 @@ def xrn50(train, validation=None, initial_bn=False,
     if augmentation is None:
         model = torch.nn.Sequential(layers)
     else:
-        model = AugmentECG(layers, mode=augmentation)
+        model = AugmentECG(layers, **augmentation)
 
     return model
 
