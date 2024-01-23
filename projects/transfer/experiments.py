@@ -6925,10 +6925,12 @@ class Source(Experiment, Enum):
         save_val_pred_history=True
     )
 
-    XRN50_R100_AGE = Experiment(
+    XRN50V1_R100_AGE = Experiment(
         description='Using the xresnet50 architecture to predict age.',
         model=xrn50,
-        model_kwargs={},
+        model_kwargs={
+            'initial_bn': False,
+        },
         extractor=SourceTask,
         extractor_index={
             'exclude_train_aliases': True,
@@ -6938,14 +6940,11 @@ class Source(Experiment, Enum):
         extractor_features={'mode': 'raw', 'ribeiro': False},
         data_fits_in_memory=False,
         optimizer=torch.optim.Adam,
-        optimizer_kwargs={
-            'weight_decay': 0.01,
-        },
         learning_rate={
             'scheduler': cosine_decay_with_warmup_torch,
             'kwargs': {
-                'initial_learning_rate': 5e-5,
-                'warmup_target': 5e-4,
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
                 'alpha': 0.01,
                 'warmup_epochs': 10,
                 'decay_epochs': 90
@@ -6964,44 +6963,14 @@ class Source(Experiment, Enum):
         save_learning_rate=True,
         save_val_pred_history=True
     )
-    XRN50_R100_AGE_V2 = Experiment(
-        description='Using the xresnet50 architecture to predict age.',
-        model=xrn50,
-        model_kwargs={},
-        extractor=SourceTask,
-        extractor_index={
-            'exclude_train_aliases': True,
-            'train_percent': 1.0
+    XRN50V2_R100_AGE = XRN50V1_R100_AGE._replace(
+        description='Using the xresnet50 architecture to predict age. With '
+                    'batch-wise sliding window augmentation with mean '
+                    'reduction.',
+        model_kwargs={
+            'initial_bn': False,
+            'augmentation': {'mode': 'batch', 'reduction': 'mean'}
         },
-        extractor_labels={'sex': False, 'age': True},
-        extractor_features={'mode': 'raw', 'ribeiro': False},
-        data_fits_in_memory=False,
-        optimizer=torch.optim.Adam,
-        optimizer_kwargs={
-            'weight_decay': 0.01,
-        },
-        learning_rate={
-            'scheduler': cosine_decay_with_warmup_torch,
-            'kwargs': {
-                'initial_learning_rate': 1e-5,
-                'warmup_target': 1e-4,
-                'alpha': 0.01,
-                'warmup_epochs': 10,
-                'decay_epochs': 190
-            }
-        },
-        epochs=200,
-        batch_size=256,
-        loss=torch.nn.L1Loss,
-        scoring=r2_score,
-        metrics=['r2'],
-        use_predefined_splits=True,
-        building_model_requires_development_data=True,
-        use_tensorboard=True,
-        save_model=True,
-        save_model_checkpoints=True,
-        save_learning_rate=True,
-        save_val_pred_history=True
     )
 
     XRN50_R100_AGE_SEX = Experiment(
