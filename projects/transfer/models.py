@@ -107,9 +107,11 @@ def ribeiros_resnet(train, validation=None, final_mlp_kwargs=None):
 
 def resnet_v1(train, validation=None, residual_kwargs=None,
               flat_mlp_kwargs=None, ecg_mlp_kwargs=None,
-              final_mlp_kwargs=None):
+              final_mlp_kwargs=None, augmentation=False):
     if residual_kwargs is None:
         residual_kwargs = {}
+        if augmentation:
+            residual_kwargs['kernel_size'] = 5
 
     inp = {}
     if 'flat_features' in train.feature_tensor_shape:
@@ -117,16 +119,26 @@ def resnet_v1(train, validation=None, residual_kwargs=None,
             shape=train.feature_tensor_shape['flat_features'],
         )
     if 'ecg' in train.feature_tensor_shape:
-        inp['ecg'] = Input(shape=(4096, 8), dtype=np.float16, name='signal')
+        if augmentation:
+            inp['ecg'] = Input(shape=(1024, 8),
+                               dtype=np.float16, name='signal')
+        else:
+            inp['ecg'] = Input(shape=(4096, 8),
+                               dtype=np.float16, name='signal')
+
+    if augmentation:
+        samples = [256, 64, 16, 4]
+    else:
+        samples = [1024, 256, 64, 16]
 
     x = Conv1D(64, 17, padding='same', use_bias=False,
                kernel_initializer='he_normal')(inp['ecg'])
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x, y = ResidualUnit(1024, 128, **residual_kwargs)([x, x])
-    x, y = ResidualUnit(256, 196, **residual_kwargs)([x, y])
-    x, y = ResidualUnit(64, 256, **residual_kwargs)([x, y])
-    x, _ = ResidualUnit(16, 320, **residual_kwargs)([x, y])
+    x, y = ResidualUnit(samples[0], 128, **residual_kwargs)([x, x])
+    x, y = ResidualUnit(samples[1], 196, **residual_kwargs)([x, y])
+    x, y = ResidualUnit(samples[2], 256, **residual_kwargs)([x, y])
+    x, _ = ResidualUnit(samples[3], 320, **residual_kwargs)([x, y])
     x = Flatten()(x)
 
     if ecg_mlp_kwargs is not None:
@@ -141,7 +153,38 @@ def resnet_v1(train, validation=None, residual_kwargs=None,
 
     output = _final_layer(x, train.target_columns)
     model = keras.Model(inp, output)
+
+    if augmentation:
+        model.build(input_shape={'ecg': (None, 1024, 8)})
+        model = AugmentECGTensorFlow(model)
+        model.build(input_shape={'ecg': (None, 4096, 8)})
+        # model.build(input_shape=train.feature_tensor_shape)
+
     return model
+
+
+class AugmentECGTensorFlow(keras.Model):
+    def __init__(self, resnet, random_seed=123):
+        super().__init__()
+        self.resnet = resnet
+        self.random_generator = random.Random(random_seed)
+        self.average = keras.layers.Average()
+
+    def call(self, inputs, training=False):
+        resolution = inputs['ecg'].shape[-2]
+        window_size = resolution // 4
+        eval_steps = 10
+        if training:
+            idx = self.random_generator.randint(0, window_size * 3)
+            random_slice = {'ecg': inputs['ecg'][:, idx:idx + window_size, :]}
+            return self.resnet(random_slice)
+        else:
+            preds = []
+            for i in np.linspace(0, resolution - window_size, eval_steps
+                                 ).astype(int):
+                inp = {'ecg': inputs['ecg'][:, i: i + window_size, :]}
+                preds.append(self.resnet(inp))
+            return self.average(preds)
 
 
 def resnet_v2(
@@ -359,14 +402,18 @@ def xrn50(train, validation=None, initial_bn=False,
     return model
 
 
-def pretrained_pt(*args, from_xp=None, **kwargs):
+def pretrained_pt(train, *args, from_xp=None, dropout=0.3, **kwargs):
     model = load_model_from_experiment_result_pt(**from_xp)
-
+    num_out_features = len(train.target_columns)
     new_classifier_head = torch.nn.Sequential(
         torch.nn.Linear(in_features=512, out_features=100, bias=True),
         torch.nn.ReLU(),
-        torch.nn.Dropout(p=0.3),
-        torch.nn.Linear(in_features=100, out_features=1, bias=True)
+        torch.nn.Dropout(p=dropout),
+        torch.nn.Linear(
+            in_features=100,
+            out_features=num_out_features,
+            bias=True
+        )
     )
     init_cnn(new_classifier_head)
     model.resnet.head.classifier = new_classifier_head

@@ -399,6 +399,106 @@ class Target(Experiment, Enum):
             'augmentation': {'mode': 'batch', 'reduction': 'mean'}
         },
     )
+    XRN50V4_R100 = XRN50_R100._replace(
+        description='Reduced lr, increased epochs',
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-6,
+                'warmup_target': 1e-5,
+                'alpha': 0.01,
+                'warmup_epochs': 30,
+                'decay_epochs': 170
+            }
+        },
+        epochs=200,
+    )
+    XRN50V5_R100 = XRN50_R100._replace(
+        description='Adds 0.1 weight decay',
+        optimizer_kwargs={'weight_decay': 0.1}
+    )
+    XRN50V6_R100 = XRN50_R100._replace(
+        description='lr 1e-4, epochs 200',
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-5,
+                'warmup_target': 1e-4,
+                'alpha': 0.01,
+                'warmup_epochs': 30,
+                'decay_epochs': 170
+            }
+        },
+        epochs=200,
+    )
+    XRN50V7_R100 = XRN50_R100._replace(
+        description='Augmentation, lr 1e-4, epochs 200',
+        model_kwargs={
+            'initial_bn': False,
+            'augmentation': {'mode': 'batch', 'reduction': 'mean'}
+        },
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-5,
+                'warmup_target': 1e-4,
+                'alpha': 0.01,
+                'warmup_epochs': 30,
+                'decay_epochs': 170
+            }
+        },
+        epochs=200,
+    )
+
+    XRN50A_R100 = Experiment(
+        description='xresnet50 with augmentation, predicting AMI.',
+        model=xrn50,
+        model_kwargs={
+            'initial_bn': False,
+            'augmentation': {'mode': 'batch', 'reduction': 'mean'}
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {
+                'mode': 'raw',
+                'ribeiro': False
+            }
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    XRN50A_R090 = XRN50A_R100._replace(extractor_index={'train_percent': 0.9})
+    XRN50A_R080 = XRN50A_R100._replace(extractor_index={'train_percent': 0.8})
+    XRN50A_R070 = XRN50A_R100._replace(extractor_index={'train_percent': 0.7})
+    XRN50A_R060 = XRN50A_R100._replace(extractor_index={'train_percent': 0.6})
+    XRN50A_R050 = XRN50A_R100._replace(extractor_index={'train_percent': 0.5})
+    XRN50A_R040 = XRN50A_R100._replace(extractor_index={'train_percent': 0.4})
+    XRN50A_R030 = XRN50A_R100._replace(extractor_index={'train_percent': 0.3})
+    XRN50A_R020 = XRN50A_R100._replace(extractor_index={'train_percent': 0.2})
+    XRN50A_R010 = XRN50A_R100._replace(extractor_index={'train_percent': 0.1})
 
     # EXPERIMENTS USING PRE-TRAINED NETWORKS:
     PTS100_CNN1_R100 = Experiment(
@@ -1239,6 +1339,297 @@ class Target(Experiment, Enum):
     PTAS100_CNN1_R020 = PTAS100_CNN1_R100._replace(
         extractor_index={'train_percent': 0.2})
     PTAS100_CNN1_R010 = PTAS100_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA100_XRN50_R100_V1 = Experiment(
+        description='XRN50 pretrained on age',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50V1_R100_AGE',
+                'commit': '',
+                'epoch': 26,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA100_XRN50_R100_V2 = PTA100_XRN50_R100_V1._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50V2_R100_AGE',
+                'commit': '',
+                'epoch': 47,
+                'trainable': False,
+            }
+        },
+    )
+    PTA100_XRN50_R100_V3 = PTA100_XRN50_R100_V1._replace(
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50V2_R100_AGE',
+                'commit': '',
+                'epoch': 47,
+                'trainable': False,
+            }
+        },
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 3e-5,
+                'warmup_target': 3e-4,
+                'alpha': 0.01,
+                'warmup_epochs': 20,
+                'decay_epochs': 60
+            }
+        },
+        epochs=200,
+        unfreeze_after_epoch=80,
+    )
+    PTA100_XRN50_R100_V4 = PTA100_XRN50_R100_V2._replace(
+        description='Augmentation + 500 epochs',
+        epochs=500
+    )
+    PTA100_XRN50_R100_V5 = PTA100_XRN50_R100_V1._replace(
+        description='No augmentation + load later epoch (100)',
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50V1_R100_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+    )
+    PTA100_XRN50_R100_V6 = PTA100_XRN50_R100_V2._replace(
+        description='Augmentation + increased lr ',
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 3e-4,
+                'warmup_target': 3e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+    )
+
+    PTA100_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R100_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA100_XRN50A_R090 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA100_XRN50A_R080 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA100_XRN50A_R070 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA100_XRN50A_R060 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA100_XRN50A_R050 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA100_XRN50A_R040 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA100_XRN50A_R030 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA100_XRN50A_R020 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA100_XRN50A_R010 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTS100_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on sex.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R100_SEX',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTS100_XRN50A_R090 = PTS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTS100_XRN50A_R080 = PTS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTS100_XRN50A_R070 = PTS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTS100_XRN50A_R060 = PTS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTS100_XRN50A_R050 = PTS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTS100_XRN50A_R040 = PTS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTS100_XRN50A_R030 = PTS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTS100_XRN50A_R020 = PTS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTS100_XRN50A_R010 = PTS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTAS100_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age + sex.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R100_AGE_SEX',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTAS100_XRN50A_R090 = PTAS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTAS100_XRN50A_R080 = PTAS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTAS100_XRN50A_R070 = PTAS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTAS100_XRN50A_R060 = PTAS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTAS100_XRN50A_R050 = PTAS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTAS100_XRN50A_R040 = PTAS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTAS100_XRN50A_R030 = PTAS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTAS100_XRN50A_R020 = PTAS100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTAS100_XRN50A_R010 = PTAS100_XRN50A_R100._replace(
         extractor_index={'train_percent': 0.1})
 
     PTS100_RN1_R100 = Experiment(
@@ -6972,11 +7363,106 @@ class Source(Experiment, Enum):
             'augmentation': {'mode': 'batch', 'reduction': 'mean'}
         },
     )
+    XRN50V3_R100_AGE = XRN50V1_R100_AGE._replace(
+        description='Reduced learning rate to 1e-4.',
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-5,
+                'warmup_target': 1e-4,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+    )
+    XRN50V4_R100_AGE = XRN50V1_R100_AGE._replace(
+        description='Weight decay 1e-3',
+        optimizer_kwargs={'weight_decay': 1e-3}
+    )
 
-    XRN50_R100_AGE_SEX = Experiment(
-        description='Using the xresnet50 architecture to predict age & sex.',
+    XRN50_R100_AGE = Experiment(
+        description='Unaugmented XRN50, v1.',
         model=xrn50,
-        model_kwargs={},
+        model_kwargs={
+            'initial_bn': False,
+        },
+        extractor=SourceTask,
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 1.0
+        },
+        extractor_labels={'sex': False, 'age': True},
+        extractor_features={'mode': 'raw', 'ribeiro': False},
+        data_fits_in_memory=False,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss=torch.nn.L1Loss,
+        scoring=r2_score,
+        metrics=['r2'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    XRN50_R100_SEX = Experiment(
+        description='Unaugmented XRN50, v1. Predicting sex.',
+        model=xrn50,
+        model_kwargs={
+            'initial_bn': False,
+        },
+        extractor=SourceTask,
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 1.0
+        },
+        extractor_labels={'sex': True, 'age': False},
+        extractor_features={'mode': 'raw', 'ribeiro': False},
+        data_fits_in_memory=False,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    XRN50_R100_AGE_SEX = Experiment(
+        description='Unaugmented XRN50, v1. Predicting age & sex.',
+        model=xrn50,
+        model_kwargs={
+            'initial_bn': False,
+        },
         extractor=SourceTask,
         extractor_index={
             'exclude_train_aliases': True,
@@ -6986,14 +7472,11 @@ class Source(Experiment, Enum):
         extractor_features={'mode': 'raw', 'ribeiro': False},
         data_fits_in_memory=False,
         optimizer=torch.optim.Adam,
-        optimizer_kwargs={
-            'weight_decay': 0.01,
-        },
         learning_rate={
             'scheduler': cosine_decay_with_warmup_torch,
             'kwargs': {
-                'initial_learning_rate': 5e-5,
-                'warmup_target': 5e-4,
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
                 'alpha': 0.01,
                 'warmup_epochs': 10,
                 'decay_epochs': 90
@@ -7006,7 +7489,132 @@ class Source(Experiment, Enum):
             'age': torch.nn.L1Loss
         },
         loss_weights={'sex': 1.0, 'age': 0.045},
+        scoring=None,
+        metrics={
+            'sex': ['auc'],
+            'age': ['mae', 'r2']
+        },
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+
+    XRN50A_R100_AGE = Experiment(
+        description='Augmented XRN50, v1.',
+        model=xrn50,
+        model_kwargs={
+            'initial_bn': False,
+            'augmentation': {'mode': 'batch', 'reduction': 'mean'}
+        },
+        extractor=SourceTask,
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 1.0
+        },
+        extractor_labels={'sex': False, 'age': True},
+        extractor_features={'mode': 'raw', 'ribeiro': False},
+        data_fits_in_memory=False,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss=torch.nn.L1Loss,
         scoring=r2_score,
+        metrics=['r2'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    XRN50A_R100_SEX = Experiment(
+        description='Augmented XRN50, v1. Predicting sex.',
+        model=xrn50,
+        model_kwargs={
+            'initial_bn': False,
+            'augmentation': {'mode': 'batch', 'reduction': 'mean'}
+        },
+        extractor=SourceTask,
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 1.0
+        },
+        extractor_labels={'sex': True, 'age': False},
+        extractor_features={'mode': 'raw', 'ribeiro': False},
+        data_fits_in_memory=False,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_predefined_splits=True,
+        building_model_requires_development_data=True,
+        use_tensorboard=True,
+        save_model=True,
+        save_model_checkpoints=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    XRN50A_R100_AGE_SEX = Experiment(
+        description='Augmented XRN50, v1. Predicting age & sex.',
+        model=xrn50,
+        model_kwargs={
+            'initial_bn': False,
+            'augmentation': {'mode': 'batch', 'reduction': 'mean'}
+        },
+        extractor=SourceTask,
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 1.0
+        },
+        extractor_labels={'sex': True, 'age': True},
+        extractor_features={'mode': 'raw', 'ribeiro': False},
+        data_fits_in_memory=False,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 90
+            }
+        },
+        epochs=100,
+        batch_size=256,
+        loss={
+            'sex': torch.nn.BCEWithLogitsLoss,
+            'age': torch.nn.L1Loss
+        },
+        loss_weights={'sex': 1.0, 'age': 0.045},
+        scoring=None,
         metrics={
             'sex': ['auc'],
             'age': ['mae', 'r2']
@@ -7466,4 +8074,83 @@ class PTBXL(Experiment, Enum):
         description='Use the high-resolution ECGs instead (this automatically '
                     'adjusts the initial conv-layer settings)',
         extractor_features={'leads': 8, 'resolution': 'high'},
+    )
+
+    PTA100_XRN50V1_500HZ_ALL = Experiment(
+        description='XRN50 pretrained on age, finetuning on PTBXL.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50V1_R100_AGE',
+                'commit': '',
+                'epoch': 26,
+                'trainable': False,
+            }
+        },
+        extractor=PTBXLExtractor,
+        extractor_features={'leads': 8, 'resolution': 'high'},
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True
+    )
+    PTA100_XRN50V2_500HZ_ALL = PTA100_XRN50V1_500HZ_ALL._replace(
+        description='V2.',
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50V2_R100_AGE',
+                'commit': '',
+                'epoch': 47,
+                'trainable': False,
+            }
+        },
+    )
+    PTA100_XRN50V3_500HZ_ALL = PTA100_XRN50V1_500HZ_ALL._replace(
+        description='Increased lr',
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-3,
+                'warmup_target': 1e-2,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+    )
+    PTA100_XRN50V4_500HZ_ALL = PTA100_XRN50V2_500HZ_ALL._replace(
+        description='Augmentation + increased lr',
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-3,
+                'warmup_target': 1e-2,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
     )

@@ -802,6 +802,7 @@ class TorchWrapper(Model):
         # not zero-indexed. So train 4 epochs frozen, then unfreeze for epochs
         # 5 and above.
         if epoch == self.unfreeze_after_epoch:
+            log.debug('Unfreezing model parameters')
             for param in self.model.parameters():
                 param.requires_grad = True
 
