@@ -1479,7 +1479,7 @@ class Target(Experiment, Enum):
                 'decay_epochs': 30
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=256,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -1540,7 +1540,7 @@ class Target(Experiment, Enum):
                 'decay_epochs': 30
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=256,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
@@ -1601,7 +1601,7 @@ class Target(Experiment, Enum):
                 'decay_epochs': 30
             }
         },
-        epochs=200,
+        epochs=400,
         batch_size=256,
         unfreeze_after_epoch=40,
         building_model_requires_development_data=True,
