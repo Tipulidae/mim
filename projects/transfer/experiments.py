@@ -1457,8 +1457,8 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'XRN50A_R100_AGE',
-                'commit': '',
-                'epoch': 100,
+                'commit': '661e83a57709b413ab7fac4907d60977c6cc0a8d',
+                'epoch': 37,
                 'trainable': False,
             }
         },
@@ -1518,8 +1518,8 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'XRN50A_R100_SEX',
-                'commit': '',
-                'epoch': 100,
+                'commit': '661e83a57709b413ab7fac4907d60977c6cc0a8d',
+                'epoch': 25,
                 'trainable': False,
             }
         },
@@ -1579,8 +1579,8 @@ class Target(Experiment, Enum):
                 'xp_project': 'transfer',
                 'xp_base': 'Source',
                 'xp_name': 'XRN50A_R100_AGE_SEX',
-                'commit': '',
-                'epoch': 100,
+                'commit': '661e83a57709b413ab7fac4907d60977c6cc0a8d',
+                'epoch': 29,
                 'trainable': False,
             }
         },

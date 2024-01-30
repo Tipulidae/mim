@@ -36,27 +36,13 @@ def load_model_from_experiment_result(
         xp_base,
         xp_name
     )
-    xp_results_path = os.path.join(
-        xp_base_path,
-        'train_val_results.pickle'
-    )
+    validate_model_metadata(xp_base_path, commit)
     xp_model_path = os.path.join(
         xp_base_path,
         f'split_{split_number}',
         'checkpoints',
         f'epoch_{epoch:03d}.keras'
     )
-    xp_results = pd.read_pickle(xp_results_path)
-    metadata = xp_results.metadata
-    expected_metadata = {
-        'has_uncommitted_changes': False,
-        'current_commit': commit
-    }
-    v = Validator(
-        allow_different_commits=False,
-        allow_uncommitted=False
-    )
-    v.validate_consistency([metadata, expected_metadata])
     log.debug(f'Model path: {xp_model_path}')
 
     model = keras.models.load_model(filepath=xp_model_path, compile=False)
@@ -83,27 +69,13 @@ def load_model_from_experiment_result_pt(
         xp_base,
         xp_name
     )
-    # xp_results_path = os.path.join(
-    #     xp_base_path,
-    #     'train_val_results.pickle'
-    # )
+    validate_model_metadata(xp_base_path, commit)
     xp_model_path = os.path.join(
         xp_base_path,
         f'split_{split_number}',
         'checkpoints',
         f'epoch_{epoch:03d}.pt'
     )
-    # xp_results = pd.read_pickle(xp_results_path)
-    # metadata = xp_results.metadata
-    # expected_metadata = {
-    #     'has_uncommitted_changes': False,
-    #     'current_commit': commit
-    # }
-    # v = Validator(
-    #     allow_different_commits=False,
-    #     allow_uncommitted=False
-    # )
-    # v.validate_consistency([metadata, expected_metadata])
     log.debug(f'Model path: {xp_model_path}')
 
     model = torch.load(xp_model_path)
@@ -111,6 +83,23 @@ def load_model_from_experiment_result_pt(
         param.requires_grad = trainable
 
     return model
+
+
+def validate_model_metadata(path, commit):
+    # Will raise a MetadataConsistencyException if the metadata doesn't
+    # match the expected commit.
+    xp_results_path = os.path.join(path, 'train_val_results.pickle')
+    xp_results = pd.read_pickle(xp_results_path)
+    metadata = xp_results.metadata
+    expected_metadata = {
+        'has_uncommitted_changes': False,
+        'current_commit': commit
+    }
+    v = Validator(
+        allow_different_commits=False,
+        allow_uncommitted=False
+    )
+    v.validate_consistency([metadata, expected_metadata])
 
 
 def load_ribeiro_model(freeze_resnet=False, suffix=None):
