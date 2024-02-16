@@ -232,7 +232,7 @@ class KerasWrapper(Model):
             ignore_callbacks=False,
             save_train_prediction_history=False,
             save_val_prediction_history=False,
-            save_model_checkpoints=False,
+            model_checkpoints=None,
             use_tensorboard=False,
             save_learning_rate=False,
             checkpoint_path=None,
@@ -263,7 +263,10 @@ class KerasWrapper(Model):
         self.ignore_callbacks = ignore_callbacks
         self.save_train_prediction_history = save_train_prediction_history
         self.save_val_prediction_history = save_val_prediction_history
-        self.save_model_checkpoints = save_model_checkpoints
+        if not isinstance(model_checkpoints, (dict, type(None))):
+            raise TypeError(f"model_checkpoints must be either dict or None, "
+                            f"was {type(model_checkpoints)}.")
+        self.model_checkpoints = model_checkpoints
         self.use_tensorboard = use_tensorboard
         self.save_learning_rate = save_learning_rate
         self.class_weight = class_weight
@@ -340,20 +343,21 @@ class KerasWrapper(Model):
                     save_auc=self.log_real_auc
                 )
             )
-        if self.save_model_checkpoints:
-            path = os.path.join(self.checkpoint_path, split_folder,
-                                'checkpoints')
-            if isinstance(self.save_model_checkpoints, dict):
-                callbacks.append(ModelCheckpoint(
-                    filepath=os.path.join(path, 'epoch_{epoch:03d}.keras'),
-                    **self.save_model_checkpoints
-                ))
+        if self.model_checkpoints is not None:
+            path = os.path.join(
+                self.checkpoint_path,
+                split_folder,
+                'checkpoints'
+            )
+            if ('save_best_only' in self.model_checkpoints and
+                    self.model_checkpoints['save_best_only']):
+                path = os.path.join(path, 'best.tf')
             else:
-                callbacks.append(ModelCheckpoint(
-                    filepath=os.path.join(path, 'last.ckpt')))
-                callbacks.append(ModelCheckpoint(
-                    filepath=os.path.join(path, 'best.ckpt'),
-                    save_best_only=True))
+                path = os.path.join(path, 'epoch_{epoch:03d}.tf')
+
+            callbacks.append(ModelCheckpoint(
+                filepath=path, save_format='tf', **self.model_checkpoints))
+
         if self.use_tensorboard:
             path = os.path.join(self.tensorboard_path, split_folder)
             callbacks.append(TensorBoard(log_dir=path))
@@ -411,6 +415,7 @@ class History:
                  save_val_prediction_history=True, metrics=None,
                  save_learning_rate=False):
         split_folder = '' if split_number is None else f'split_{split_number}'
+        self.split_number = split_number
         self.train_writer = SummaryWriter(
             log_dir=os.path.join(tensorboard_path, split_folder, 'train')
         )
@@ -628,7 +633,7 @@ class TorchWrapper(Model):
             save_train_prediction_history=False,
             save_val_prediction_history=False,
             save_learning_rate=False,
-            save_model_checkpoints=False,
+            model_checkpoints=None,
             unfreeze_after_epoch=-1,
             prefetch=None,
             tensorboard_path=None,
@@ -660,11 +665,16 @@ class TorchWrapper(Model):
         self.save_train_prediction_history = save_train_prediction_history
         self.save_val_prediction_history = save_val_prediction_history
         self.save_learning_rate = save_learning_rate
-        self.save_model_checkpoints = save_model_checkpoints
         self.prefetch = prefetch
         self.tensorboard_path = tensorboard_path
         self.metrics = metrics
         self.unfreeze_after_epoch = unfreeze_after_epoch
+        if model_checkpoints is None:
+            self.model_checkpoint = TorchModelCheckpoint(
+                checkpoint_path, save_freq='never')
+        else:
+            self.model_checkpoint = TorchModelCheckpoint(
+                checkpoint_path, **model_checkpoints)
 
     def predict(self, data: DataWrapper):
         dataloader = data.as_dataloader(
@@ -725,14 +735,13 @@ class TorchWrapper(Model):
                 epoch=epoch,
             )
 
-            self.save_model_checkpoint(epoch, split_number)
-
             elapsed_time = time() - t0
             print(
                 f"\r{len(train)}/{len(train):>} "
                 f"[==============================]"
                 f" - {elapsed_time:.1f}s - {log_string}"
             )
+            self.model_checkpoint.save(self.model, epoch, history)
 
         history.flush()
         print("Finished training pytorch model!")
@@ -817,24 +826,59 @@ class TorchWrapper(Model):
         torch.save(self.model, path)
         log.debug(f"Saved model to {path}")
 
-    def save_model_checkpoint(self, epoch, split_number):
-        if not self.save_model_checkpoints:
-            return
-
-        path = os.path.join(
-            self.checkpoint_path,
-            f"split_{split_number}",
-            "checkpoints",
-        )
-        if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
-
-        model_path = os.path.join(path, f"epoch_{epoch+1:03d}.pt")
-        torch.save(self.model, model_path)
-
     @property
     def summary(self):
         return str(self.model)
+
+
+class TorchModelCheckpoint:
+    # Trying to stick to the keras API here with the argument names
+    def __init__(self, filepath, monitor='val_loss', save_best_only=False,
+                 mode='min', save_freq='epoch'):
+
+        if mode not in ['min', 'max']:
+            raise ValueError(f"mode should be either min or max, was {mode}")
+        if mode == 'min':
+            self.op = np.less
+            self.best = np.inf
+        else:
+            self.op = np.greater
+            self.best = -np.inf
+
+        self.save_best_only = save_best_only
+        self.monitor = monitor
+        self.filepath = filepath
+        self.save_freq = save_freq
+
+    def save(self, model, epoch, history):
+        # I suppose I want to either save every epoch or save best epoch,
+        # but not both at the same time, right?
+        if not self._should_save(history):
+            return
+        path = os.path.join(
+            self.filepath, f"split_{history.split_number}", "checkpoints")
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+
+        if self.save_best_only:
+            path = os.path.join(path, 'best.pt')
+        else:
+            path = os.path.join(path, f'epoch_{epoch+1:03d}.pt')
+
+        torch.save(model, path)
+        log.debug('Model checkpoint saved')
+
+    def _should_save(self, history):
+        if self.save_freq == 'never':
+            return False
+        if not self.save_best_only:
+            return True
+        current = history.history[self.monitor][-1]
+        if self.op(current, self.best):
+            self.best = current
+            return True
+        else:
+            return False
 
 
 def to_device(x, device, force_float=False):

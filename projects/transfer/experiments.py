@@ -21,56 +21,6 @@ from projects.transfer.models import (
 
 
 class Target(Experiment, Enum):
-    TEST = Experiment(
-        description='Testing the new prediction history callback',
-        model=cnn,
-        model_kwargs={
-            'cnn_kwargs': {
-                'num_layers': 2,
-                'down_sample': False,
-                'dropouts': [0.5, 0.4],
-                'pool_size': 15,
-                'filter_first': 28,
-                'filter_last': 8,
-                'kernel_first': 61,
-                'kernel_last': 17,
-                'batch_norms': [False, False],
-                'weight_decays': [0.0, 0.01],
-            },
-            'ffnn_kwargs': {
-                'sizes': [10, 100],
-                'dropout': [0.4, 0.3],
-                'batch_norm': [False, False]
-            },
-        },
-        extractor=TargetTask,
-        extractor_index={'train_percent': 1.0},
-        extractor_features={'mode': 'raw', 'ribeiro': False},
-        optimizer=Adam,
-        learning_rate={
-            'scheduler': CosineDecayWithWarmup,
-            'kwargs': {
-                'decay_steps': -1,
-                'initial_learning_rate': 0.0,
-                'warmup_target': 5e-4,
-                'alpha': 1e-6,
-                'warmup_epochs': 10,
-                'decay_epochs': 90,
-                'steps_per_epoch': -1
-            }
-        },
-        epochs=10,
-        batch_size=512,
-        loss='binary_crossentropy',
-        scoring=roc_auc_score,
-        metrics=['auc'],
-        use_predefined_splits=True,
-        building_model_requires_development_data=True,
-        use_tensorboard=True,
-        save_learning_rate=True,
-        save_val_pred_history=True
-    )
-
     # EXPERIMENTS USING NETWORKS TRAINED FROM SCRATCH:
     RN1_R100 = Experiment(
         description='Training the ResNet v1 from scratch.',
@@ -104,7 +54,13 @@ class Target(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     RN1_R090 = RN1_R100._replace(extractor_index={'train_percent': 0.9})
     RN1_R080 = RN1_R100._replace(extractor_index={'train_percent': 0.8})
@@ -148,6 +104,12 @@ class Target(Experiment, Enum):
         use_tensorboard=True,
         save_learning_rate=True,
         save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     RN2_R090 = RN2_R100._replace(extractor_index={'train_percent': 0.9})
     RN2_R080 = RN2_R100._replace(extractor_index={'train_percent': 0.8})
@@ -243,7 +205,13 @@ class Target(Experiment, Enum):
         loss='binary_crossentropy',
         scoring=roc_auc_score,
         use_tensorboard=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     CNN1_R090 = CNN1_R100._replace(extractor_index={'train_percent': 0.9})
     CNN1_R080 = CNN1_R100._replace(extractor_index={'train_percent': 0.8})
@@ -254,95 +222,6 @@ class Target(Experiment, Enum):
     CNN1_R030 = CNN1_R100._replace(extractor_index={'train_percent': 0.3})
     CNN1_R020 = CNN1_R100._replace(extractor_index={'train_percent': 0.2})
     CNN1_R010 = CNN1_R100._replace(extractor_index={'train_percent': 0.1})
-
-    XRN50_TEST = Experiment(
-        description='Initial test of the xresnet model',
-        model=xrn50,
-        model_kwargs={},
-        extractor=TargetTask,
-        extractor_index={'train_percent': 0.1},
-        extractor_features={
-            'ecg_features': {
-                'mode': 'raw',
-                'ribeiro': False
-            }
-        },
-        data_fits_in_memory=True,
-        optimizer=torch.optim.Adam,
-        optimizer_kwargs={
-            'weight_decay': 0.01,
-        },
-        learning_rate={
-            'scheduler': cosine_decay_with_warmup_torch,
-            'kwargs': {
-                'initial_learning_rate': 5e-5,
-                'warmup_target': 5e-4,
-                'alpha': 0.01,
-                'warmup_epochs': 10,
-                'decay_epochs': 90
-            }
-        },
-        epochs=3,
-        batch_size=256,
-        loss=torch.nn.BCEWithLogitsLoss,
-        scoring=roc_auc_score,
-        metrics=['auc'],
-        use_predefined_splits=True,
-        building_model_requires_development_data=False,
-        use_tensorboard=True,
-        save_model=True,
-        save_model_checkpoints=True,
-        save_learning_rate=True,
-        save_val_pred_history=True
-    )
-    XRN50_TEST_PT = Experiment(
-        description='Testing pretrained models',
-        model=pretrained_pt,
-        model_kwargs={
-            'from_xp': {
-                'xp_project': 'transfer',
-                'xp_base': 'Target',
-                'xp_name': 'XRN50_TEST',
-                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
-                'epoch': 3,
-                'trainable': False,
-            },
-        },
-        extractor=TargetTask,
-        extractor_index={'train_percent': 0.1},
-        extractor_features={
-            'ecg_features': {
-                'mode': 'raw',
-                'ribeiro': False
-            }
-        },
-        data_fits_in_memory=True,
-        optimizer=torch.optim.Adam,
-        optimizer_kwargs={
-            'weight_decay': 0.01,
-        },
-        learning_rate={
-            'scheduler': cosine_decay_with_warmup_torch,
-            'kwargs': {
-                'initial_learning_rate': 5e-5,
-                'warmup_target': 5e-4,
-                'alpha': 0.01,
-                'warmup_epochs': 10,
-                'decay_epochs': 90
-            }
-        },
-        epochs=10,
-        batch_size=256,
-        loss=torch.nn.BCEWithLogitsLoss,
-        scoring=roc_auc_score,
-        metrics=['auc'],
-        use_predefined_splits=True,
-        building_model_requires_development_data=False,
-        use_tensorboard=True,
-        save_model=True,
-        save_learning_rate=True,
-        save_val_pred_history=True
-    )
 
     XRN50_R100 = Experiment(
         description='xresnet50 without augmentation, predicting AMI',
@@ -379,10 +258,26 @@ class Target(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
+        model_checkpoints=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
+    XRN50_R090 = XRN50_R100._replace(extractor_index={'train_percent': 0.9})
+    XRN50_R080 = XRN50_R100._replace(extractor_index={'train_percent': 0.8})
+    XRN50_R070 = XRN50_R100._replace(extractor_index={'train_percent': 0.7})
+    XRN50_R060 = XRN50_R100._replace(extractor_index={'train_percent': 0.6})
+    XRN50_R050 = XRN50_R100._replace(extractor_index={'train_percent': 0.5})
+    XRN50_R040 = XRN50_R100._replace(extractor_index={'train_percent': 0.4})
+    XRN50_R030 = XRN50_R100._replace(extractor_index={'train_percent': 0.3})
+    XRN50_R020 = XRN50_R100._replace(extractor_index={'train_percent': 0.2})
+    XRN50_R010 = XRN50_R100._replace(extractor_index={'train_percent': 0.1})
+
     XRN50V2_R100 = XRN50_R100._replace(
         description='Adds batch sliding window augmentation with max '
                     'reduction.',
@@ -486,9 +381,14 @@ class Target(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     XRN50A_R090 = XRN50A_R100._replace(extractor_index={'train_percent': 0.9})
     XRN50A_R080 = XRN50A_R100._replace(extractor_index={'train_percent': 0.8})
@@ -550,7 +450,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS100_CNN1_R090 = PTS100_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -620,7 +526,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS090_CNN1_R090 = PTS090_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -690,7 +602,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS080_CNN1_R090 = PTS080_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -760,7 +678,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS070_CNN1_R090 = PTS070_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -830,7 +754,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS060_CNN1_R090 = PTS060_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -900,7 +830,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS050_CNN1_R090 = PTS050_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -970,7 +906,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS040_CNN1_R090 = PTS040_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1040,7 +982,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS030_CNN1_R090 = PTS030_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1110,7 +1058,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS020_CNN1_R090 = PTS020_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1180,7 +1134,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS010_CNN1_R090 = PTS010_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1250,7 +1210,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA100_CNN1_R090 = PTA100_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1320,7 +1286,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTAS100_CNN1_R090 = PTAS100_CNN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1380,7 +1352,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA100_XRN50_R100_V2 = PTA100_XRN50_R100_V1._replace(
         model_kwargs={
@@ -1489,7 +1467,13 @@ class Target(Experiment, Enum):
         metrics=['auc'],
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA100_XRN50A_R090 = PTA100_XRN50A_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1550,7 +1534,13 @@ class Target(Experiment, Enum):
         metrics=['auc'],
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS100_XRN50A_R090 = PTS100_XRN50A_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1611,7 +1601,13 @@ class Target(Experiment, Enum):
         metrics=['auc'],
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTAS100_XRN50A_R090 = PTAS100_XRN50A_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1680,7 +1676,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS100_RN1_R090 = PTS100_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1749,7 +1751,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS090_RN1_R090 = PTS090_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1818,7 +1826,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS080_RN1_R090 = PTS080_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1887,7 +1901,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS070_RN1_R090 = PTS070_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -1956,7 +1976,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS060_RN1_R090 = PTS060_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2025,7 +2051,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS050_RN1_R090 = PTS050_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2094,7 +2126,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS040_RN1_R090 = PTS040_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2163,7 +2201,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS030_RN1_R090 = PTS030_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2232,7 +2276,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS020_RN1_R090 = PTS020_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2301,7 +2351,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS010_RN1_R090 = PTS010_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2370,7 +2426,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS008_RN1_R090 = PTS008_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2439,7 +2501,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS006_RN1_R090 = PTS006_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2508,7 +2576,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS004_RN1_R090 = PTS004_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2577,7 +2651,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS002_RN1_R090 = PTS002_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2646,7 +2726,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA100_RN1_R090 = PTA100_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2715,7 +2801,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA090_RN1_R090 = PTA090_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2784,7 +2876,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA080_RN1_R090 = PTA080_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2853,7 +2951,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA070_RN1_R090 = PTA070_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2922,7 +3026,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA060_RN1_R090 = PTA060_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -2991,7 +3101,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA050_RN1_R090 = PTA050_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3060,7 +3176,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA040_RN1_R090 = PTA040_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3129,7 +3251,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA030_RN1_R090 = PTA030_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3198,7 +3326,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA020_RN1_R090 = PTA020_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3267,7 +3401,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA010_RN1_R090 = PTA010_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3336,7 +3476,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA008_RN1_R090 = PTA008_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3405,7 +3551,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA006_RN1_R090 = PTA006_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3474,7 +3626,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA004_RN1_R090 = PTA004_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3543,7 +3701,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA002_RN1_R090 = PTA002_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3613,6 +3777,12 @@ class Target(Experiment, Enum):
         use_tensorboard=True,
         save_learning_rate=True,
         save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTAS100_RN1_R090 = PTAS100_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3687,7 +3857,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS100_RN1_ASR090 = PTS100_RN1_ASR100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3769,7 +3945,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA100_PTS100_RN1_R090 = PTA100_PTS100_RN1_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3838,7 +4020,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTS100_RN2_R090 = PTS100_RN2_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3907,7 +4095,13 @@ class Target(Experiment, Enum):
         scoring=roc_auc_score,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_val_pred_history=True
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTA100_RN2_R090 = PTA100_RN2_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -3977,6 +4171,12 @@ class Target(Experiment, Enum):
         use_tensorboard=True,
         save_learning_rate=True,
         save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
     )
     PTAS100_RN2_R090 = PTAS100_RN2_R100._replace(
         extractor_index={'train_percent': 0.9})
@@ -7026,7 +7226,7 @@ class Source(Experiment, Enum):
             }
         },
         use_predefined_splits=True,
-        save_model_checkpoints={
+        model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
@@ -7108,16 +7308,13 @@ class Source(Experiment, Enum):
                 'decay_epochs': 90,
             }
         },
-        save_model_checkpoints=False,
         epochs=100
     )
     CNN1_LR_TEST2 = CNN1_R100_SEX._replace(
         learning_rate=3e-5,
-        save_model_checkpoints=False,
         epochs=200
     )
     CNN1_LR_TEST3 = CNN1_R100_SEX._replace(
-        save_model_checkpoints=False,
         learning_rate={
             'scheduler': CosineDecayWithWarmup,
             'kwargs': {
@@ -7178,7 +7375,7 @@ class Source(Experiment, Enum):
             }
         },
         use_predefined_splits=True,
-        save_model_checkpoints={
+        model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
@@ -7247,6 +7444,30 @@ class Source(Experiment, Enum):
             'train_percent': 0.1
         },
     )
+    CNN1_R008_AGE = CNN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.08
+        },
+    )
+    CNN1_R006_AGE = CNN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.06
+        },
+    )
+    CNN1_R004_AGE = CNN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.04
+        },
+    )
+    CNN1_R002_AGE = CNN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.02
+        },
+    )
 
     CNN1_R100_AGE_SEX = Experiment(
         description='M_R1_CNN1 from the serial ECGs project. Predicting '
@@ -7293,7 +7514,7 @@ class Source(Experiment, Enum):
             }
         },
         use_predefined_splits=True,
-        save_model_checkpoints={
+        model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
@@ -7350,7 +7571,7 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
+        model_checkpoints=True,
         save_learning_rate=True,
         save_val_pred_history=True
     )
@@ -7415,7 +7636,7 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
+        model_checkpoints=True,
         save_learning_rate=True,
         save_val_pred_history=True
     )
@@ -7453,7 +7674,7 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
+        model_checkpoints=True,
         save_learning_rate=True,
         save_val_pred_history=True
     )
@@ -7498,7 +7719,7 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
+        model_checkpoints=True,
         save_learning_rate=True,
         save_val_pred_history=True
     )
@@ -7538,10 +7759,89 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
+        model_checkpoints={'save_freq': 'epoch'},
         save_learning_rate=True,
         save_val_pred_history=True
     )
+    XRN50A_R090_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.9
+        },
+    )
+    XRN50A_R080_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.8
+        },
+    )
+    XRN50A_R070_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.7
+        },
+    )
+    XRN50A_R060_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.6
+        },
+    )
+    XRN50A_R050_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.5
+        },
+    )
+    XRN50A_R040_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.4
+        },
+    )
+    XRN50A_R030_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.3
+        },
+    )
+    XRN50A_R020_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.2
+        },
+    )
+    XRN50A_R010_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.1
+        },
+    )
+    XRN50A_R008_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.08
+        },
+    )
+    XRN50A_R006_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.06
+        },
+    )
+    XRN50A_R004_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.04
+        },
+    )
+    XRN50A_R002_AGE = XRN50A_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.02
+        },
+    )
+
     XRN50A_R100_SEX = Experiment(
         description='Augmented XRN50, v1. Predicting sex.',
         model=xrn50,
@@ -7577,7 +7877,7 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
+        model_checkpoints={'save_freq': 'epoch'},
         save_learning_rate=True,
         save_val_pred_history=True
     )
@@ -7623,7 +7923,7 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
+        model_checkpoints={'save_freq': 'epoch'},
         save_learning_rate=True,
         save_val_pred_history=True
     )
@@ -7664,7 +7964,7 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_model_checkpoints={
+        model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
@@ -7790,7 +8090,7 @@ class Source(Experiment, Enum):
         use_tensorboard=True,
         save_learning_rate=True,
         save_val_pred_history=True,
-        save_model_checkpoints={
+        model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
@@ -7855,7 +8155,7 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_model_checkpoints={
+        model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
@@ -7982,7 +8282,7 @@ class Source(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_learning_rate=True,
-        save_model_checkpoints={
+        model_checkpoints={
             'save_best_only': False,
             'save_freq': 'epoch',
             'save_weights_only': False
@@ -7999,10 +8299,90 @@ class Source(Experiment, Enum):
                     'Trained here to predict sex using the raw ECG signal.',
         model=resnet_v2,
     )
+
     RN2_R100_AGE = RN1_R100_AGE._replace(
         description='Using the RN2 architecture to predict age.',
         model=resnet_v2
     )
+    RN2_R090_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.9
+        },
+    )
+    RN2_R080_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.8
+        },
+    )
+    RN2_R070_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.7
+        },
+    )
+    RN2_R060_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.6
+        },
+    )
+    RN2_R050_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.5
+        },
+    )
+    RN2_R040_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.4
+        },
+    )
+    RN2_R030_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.3
+        },
+    )
+    RN2_R020_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.2
+        },
+    )
+    RN2_R010_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.1
+        },
+    )
+    RN2_R008_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.08
+        },
+    )
+    RN2_R006_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.06
+        },
+    )
+    RN2_R004_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.04
+        },
+    )
+    RN2_R002_AGE = RN1_R100_AGE._replace(
+        extractor_index={
+            'exclude_train_aliases': True,
+            'train_percent': 0.02
+        },
+    )
+
     RN2_R100_AGE_SEX = RN1_R100_AGE_SEX._replace(
         description='Using the RN2 architecture to predict age and sex.',
         model=resnet_v2
@@ -8042,7 +8422,7 @@ class PTBXL(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        save_model_checkpoints=True,
+        model_checkpoints=True,
         save_learning_rate=True,
         save_val_pred_history=True
     )

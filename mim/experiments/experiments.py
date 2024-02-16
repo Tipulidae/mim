@@ -77,7 +77,8 @@ class Experiment(NamedTuple):
     ignore_callbacks: bool = False
     save_train_pred_history: bool = False
     save_val_pred_history: bool = False
-    save_model_checkpoints: Union[bool, dict] = False
+    model_checkpoints: dict = None  # None means no checkpoints saved
+    test_model: str = 'last'  # last, best or epoch_###
     use_tensorboard: bool = False
     save_learning_rate: bool = False
     unfreeze_after_epoch: int = -1
@@ -141,10 +142,13 @@ class Experiment(NamedTuple):
         # pre-processing to be part of the model-wrapper and automatically
         # save any pre-processing parameters along with the actual model,
         # but this requires more re-factoring than I have time for right now.
-        dev = extractor.get_development_data()
-        test = extractor.get_test_data()
-        pre_process = self.get_pre_processor(0)
-        dev, test = pre_process(dev, test)
+        if self.pre_processor is None:
+            test = extractor.get_test_data()
+        else:
+            dev = extractor.get_development_data()
+            test = extractor.get_test_data()
+            pre_process = self.get_pre_processor(0)
+            _, test = pre_process(dev, test)
 
         targets = test.y
         predictions = []
@@ -168,7 +172,19 @@ class Experiment(NamedTuple):
         return results
 
     def _model_paths(self):
-        return glob(os.path.join(self.base_path, 'split*/model.*'))
+        # test_model should be either 'last', 'best' or 'epoch_###'
+        # for a specific epoch.
+
+        # If we want the last model, use the model saved as 'model'. Might
+        # want to refactor this, but would require re-running a lot of stuff
+        # maybe.
+        if self.test_model == 'last':
+            model = 'model'
+        else:
+            model = self.test_model
+
+        return glob(os.path.join(
+            self.base_path, f'split*/**/{model}.*'))
 
     def _train_and_validate(self, splits_to_do=-1) -> ExperimentResult:
         """
@@ -357,7 +373,7 @@ class Experiment(NamedTuple):
                 ignore_callbacks=self.ignore_callbacks,
                 save_train_prediction_history=self.save_train_pred_history,
                 save_val_prediction_history=self.save_val_pred_history,
-                save_model_checkpoints=self.save_model_checkpoints,
+                model_checkpoints=self.model_checkpoints,
                 use_tensorboard=self.use_tensorboard,
                 save_learning_rate=self.save_learning_rate,
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
@@ -392,7 +408,7 @@ class Experiment(NamedTuple):
                 # ignore_callbacks=self.ignore_callbacks,
                 save_train_prediction_history=self.save_train_pred_history,
                 save_val_prediction_history=self.save_val_pred_history,
-                save_model_checkpoints=self.save_model_checkpoints,
+                model_checkpoints=self.model_checkpoints,
                 # use_tensorboard=self.use_tensorboard,
                 save_learning_rate=self.save_learning_rate,
                 # reduce_lr_on_plateau=self.reduce_lr_on_plateau,
@@ -412,14 +428,14 @@ class Experiment(NamedTuple):
             model_type = path.split('.')[-1]
             if model_type == 'sklearn':
                 return pd.read_pickle(path)
-            elif model_type == 'keras':
+            elif model_type in ['keras', 'tf']:
                 return keras.models.load_model(filepath=path)
             elif model_type == 'pt':
                 return torch.load(path)
             raise TypeError(f'Unexpected model type {model_type}')
 
-        return self._wrap_model(_load(), target_columns=target_columns,
-                                verbose=0)
+        return self._wrap_model(
+            _load(), target_columns=target_columns, verbose=0)
 
     def asdict(self):
         return callable_to_string(self._asdict())
