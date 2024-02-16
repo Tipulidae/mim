@@ -349,14 +349,20 @@ class KerasWrapper(Model):
                 split_folder,
                 'checkpoints'
             )
+            # For legacy reasons, I save as .keras if we save each epoch,
+            # and as .tf when we only save the best model. This is because of
+            # a bug in tensorflow where save_best_only is not compatible with
+            # the keras format. Should probably try to refactor this later.
             if ('save_best_only' in self.model_checkpoints and
                     self.model_checkpoints['save_best_only']):
                 path = os.path.join(path, 'best.tf')
+                format = 'tf'
             else:
-                path = os.path.join(path, 'epoch_{epoch:03d}.tf')
+                path = os.path.join(path, 'epoch_{epoch:03d}.keras')
+                format = 'keras'
 
             callbacks.append(ModelCheckpoint(
-                filepath=path, save_format='tf', **self.model_checkpoints))
+                filepath=path, save_format=format, **self.model_checkpoints))
 
         if self.use_tensorboard:
             path = os.path.join(self.tensorboard_path, split_folder)

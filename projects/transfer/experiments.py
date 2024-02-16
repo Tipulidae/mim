@@ -258,7 +258,6 @@ class Target(Experiment, Enum):
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_model=True,
-        model_checkpoints=True,
         save_learning_rate=True,
         save_val_pred_history=True,
         model_checkpoints={
