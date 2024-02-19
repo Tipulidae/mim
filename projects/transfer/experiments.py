@@ -10655,6 +10655,7 @@ class Source(Experiment, Enum):
             'exclude_train_aliases': True,
             'train_percent': 0.08
         },
+        batch_size=255,  # workaround to prevent last batch from being size 1
     )
     XRN50A_R006_AGE = XRN50A_R100_AGE._replace(
         extractor_index={
