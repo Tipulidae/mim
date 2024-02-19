@@ -1236,6 +1236,994 @@ class Target(Experiment, Enum):
     PTA100_CNN1_R010 = PTA100_CNN1_R100._replace(
         extractor_index={'train_percent': 0.1})
 
+    PTA090_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R090_AGE',
+                'commit': '064e5e0e9c763ab3f53fed34d6484a6d79c02e8c',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA090_CNN1_R090 = PTA090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA090_CNN1_R080 = PTA090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA090_CNN1_R070 = PTA090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA090_CNN1_R060 = PTA090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA090_CNN1_R050 = PTA090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA090_CNN1_R040 = PTA090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA090_CNN1_R030 = PTA090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA090_CNN1_R020 = PTA090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA090_CNN1_R010 = PTA090_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA080_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R080_AGE',
+                'commit': '05ee85195684bba26db810ed61cbd7830bc09e95',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA080_CNN1_R090 = PTA080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA080_CNN1_R080 = PTA080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA080_CNN1_R070 = PTA080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA080_CNN1_R060 = PTA080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA080_CNN1_R050 = PTA080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA080_CNN1_R040 = PTA080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA080_CNN1_R030 = PTA080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA080_CNN1_R020 = PTA080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA080_CNN1_R010 = PTA080_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA070_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R070_AGE',
+                'commit': '05ee85195684bba26db810ed61cbd7830bc09e95',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA070_CNN1_R090 = PTA070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA070_CNN1_R080 = PTA070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA070_CNN1_R070 = PTA070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA070_CNN1_R060 = PTA070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA070_CNN1_R050 = PTA070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA070_CNN1_R040 = PTA070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA070_CNN1_R030 = PTA070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA070_CNN1_R020 = PTA070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA070_CNN1_R010 = PTA070_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA060_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R060_AGE',
+                'commit': '05ee85195684bba26db810ed61cbd7830bc09e95',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA060_CNN1_R090 = PTA060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA060_CNN1_R080 = PTA060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA060_CNN1_R070 = PTA060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA060_CNN1_R060 = PTA060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA060_CNN1_R050 = PTA060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA060_CNN1_R040 = PTA060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA060_CNN1_R030 = PTA060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA060_CNN1_R020 = PTA060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA060_CNN1_R010 = PTA060_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA050_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R050_AGE',
+                'commit': '05ee85195684bba26db810ed61cbd7830bc09e95',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA050_CNN1_R090 = PTA050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA050_CNN1_R080 = PTA050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA050_CNN1_R070 = PTA050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA050_CNN1_R060 = PTA050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA050_CNN1_R050 = PTA050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA050_CNN1_R040 = PTA050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA050_CNN1_R030 = PTA050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA050_CNN1_R020 = PTA050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA050_CNN1_R010 = PTA050_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA040_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R040_AGE',
+                'commit': '05ee85195684bba26db810ed61cbd7830bc09e95',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA040_CNN1_R090 = PTA040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA040_CNN1_R080 = PTA040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA040_CNN1_R070 = PTA040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA040_CNN1_R060 = PTA040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA040_CNN1_R050 = PTA040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA040_CNN1_R040 = PTA040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA040_CNN1_R030 = PTA040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA040_CNN1_R020 = PTA040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA040_CNN1_R010 = PTA040_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA030_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R030_AGE',
+                'commit': '05ee85195684bba26db810ed61cbd7830bc09e95',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA030_CNN1_R090 = PTA030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA030_CNN1_R080 = PTA030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA030_CNN1_R070 = PTA030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA030_CNN1_R060 = PTA030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA030_CNN1_R050 = PTA030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA030_CNN1_R040 = PTA030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA030_CNN1_R030 = PTA030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA030_CNN1_R020 = PTA030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA030_CNN1_R010 = PTA030_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA020_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R020_AGE',
+                'commit': '05ee85195684bba26db810ed61cbd7830bc09e95',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA020_CNN1_R090 = PTA020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA020_CNN1_R080 = PTA020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA020_CNN1_R070 = PTA020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA020_CNN1_R060 = PTA020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA020_CNN1_R050 = PTA020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA020_CNN1_R040 = PTA020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA020_CNN1_R030 = PTA020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA020_CNN1_R020 = PTA020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA020_CNN1_R010 = PTA020_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA010_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R010_AGE',
+                'commit': '05ee85195684bba26db810ed61cbd7830bc09e95',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA010_CNN1_R090 = PTA010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA010_CNN1_R080 = PTA010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA010_CNN1_R070 = PTA010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA010_CNN1_R060 = PTA010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA010_CNN1_R050 = PTA010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA010_CNN1_R040 = PTA010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA010_CNN1_R030 = PTA010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA010_CNN1_R020 = PTA010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA010_CNN1_R010 = PTA010_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA008_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R008_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA008_CNN1_R090 = PTA008_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA008_CNN1_R080 = PTA008_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA008_CNN1_R070 = PTA008_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA008_CNN1_R060 = PTA008_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA008_CNN1_R050 = PTA008_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA008_CNN1_R040 = PTA008_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA008_CNN1_R030 = PTA008_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA008_CNN1_R020 = PTA008_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA008_CNN1_R010 = PTA008_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA006_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R006_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA006_CNN1_R090 = PTA006_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA006_CNN1_R080 = PTA006_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA006_CNN1_R070 = PTA006_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA006_CNN1_R060 = PTA006_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA006_CNN1_R050 = PTA006_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA006_CNN1_R040 = PTA006_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA006_CNN1_R030 = PTA006_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA006_CNN1_R020 = PTA006_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA006_CNN1_R010 = PTA006_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA004_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R004_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA004_CNN1_R090 = PTA004_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA004_CNN1_R080 = PTA004_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA004_CNN1_R070 = PTA004_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA004_CNN1_R060 = PTA004_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA004_CNN1_R050 = PTA004_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA004_CNN1_R040 = PTA004_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA004_CNN1_R030 = PTA004_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA004_CNN1_R020 = PTA004_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA004_CNN1_R010 = PTA004_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA002_CNN1_R100 = Experiment(
+        description='Uses CNN1 model pre-trained on age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'CNN1_R002_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 200,
+                'trainable': False,
+                'final_layer_index': -6,
+                'suffix': '_cnn1',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [10, 100],
+                'dropout': [0.4, 0.3],
+                'batch_norm': [False, False]
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA002_CNN1_R090 = PTA002_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA002_CNN1_R080 = PTA002_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA002_CNN1_R070 = PTA002_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA002_CNN1_R060 = PTA002_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA002_CNN1_R050 = PTA002_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA002_CNN1_R040 = PTA002_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA002_CNN1_R030 = PTA002_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA002_CNN1_R020 = PTA002_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA002_CNN1_R010 = PTA002_CNN1_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
     PTAS100_CNN1_R100 = Experiment(
         description='Uses CNN1 model pre-trained on age and sex.',
         model=pretrained,
@@ -1491,6 +2479,877 @@ class Target(Experiment, Enum):
     PTA100_XRN50A_R020 = PTA100_XRN50A_R100._replace(
         extractor_index={'train_percent': 0.2})
     PTA100_XRN50A_R010 = PTA100_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA090_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R090_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA090_XRN50A_R090 = PTA090_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA090_XRN50A_R080 = PTA090_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA090_XRN50A_R070 = PTA090_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA090_XRN50A_R060 = PTA090_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA090_XRN50A_R050 = PTA090_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA090_XRN50A_R040 = PTA090_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA090_XRN50A_R030 = PTA090_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA090_XRN50A_R020 = PTA090_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA090_XRN50A_R010 = PTA090_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA080_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R080_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA080_XRN50A_R090 = PTA080_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA080_XRN50A_R080 = PTA080_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA080_XRN50A_R070 = PTA080_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA080_XRN50A_R060 = PTA080_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA080_XRN50A_R050 = PTA080_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA080_XRN50A_R040 = PTA080_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA080_XRN50A_R030 = PTA080_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA080_XRN50A_R020 = PTA080_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA080_XRN50A_R010 = PTA080_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA070_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R070_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA070_XRN50A_R090 = PTA070_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA070_XRN50A_R080 = PTA070_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA070_XRN50A_R070 = PTA070_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA070_XRN50A_R060 = PTA070_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA070_XRN50A_R050 = PTA070_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA070_XRN50A_R040 = PTA070_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA070_XRN50A_R030 = PTA070_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA070_XRN50A_R020 = PTA070_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA070_XRN50A_R010 = PTA070_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA060_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R060_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA060_XRN50A_R090 = PTA060_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA060_XRN50A_R080 = PTA060_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA060_XRN50A_R070 = PTA060_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA060_XRN50A_R060 = PTA060_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA060_XRN50A_R050 = PTA060_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA060_XRN50A_R040 = PTA060_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA060_XRN50A_R030 = PTA060_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA060_XRN50A_R020 = PTA060_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA060_XRN50A_R010 = PTA060_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA050_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R050_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA050_XRN50A_R090 = PTA050_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA050_XRN50A_R080 = PTA050_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA050_XRN50A_R070 = PTA050_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA050_XRN50A_R060 = PTA050_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA050_XRN50A_R050 = PTA050_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA050_XRN50A_R040 = PTA050_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA050_XRN50A_R030 = PTA050_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA050_XRN50A_R020 = PTA050_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA050_XRN50A_R010 = PTA050_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA040_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R040_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA040_XRN50A_R090 = PTA040_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA040_XRN50A_R080 = PTA040_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA040_XRN50A_R070 = PTA040_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA040_XRN50A_R060 = PTA040_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA040_XRN50A_R050 = PTA040_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA040_XRN50A_R040 = PTA040_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA040_XRN50A_R030 = PTA040_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA040_XRN50A_R020 = PTA040_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA040_XRN50A_R010 = PTA040_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA030_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R030_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA030_XRN50A_R090 = PTA030_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA030_XRN50A_R080 = PTA030_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA030_XRN50A_R070 = PTA030_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA030_XRN50A_R060 = PTA030_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA030_XRN50A_R050 = PTA030_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA030_XRN50A_R040 = PTA030_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA030_XRN50A_R030 = PTA030_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA030_XRN50A_R020 = PTA030_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA030_XRN50A_R010 = PTA030_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA020_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R020_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA020_XRN50A_R090 = PTA020_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA020_XRN50A_R080 = PTA020_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA020_XRN50A_R070 = PTA020_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA020_XRN50A_R060 = PTA020_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA020_XRN50A_R050 = PTA020_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA020_XRN50A_R040 = PTA020_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA020_XRN50A_R030 = PTA020_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA020_XRN50A_R020 = PTA020_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA020_XRN50A_R010 = PTA020_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA010_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R010_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA010_XRN50A_R090 = PTA010_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA010_XRN50A_R080 = PTA010_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA010_XRN50A_R070 = PTA010_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA010_XRN50A_R060 = PTA010_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA010_XRN50A_R050 = PTA010_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA010_XRN50A_R040 = PTA010_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA010_XRN50A_R030 = PTA010_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA010_XRN50A_R020 = PTA010_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA010_XRN50A_R010 = PTA010_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA008_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R008_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA008_XRN50A_R090 = PTA008_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA008_XRN50A_R080 = PTA008_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA008_XRN50A_R070 = PTA008_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA008_XRN50A_R060 = PTA008_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA008_XRN50A_R050 = PTA008_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA008_XRN50A_R040 = PTA008_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA008_XRN50A_R030 = PTA008_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA008_XRN50A_R020 = PTA008_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA008_XRN50A_R010 = PTA008_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA006_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R006_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA006_XRN50A_R090 = PTA006_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA006_XRN50A_R080 = PTA006_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA006_XRN50A_R070 = PTA006_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA006_XRN50A_R060 = PTA006_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA006_XRN50A_R050 = PTA006_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA006_XRN50A_R040 = PTA006_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA006_XRN50A_R030 = PTA006_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA006_XRN50A_R020 = PTA006_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA006_XRN50A_R010 = PTA006_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA004_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R004_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA004_XRN50A_R090 = PTA004_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA004_XRN50A_R080 = PTA004_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA004_XRN50A_R070 = PTA004_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA004_XRN50A_R060 = PTA004_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA004_XRN50A_R050 = PTA004_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA004_XRN50A_R040 = PTA004_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA004_XRN50A_R030 = PTA004_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA004_XRN50A_R020 = PTA004_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA004_XRN50A_R010 = PTA004_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA002_XRN50A_R100 = Experiment(
+        description='Augmented XRN50 pretrained on age.',
+        model=pretrained_pt,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'XRN50A_R002_AGE',
+                'commit': '567ccdfac8a6119f71db0b216c79564df4aea5c0',
+                'epoch': 100,
+                'trainable': False,
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': False},
+        },
+        data_fits_in_memory=True,
+        optimizer=torch.optim.Adam,
+        learning_rate={
+            'scheduler': cosine_decay_with_warmup_torch,
+            'kwargs': {
+                'initial_learning_rate': 1e-4,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30
+            }
+        },
+        epochs=400,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss=torch.nn.BCEWithLogitsLoss,
+        scoring=roc_auc_score,
+        metrics=['auc'],
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_ami_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA002_XRN50A_R090 = PTA002_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA002_XRN50A_R080 = PTA002_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA002_XRN50A_R070 = PTA002_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA002_XRN50A_R060 = PTA002_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA002_XRN50A_R050 = PTA002_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA002_XRN50A_R040 = PTA002_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA002_XRN50A_R030 = PTA002_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA002_XRN50A_R020 = PTA002_XRN50A_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA002_XRN50A_R010 = PTA002_XRN50A_R100._replace(
         extractor_index={'train_percent': 0.1})
 
     PTS100_XRN50A_R100 = Experiment(
@@ -4119,6 +5978,981 @@ class Target(Experiment, Enum):
     PTA100_RN2_R020 = PTA100_RN2_R100._replace(
         extractor_index={'train_percent': 0.2})
     PTA100_RN2_R010 = PTA100_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA090_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R090_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA090_RN2_R090 = PTA090_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA090_RN2_R080 = PTA090_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA090_RN2_R070 = PTA090_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA090_RN2_R060 = PTA090_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA090_RN2_R050 = PTA090_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA090_RN2_R040 = PTA090_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA090_RN2_R030 = PTA090_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA090_RN2_R020 = PTA090_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA090_RN2_R010 = PTA090_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA080_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R080_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA080_RN2_R090 = PTA080_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA080_RN2_R080 = PTA080_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA080_RN2_R070 = PTA080_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA080_RN2_R060 = PTA080_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA080_RN2_R050 = PTA080_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA080_RN2_R040 = PTA080_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA080_RN2_R030 = PTA080_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA080_RN2_R020 = PTA080_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA080_RN2_R010 = PTA080_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA070_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R070_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA070_RN2_R090 = PTA070_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA070_RN2_R080 = PTA070_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA070_RN2_R070 = PTA070_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA070_RN2_R060 = PTA070_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA070_RN2_R050 = PTA070_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA070_RN2_R040 = PTA070_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA070_RN2_R030 = PTA070_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA070_RN2_R020 = PTA070_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA070_RN2_R010 = PTA070_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA060_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R060_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA060_RN2_R090 = PTA060_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA060_RN2_R080 = PTA060_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA060_RN2_R070 = PTA060_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA060_RN2_R060 = PTA060_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA060_RN2_R050 = PTA060_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA060_RN2_R040 = PTA060_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA060_RN2_R030 = PTA060_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA060_RN2_R020 = PTA060_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA060_RN2_R010 = PTA060_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA050_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R050_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA050_RN2_R090 = PTA050_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA050_RN2_R080 = PTA050_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA050_RN2_R070 = PTA050_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA050_RN2_R060 = PTA050_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA050_RN2_R050 = PTA050_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA050_RN2_R040 = PTA050_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA050_RN2_R030 = PTA050_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA050_RN2_R020 = PTA050_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA050_RN2_R010 = PTA050_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA040_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R040_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA040_RN2_R090 = PTA040_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA040_RN2_R080 = PTA040_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA040_RN2_R070 = PTA040_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA040_RN2_R060 = PTA040_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA040_RN2_R050 = PTA040_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA040_RN2_R040 = PTA040_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA040_RN2_R030 = PTA040_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA040_RN2_R020 = PTA040_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA040_RN2_R010 = PTA040_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA030_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R030_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA030_RN2_R090 = PTA030_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA030_RN2_R080 = PTA030_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA030_RN2_R070 = PTA030_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA030_RN2_R060 = PTA030_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA030_RN2_R050 = PTA030_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA030_RN2_R040 = PTA030_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA030_RN2_R030 = PTA030_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA030_RN2_R020 = PTA030_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA030_RN2_R010 = PTA030_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA020_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R020_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA020_RN2_R090 = PTA020_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA020_RN2_R080 = PTA020_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA020_RN2_R070 = PTA020_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA020_RN2_R060 = PTA020_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA020_RN2_R050 = PTA020_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA020_RN2_R040 = PTA020_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA020_RN2_R030 = PTA020_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA020_RN2_R020 = PTA020_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA020_RN2_R010 = PTA020_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA010_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R010_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA010_RN2_R090 = PTA010_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA010_RN2_R080 = PTA010_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA010_RN2_R070 = PTA010_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA010_RN2_R060 = PTA010_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA010_RN2_R050 = PTA010_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA010_RN2_R040 = PTA010_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA010_RN2_R030 = PTA010_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA010_RN2_R020 = PTA010_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA010_RN2_R010 = PTA010_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA008_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R008_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA008_RN2_R090 = PTA008_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA008_RN2_R080 = PTA008_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA008_RN2_R070 = PTA008_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA008_RN2_R060 = PTA008_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA008_RN2_R050 = PTA008_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA008_RN2_R040 = PTA008_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA008_RN2_R030 = PTA008_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA008_RN2_R020 = PTA008_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA008_RN2_R010 = PTA008_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA006_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R006_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA006_RN2_R090 = PTA006_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA006_RN2_R080 = PTA006_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA006_RN2_R070 = PTA006_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA006_RN2_R060 = PTA006_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA006_RN2_R050 = PTA006_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA006_RN2_R040 = PTA006_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA006_RN2_R030 = PTA006_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA006_RN2_R020 = PTA006_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA006_RN2_R010 = PTA006_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA004_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R004_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA004_RN2_R090 = PTA004_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA004_RN2_R080 = PTA004_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA004_RN2_R070 = PTA004_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA004_RN2_R060 = PTA004_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA004_RN2_R050 = PTA004_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA004_RN2_R040 = PTA004_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA004_RN2_R030 = PTA004_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA004_RN2_R020 = PTA004_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA004_RN2_R010 = PTA004_RN2_R100._replace(
+        extractor_index={'train_percent': 0.1})
+
+    PTA002_RN2_R100 = Experiment(
+        description='Uses RN2 model trained to predict age.',
+        model=pretrained,
+        model_kwargs={
+            'from_xp': {
+                'xp_project': 'transfer',
+                'xp_base': 'Source',
+                'xp_name': 'RN2_R002_AGE',
+                'commit': '',
+                'epoch': 100,
+                'trainable': False,
+                'final_layer_index': -2,
+                'suffix': '_rn2',
+                'input_key': 'ecg'
+            },
+            'final_mlp_kwargs': {
+                'sizes': [100],
+                'dropout': 0.3
+            }
+        },
+        extractor=TargetTask,
+        extractor_index={'train_percent': 1.0},
+        extractor_features={
+            'ecg_features': {'mode': 'raw', 'ribeiro': True},
+        },
+        data_fits_in_memory=True,
+        optimizer=LegacyAdam,
+        learning_rate={
+            'scheduler': CosineDecayWithWarmup,
+            'kwargs': {
+                'decay_steps': -1,
+                'initial_learning_rate': 0.0,
+                'warmup_target': 1e-3,
+                'alpha': 0.01,
+                'warmup_epochs': 10,
+                'decay_epochs': 30,
+                'steps_per_epoch': -1
+            }
+        },
+        epochs=200,
+        batch_size=256,
+        unfreeze_after_epoch=40,
+        building_model_requires_development_data=True,
+        use_predefined_splits=True,
+        loss='binary_crossentropy',
+        scoring=roc_auc_score,
+        use_tensorboard=True,
+        save_learning_rate=True,
+        save_val_pred_history=True,
+        model_checkpoints={
+            'monitor': 'val_real_auc',
+            'mode': 'max',
+            'save_best_only': True
+        },
+        test_model='best'
+    )
+    PTA002_RN2_R090 = PTA002_RN2_R100._replace(
+        extractor_index={'train_percent': 0.9})
+    PTA002_RN2_R080 = PTA002_RN2_R100._replace(
+        extractor_index={'train_percent': 0.8})
+    PTA002_RN2_R070 = PTA002_RN2_R100._replace(
+        extractor_index={'train_percent': 0.7})
+    PTA002_RN2_R060 = PTA002_RN2_R100._replace(
+        extractor_index={'train_percent': 0.6})
+    PTA002_RN2_R050 = PTA002_RN2_R100._replace(
+        extractor_index={'train_percent': 0.5})
+    PTA002_RN2_R040 = PTA002_RN2_R100._replace(
+        extractor_index={'train_percent': 0.4})
+    PTA002_RN2_R030 = PTA002_RN2_R100._replace(
+        extractor_index={'train_percent': 0.3})
+    PTA002_RN2_R020 = PTA002_RN2_R100._replace(
+        extractor_index={'train_percent': 0.2})
+    PTA002_RN2_R010 = PTA002_RN2_R100._replace(
         extractor_index={'train_percent': 0.1})
 
     PTAS100_RN2_R100 = Experiment(
@@ -8150,7 +10984,7 @@ class Source(Experiment, Enum):
         batch_size=256,
         loss='mean_absolute_error',
         scoring=r2_score,
-        metrics=['mae', 'mse'],
+        metrics=['mae'],
         building_model_requires_development_data=True,
         use_tensorboard=True,
         save_learning_rate=True,
@@ -8303,79 +11137,79 @@ class Source(Experiment, Enum):
         description='Using the RN2 architecture to predict age.',
         model=resnet_v2
     )
-    RN2_R090_AGE = RN1_R100_AGE._replace(
+    RN2_R090_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.9
         },
     )
-    RN2_R080_AGE = RN1_R100_AGE._replace(
+    RN2_R080_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.8
         },
     )
-    RN2_R070_AGE = RN1_R100_AGE._replace(
+    RN2_R070_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.7
         },
     )
-    RN2_R060_AGE = RN1_R100_AGE._replace(
+    RN2_R060_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.6
         },
     )
-    RN2_R050_AGE = RN1_R100_AGE._replace(
+    RN2_R050_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.5
         },
     )
-    RN2_R040_AGE = RN1_R100_AGE._replace(
+    RN2_R040_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.4
         },
     )
-    RN2_R030_AGE = RN1_R100_AGE._replace(
+    RN2_R030_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.3
         },
     )
-    RN2_R020_AGE = RN1_R100_AGE._replace(
+    RN2_R020_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.2
         },
     )
-    RN2_R010_AGE = RN1_R100_AGE._replace(
+    RN2_R010_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.1
         },
     )
-    RN2_R008_AGE = RN1_R100_AGE._replace(
+    RN2_R008_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.08
         },
     )
-    RN2_R006_AGE = RN1_R100_AGE._replace(
+    RN2_R006_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.06
         },
     )
-    RN2_R004_AGE = RN1_R100_AGE._replace(
+    RN2_R004_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.04
         },
     )
-    RN2_R002_AGE = RN1_R100_AGE._replace(
+    RN2_R002_AGE = RN2_R100_AGE._replace(
         extractor_index={
             'exclude_train_aliases': True,
             'train_percent': 0.02

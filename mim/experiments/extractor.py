@@ -405,7 +405,7 @@ class DataWrapper:
 
         dataloader = torch.utils.data.DataLoader(
             data, batch_size=batch_size, shuffle=shuffle, generator=g,
-            prefetch_factor=prefetch, **kwargs
+            prefetch_factor=prefetch, drop_last=True, **kwargs
         )
         return dataloader
 

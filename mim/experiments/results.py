@@ -157,6 +157,10 @@ class ExperimentResult:
     def validation_history(self):
         return self._result_history(self.validation_results)
 
+    @property
+    def name(self):
+        return self.path.split('/')[-1]
+
     def _result_history(self, results):
         if results[0].history is None:
             return None
