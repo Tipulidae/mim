@@ -33,5 +33,6 @@ dependencies:
     - compress_pickle
     - silence-tensorflow
     - torchviz
+    - pytorch-symbolic
     - pytorch-model-summary
 channel_priority: disabled

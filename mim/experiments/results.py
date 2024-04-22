@@ -84,7 +84,7 @@ class ExperimentResult:
 
     @property
     def test_predictions(self):
-        return self.test_results.predictions
+        return self.test_results.predictions[0]
 
     @property
     def validation_predictions(self):

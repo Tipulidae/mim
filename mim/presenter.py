@@ -48,6 +48,46 @@ regression_scores = {
 }
 
 
+class Results:
+    def __init__(self, name, verbose=2):
+        self.results = dict()
+
+        dev_paths = insensitive_iglob(
+            f"{PATH_TO_TEST_RESULTS}/{name}/**/train_val_results.pickle",
+            recursive=True
+        )
+        for path in sorted(dev_paths):
+            _, xp_name = os.path.split(os.path.dirname(path))
+            if verbose > 1:
+                log.info(f"Loading {xp_name}")
+            if xp_name in self.results:
+                log.warning(f"Two experiments with the name {xp_name}!")
+
+            self.results[xp_name] = pd.read_pickle(path)
+
+            test_path = os.path.join(
+                os.path.dirname(path), 'test_results.pickle')
+            if os.path.isfile(test_path):
+                self.results[xp_name].test_results = pd.read_pickle(test_path)
+
+        if verbose > 0:
+            log.info(f"Finished loading {len(self.results)} experiments.")
+
+    def like(self, pattern):
+        p = re.compile(pattern)
+        for name in filter(p.match, self.results):
+            yield self[name]
+
+    def __len__(self):
+        return len(self.results)
+
+    def __getitem__(self, key):
+        return self.results[key]
+
+    def __contains__(self, key):
+        return key in self.results
+
+
 class Presenter:
     def __init__(self, name, verbose=2, legacy_path=False):
         self.results = dict()

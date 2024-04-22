@@ -188,9 +188,11 @@ def make_source_index(
 
     def exclude(column, df, msg):
         n1 = len(source)
+        m1 = len(source.Alias.unique())
         new_source = source.loc[~source[column].isin(df[column]), :]
         n2 = len(new_source)
-        log.info(f"Excluded {n1-n2} ECGs from the {msg}")
+        m2 = len(new_source.Alias.unique())
+        log.info(f"Excluded {n1-n2} ECGs ({m1-m2} patients) from the {msg}")
         return new_source
 
     # Exclude some of the ecgs from the source dataset
