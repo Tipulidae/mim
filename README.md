@@ -36,3 +36,6 @@ The pre-push hook will run pytest to verify that all the tests pass before any c
 Link to the article: https://doi.org/10.1016/j.jelectrocard.2023.11.002
 
 All the code as well as further instructions can be found in the projects/serial_ecgs folder.
+
+## Transfer Learning for Predicting Acute Myocardial Infarction Using Electrocardiograms
+Paper under review. The code is found in the projects/transfer folder.
