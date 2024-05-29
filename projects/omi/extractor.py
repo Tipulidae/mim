@@ -3,6 +3,7 @@ import string
 
 import h5py
 import numpy as np
+import scipy
 import pandas as pd
 from sklearn.model_selection import StratifiedShuffleSplit
 from tqdm import tqdm
@@ -16,6 +17,7 @@ from mim.experiments.extractor import (
     Data
 )
 from mim.util.logs import get_logger
+from mim.cache.decorator import cache
 from mim.config import PATH_TO_DATA
 from massage import esc_trop
 
@@ -23,6 +25,7 @@ log = get_logger("OMI-Extractor")
 ECG_COLUMNS = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'I', 'II']
 
 
+@cache
 def make_ecg_data(ecg_ids):
     mode = 'raw'
     with h5py.File(esc_trop.ECG_PATH, 'r') as f:
@@ -30,8 +33,7 @@ def make_ecg_data(ecg_ids):
             f[mode][ecg] for ecg in
             tqdm(ecg_ids, desc=f'Extracting {mode} ECG data')
         ])
-
-    data *= 5000
+    data = scipy.signal.resample(data * 1000, 5000, axis=1).astype(np.float16)
     return data
 
 
@@ -131,6 +133,36 @@ def write_annotation_documents(html_documents):
             f.write(text)
 
 
+def make_label(omi_table, omi=True, nomi=False, ami=False):
+    label = pd.DataFrame(index=omi_table.index)
+    label['AMI'] = omi_table.i21
+    label['OMI'] = (
+        omi_table.i21 &
+        omi_table.has_angio &
+        (
+            omi_table.occlusion_less_than_3_months_old |
+            (omi_table.annotation == 'OMI') |
+            (
+                (omi_table.tnt > 1000) &
+                (
+                    omi_table.pci_performed |
+                    omi_table.cabg_within_7_days_of_angio
+                )
+            )
+        )
+    )
+    label['NOMI'] = omi_table.i21 & (~label['OMI'])
+    columns = []
+    if omi:
+        columns.append('OMI')
+    if nomi:
+        columns.append('NOMI')
+    if ami:
+        columns.append('AMI')
+
+    return label[columns]
+
+
 class OMIExtractor(Extractor):
     def get_data(self):
         log.debug('Making index')
@@ -145,35 +177,44 @@ class OMIExtractor(Extractor):
 
         log.debug('Making labels')
         omi_table = esc_trop.make_omi_table(index)
+        annotations = pd.read_csv(
+            '/projects/air-crypt/axel/omi_annotations/'
+            'annotations_20240517.csv',
+            usecols=['Alias', 'annotation'],
+            index_col=['Alias']
+        )
+        omi_table = omi_table.join(annotations)
+        # omi_table = omi_table.loc[omi_table.annotation != 'Review', :]
         # y = make_omi_label(omi_table, stenosis_limit=90, tnt_limit=750)
-        y = esc_trop.make_omi_label(omi_table, **self.labels)
+        # y = esc_trop.make_omi_label(omi_table, **self.labels)
+        y = make_label(omi_table, **self.labels)
 
         log.debug('Making features')
-        ecg_features = esc_trop.make_double_ecg_features(index)
+        ecg_features = esc_trop.make_double_ecg_features(omi_table)
         x_dict = {
-            'ecg_0': Data(
+            'ecg': Data(
                 make_ecg_data(ecg_features.ecg_0),
                 columns=ECG_COLUMNS
             )
         }
 
-        if not index.index.equals(y.index):
+        if not omi_table.index.equals(y.index):
             raise ValueError('Index and targets are different!')
 
         data = DataWrapper(
             features=Container(x_dict),
             labels=Data(y.values, columns=['OMI']),
-            index=Data(index.index.values, columns=['Alias']),
-            groups=index.index.values,
+            index=Data(omi_table.index.values, columns=['Alias']),
+            groups=omi_table.index.values,
             fits_in_memory=self.fits_in_memory
         )
 
-        if self.cv_kwargs is not None and 'test_size' in self.cv_kwargs:
-            test_size = self.cv_kwargs['test_size']
-        else:
-            test_size = 1 / 4
+        # if self.cv_kwargs is not None and 'test_size' in self.cv_kwargs:
+        #     test_size = self.cv_kwargs['test_size']
+        # else:
+        #     test_size = 1 / 4
         hold_out_splitter = CrossValidationWrapper(
-            StratifiedShuffleSplit(test_size=test_size)
+            StratifiedShuffleSplit(test_size=1/4, random_state=4321)
         )
         development_data, test_data = next(hold_out_splitter.split(data))
         log.debug('Finished extracting esc-trop data')
@@ -221,9 +262,9 @@ class UseAdditionalECGs(Augmentor):
         new_ecg_data = make_ecg_data(new_index.ecg)
 
         x_dict = {
-            'ecg_0': Data(
+            'ecg': Data(
                 np.concatenate([
-                    data.data['x']['ecg_0'].as_numpy(),
+                    data.data['x']['ecg'].as_numpy(),
                     new_ecg_data
                 ]),
                 columns=ECG_COLUMNS

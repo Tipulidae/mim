@@ -324,9 +324,10 @@ class Experiment(NamedTuple):
             model = self.model(**model_kwargs)
 
         train_size = 0 if train is None else len(train)
+        target_columns = [] if train is None else train.target_columns
         return self._wrap_model(
             model, train_size=train_size, resume_from_epoch=resume_from_epoch,
-            target_columns=train.target_columns
+            target_columns=target_columns
         )
 
     def _make_optimizer(self, train_size=0):

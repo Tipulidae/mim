@@ -1659,10 +1659,13 @@ def _make_occlusion_and_presentation(index):
 
 def _make_stenosis(index):
     log.debug('Gathering data on stenosis')
+    stenosis_levels = [
+        '0-29%', '30-49%', '50-69%', '70-89%', '90-99%', '100%'
+    ]
 
     def collate_degrees_of_stenosis(s):
         return (
-            pd.concat([(s == x).rename(x) for x in ['90-99%', '100%']], axis=1)
+            pd.concat([(s == x).rename(x) for x in stenosis_levels], axis=1)
             .groupby(level='SID_pseudo')
             .any()
         )
@@ -1693,16 +1696,20 @@ def _make_stenosis(index):
         .fillna(False)
         .T.groupby(level='stenosis')  # groupby(axis=1) is deprecated
         .any().T
-        .rename(columns={'100%': 'stenosis_100%', '90-99%': 'stenosis_90-99%'})
     )
-
-    return (
+    stenosis = (
         index[['SID_pseudo']]
         .join(stenosis, on='SID_pseudo')
         .drop(columns=['SID_pseudo'])
         .groupby('Alias')
         .any()
         .fillna(False)
+    )
+    max_stenosis = stenosis[reversed(stenosis_levels)].idxmax(axis=1)
+    return (
+        pd.get_dummies(max_stenosis)
+        .loc[:, stenosis_levels]
+        .rename(columns={x: f'stenosis_{x}' for x in stenosis_levels})
     )
 
 
@@ -1939,6 +1946,10 @@ def make_omi_table(index):
         'suspected_thrombosis': False,
         'stenosis_100%': False,
         'stenosis_90-99%': False,
+        'stenosis_70-89%': False,
+        'stenosis_50-69%': False,
+        'stenosis_30-49%': False,
+        'stenosis_0-29%': False,
         'acs_indication': False,
         'i21_rikshia': False,
         'prior_cabg': False,
@@ -1951,6 +1962,10 @@ def make_omi_table(index):
     omi['tnt'] = omi[['tnt_melior', 'tnt_rikshia']].max(axis=1)
     omi['i21'] = omi.i21_rikshia | omi.i21_sos
     omi['stenosis_over_90%'] = omi['stenosis_100%'] | omi['stenosis_90-99%']
+    omi['stenosis_under_70%'] = ~omi[[
+        'stenosis_70-89%', 'stenosis_90-99%', 'stenosis_100%']].any(axis=1)
+    omi['stenosis_70-99%'] = omi[[
+        'stenosis_70-89%', 'stenosis_90-99%']].any(axis=1)
 
     return omi
 
