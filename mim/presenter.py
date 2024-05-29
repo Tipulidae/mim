@@ -88,6 +88,27 @@ class Results:
         return key in self.results
 
 
+def scores(results, auc=True, rule_in_out=False):
+    scores = []
+    for result in results:
+        targets = result.validation_targets.values.ravel()
+        predictions = result.validation_predictions.values.ravel()
+
+        data = []
+        index = []
+        if auc:
+            data.append(roc_auc_score(targets, predictions))
+            index.append('auc')
+        if rule_in_out:
+            riro = rule_in_rule_out(targets, predictions).mean(axis=0)
+            data.extend(list(riro))
+            index.extend(['rule-in', 'intermediate', 'rule-out'])
+
+        s = pd.Series(data=data, index=index, name=result.name)
+        scores.append(s)
+    return pd.DataFrame(scores)
+
+
 class Presenter:
     def __init__(self, name, verbose=2, legacy_path=False):
         self.results = dict()

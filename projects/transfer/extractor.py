@@ -24,6 +24,13 @@ def make_target_index(ecg_table):
     index = sk1718.make_index()
     brsm = index.loc[index.cause == 'BröstSm', :]
     brsm_ecgs = sk1718.find_index_ecgs(brsm, ecg_table)
+    num_patients_before = len(brsm.Alias.unique())
+    num_patients_after = len(brsm_ecgs.Alias.unique())
+    num_visits_before = len(brsm)
+    num_visits_after = len(brsm_ecgs)
+    log.info(f"Excluded {num_visits_before - num_visits_after} from "
+             f"{num_patients_before - num_patients_after} patients due to "
+             f"missing index ECGs.")
     return brsm_ecgs
 
 
@@ -86,7 +93,14 @@ def temporal_split(index, percent, exclude_test_aliases):
     remainder = index.iloc[cutoff:, :].sort_values(by='Alias')
 
     if exclude_test_aliases:
+        num_patients_before = len(remainder.Alias.unique())
+        num_visits_before = len(remainder)
         remainder = remainder.loc[~remainder.Alias.isin(test.Alias), :]
+        num_patients_after = len(remainder.Alias.unique())
+        num_visits_after = len(remainder)
+        log.debug(f"Excluded {num_visits_before - num_visits_after} "
+                  f"visits from {num_patients_before - num_patients_after} "
+                  f"patients that were in the temporal test set.")
 
     return remainder, test
 

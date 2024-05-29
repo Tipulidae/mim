@@ -244,3 +244,21 @@ def sparse_categorical_accuracy(y_true, y_pred):
     m = SparseCategoricalAccuracy()
     m.update_state(y_true, y_pred)
     return m.result().numpy()
+
+
+def max_mcc(targets, predictions):
+    """
+    Calculates Matthew's Correlation Coefficient (mcc) for all possible
+    thresholds, and returns the largets threshold + corresponding mcc.
+    For given threshold t, uses y = np.where(pred > th, 1, 0) as the
+    predictions.
+    """
+    tc = total_confusion_all_thresholds(targets, predictions)
+    tc['mcc'] = (
+        (tc.tp * tc.tn - tc.fp * tc.fn) /
+        (
+            ((tc.tp + tc.fp) * (tc.fn + tc.tn) *
+             (tc.tp + tc.fn) * (tc.fp + tc.tn)) ** 0.5
+        )
+    )
+    return tc.mcc.idxmax(), tc.mcc.max()

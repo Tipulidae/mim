@@ -400,8 +400,9 @@ class KerasWrapper(Model):
         else:
             split_folder = f'split_{split_number}'
 
-        checkpoint = os.path.join(self.checkpoint_path, split_folder)
-        self.model.save(os.path.join(checkpoint, name), save_format='keras')
+        path = os.path.join(self.checkpoint_path, split_folder)
+        Path(path).mkdir(parents=True, exist_ok=True)
+        self.model.save(os.path.join(path, name), save_format='keras')
 
     def _prediction(self, x):
         prediction = self.model.predict(x.batch(self.batch_size))
