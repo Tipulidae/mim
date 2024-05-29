@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+import torch
 from tensorflow import keras
 
 from mim.experiments.extractor import Data, Container
@@ -20,6 +21,11 @@ def load_keras_model(base_path, split_number, **kwargs):
     return keras.models.load_model(filepath=path)
 
 
+def load_torch_model(base_path, split_number, **kwargs):
+    path = os.path.join(base_path, f"split_{split_number}", "model.pt")
+    return torch.load(path)
+
+
 def load_model_from_experiment_result(
         xp_project, xp_base, xp_name, commit=None, epoch=None, split_number=0,
         trainable=False, final_layer_index=-1, input_key=None, suffix=None,
@@ -30,27 +36,13 @@ def load_model_from_experiment_result(
         xp_base,
         xp_name
     )
-    xp_results_path = os.path.join(
-        xp_base_path,
-        'train_val_results.pickle'
-    )
+    validate_model_metadata(xp_base_path, commit)
     xp_model_path = os.path.join(
         xp_base_path,
         f'split_{split_number}',
         'checkpoints',
-        f'epoch_{epoch:03d}.h5'
+        f'epoch_{epoch:03d}.keras'
     )
-    xp_results = pd.read_pickle(xp_results_path)
-    metadata = xp_results.metadata
-    expected_metadata = {
-        'has_uncommitted_changes': False,
-        'current_commit': commit
-    }
-    v = Validator(
-        allow_different_commits=False,
-        allow_uncommitted=False
-    )
-    v.validate_consistency([metadata, expected_metadata])
     log.debug(f'Model path: {xp_model_path}')
 
     model = keras.models.load_model(filepath=xp_model_path, compile=False)
@@ -66,6 +58,48 @@ def load_model_from_experiment_result(
         inp = model.input[input_key]
 
     return inp, model.layers[final_layer_index].output
+
+
+def load_model_from_experiment_result_pt(
+        xp_project, xp_base, xp_name, commit=None, epoch=None, split_number=0,
+        trainable=False):
+    xp_base_path = os.path.join(
+        PATH_TO_TEST_RESULTS,
+        xp_project,
+        xp_base,
+        xp_name
+    )
+    validate_model_metadata(xp_base_path, commit)
+    xp_model_path = os.path.join(
+        xp_base_path,
+        f'split_{split_number}',
+        'checkpoints',
+        f'epoch_{epoch:03d}.pt'
+    )
+    log.debug(f'Model path: {xp_model_path}')
+
+    model = torch.load(xp_model_path)
+    for param in model.parameters():
+        param.requires_grad = trainable
+
+    return model
+
+
+def validate_model_metadata(path, commit):
+    # Will raise a MetadataConsistencyException if the metadata doesn't
+    # match the expected commit.
+    xp_results_path = os.path.join(path, 'train_val_results.pickle')
+    xp_results = pd.read_pickle(xp_results_path)
+    metadata = xp_results.metadata
+    expected_metadata = {
+        'has_uncommitted_changes': False,
+        'current_commit': commit
+    }
+    v = Validator(
+        allow_different_commits=False,
+        allow_uncommitted=False
+    )
+    v.validate_consistency([metadata, expected_metadata])
 
 
 def load_ribeiro_model(freeze_resnet=False, suffix=None):

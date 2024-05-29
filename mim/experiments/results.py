@@ -31,6 +31,7 @@ class ExperimentResult:
     total_splits: int = 1
     training_results: List[Result] = field(default_factory=list)
     validation_results: List[Result] = field(default_factory=list)
+    test_results: Union[None, TestResult] = None
 
     def add(self, train_result: Result, validation_result: Result):
         self.training_results.append(train_result)
@@ -57,6 +58,10 @@ class ExperimentResult:
         return [r.score for r in self.validation_results]
 
     @property
+    def test_targets(self):
+        return self.test_results.targets
+
+    @property
     def validation_targets(self):
         folds_total = len(self.validation_results)
         ensemble = self._ensemble()
@@ -76,6 +81,10 @@ class ExperimentResult:
         #
         # return pd.concat(
         #     [r.targets for r in self.training_results], axis=0)
+
+    @property
+    def test_predictions(self):
+        return self.test_results.predictions[0]
 
     @property
     def validation_predictions(self):
@@ -148,6 +157,10 @@ class ExperimentResult:
     def validation_history(self):
         return self._result_history(self.validation_results)
 
+    @property
+    def name(self):
+        return self.path.split('/')[-1]
+
     def _result_history(self, results):
         if results[0].history is None:
             return None
@@ -160,5 +173,13 @@ class ExperimentResult:
         )
 
     def __str__(self):
-        base, xp_name = self.path.split('/')[-2:]
-        return f"Experiment result for {base}.{xp_name}"
+        project, base, xp_name = self.path.split('/')[-3:]
+        return (
+            f"Experiment result for {project}.{base}.{xp_name}\n"
+            f"Description: {self.experiment_summary['description']}\n"
+            f"Completed: {self.metadata['timestamp']}\n"
+            f"Commit: {self.metadata['current_commit']}"
+        )
+
+    def __repr__(self):
+        return str(self)

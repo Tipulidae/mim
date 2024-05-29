@@ -12,6 +12,7 @@
 .micromamba
 data/
 .ipynb_checkpoints
+.vscode/
 notebooks/
 docker/
 __pycache__/

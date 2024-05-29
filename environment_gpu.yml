@@ -1,6 +1,5 @@
 name: mim-gpu
 channels:
-  - defaults
   - conda-forge
 dependencies:
   - python=3.11
@@ -27,8 +26,13 @@ dependencies:
   - lxml
   - h5py
   - conda-lock
-  - tensorflow-gpu=2.12
+  - tensorflow-gpu=2.14
+  - pytorch-gpu
   - pip:
     - ecg_plot
-    - compress-pickle
+    - compress_pickle
     - silence-tensorflow
+    - torchviz
+    - pytorch-symbolic
+    - pytorch-model-summary
+channel_priority: disabled

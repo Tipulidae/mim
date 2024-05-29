@@ -4,6 +4,7 @@ import os
 import shutil
 import re
 import math
+import random
 from copy import copy
 from time import time
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Any, Tuple, NamedTuple, Callable, Union
 
 import numpy as np
 import pandas as pd
+import torch
 import silence_tensorflow.auto  # noqa: F401
 import tensorflow as tf
 from tensorflow import keras
@@ -23,7 +25,7 @@ from mim.experiments.extractor import Extractor, Augmentor
 from mim.cross_validation import CrossValidationWrapper, \
     RepeatingCrossValidator
 from mim.config import PATH_TO_TEST_RESULTS
-from mim.model_wrapper import Model, KerasWrapper
+from mim.model_wrapper import Model, KerasWrapper, TorchWrapper
 from mim.util.logs import get_logger
 from mim.util.metadata import Metadata, Validator
 from mim.util.util import callable_to_string, keras_model_summary_as_string
@@ -75,7 +77,8 @@ class Experiment(NamedTuple):
     ignore_callbacks: bool = False
     save_train_pred_history: bool = False
     save_val_pred_history: bool = False
-    save_model_checkpoints: Union[bool, dict] = False
+    model_checkpoints: dict = None  # None means no checkpoints saved
+    test_model: str = 'last'  # last, best or epoch_###
     use_tensorboard: bool = False
     save_learning_rate: bool = False
     unfreeze_after_epoch: int = -1
@@ -139,15 +142,18 @@ class Experiment(NamedTuple):
         # pre-processing to be part of the model-wrapper and automatically
         # save any pre-processing parameters along with the actual model,
         # but this requires more re-factoring than I have time for right now.
-        dev = extractor.get_development_data()
-        test = extractor.get_test_data()
-        pre_process = self.get_pre_processor(0)
-        dev, test = pre_process(dev, test)
+        if self.pre_processor is None:
+            test = extractor.get_test_data()
+        else:
+            dev = extractor.get_development_data()
+            test = extractor.get_test_data()
+            pre_process = self.get_pre_processor(0)
+            _, test = pre_process(dev, test)
 
         targets = test.y
         predictions = []
         for path in self._model_paths():
-            model = self.load_model(path)
+            model = self.load_model(path, target_columns=test.target_columns)
             prediction = model.predict(test)
             predictions.append(prediction)
 
@@ -166,7 +172,19 @@ class Experiment(NamedTuple):
         return results
 
     def _model_paths(self):
-        return glob(os.path.join(self.base_path, 'split*/model.*'))
+        # test_model should be either 'last', 'best' or 'epoch_###'
+        # for a specific epoch.
+
+        # If we want the last model, use the model saved as 'model'. Might
+        # want to refactor this, but would require re-running a lot of stuff
+        # maybe.
+        if self.test_model == 'last':
+            model = 'model'
+        else:
+            model = self.test_model
+
+        return glob(os.path.join(
+            self.base_path, f'split*/**/{model}.*'))
 
     def _train_and_validate(self, splits_to_do=-1) -> ExperimentResult:
         """
@@ -306,8 +324,11 @@ class Experiment(NamedTuple):
             model = self.model(**model_kwargs)
 
         train_size = 0 if train is None else len(train)
+        target_columns = [] if train is None else train.target_columns
         return self._wrap_model(
-            model, train_size=train_size, resume_from_epoch=resume_from_epoch)
+            model, train_size=train_size, resume_from_epoch=resume_from_epoch,
+            target_columns=target_columns
+        )
 
     def _make_optimizer(self, train_size=0):
         if isinstance(self.learning_rate, float):
@@ -325,7 +346,8 @@ class Experiment(NamedTuple):
         )
         return optimizer
 
-    def _wrap_model(self, model, train_size, resume_from_epoch=0, verbose=1):
+    def _wrap_model(self, model, train_size=0, target_columns=None,
+                    resume_from_epoch=0, verbose=1):
         if isinstance(model, tf.keras.Model):
             optimizer = self._make_optimizer(train_size=train_size)
 
@@ -352,7 +374,7 @@ class Experiment(NamedTuple):
                 ignore_callbacks=self.ignore_callbacks,
                 save_train_prediction_history=self.save_train_pred_history,
                 save_val_prediction_history=self.save_val_pred_history,
-                save_model_checkpoints=self.save_model_checkpoints,
+                model_checkpoints=self.model_checkpoints,
                 use_tensorboard=self.use_tensorboard,
                 save_learning_rate=self.save_learning_rate,
                 reduce_lr_on_plateau=self.reduce_lr_on_plateau,
@@ -364,6 +386,37 @@ class Experiment(NamedTuple):
                 log.info("\n\n" + keras_model_summary_as_string(model))
 
             return wrapped_model
+        elif isinstance(model, torch.nn.Module):
+            wrapped_model = TorchWrapper(
+                model,
+                checkpoint_path=self.base_path,
+                tensorboard_path=self.base_path,
+                # exp_base_path=self.base_path,
+                batch_size=self.batch_size,
+                epochs=self.epochs,
+                # initial_epoch=self.initial_epoch + resume_from_epoch,
+                optimizer=self.optimizer,
+                optimizer_kwargs=self.optimizer_kwargs,
+                learning_rate=self.learning_rate,
+                loss=self.loss,
+                loss_kwargs=self.loss_kwargs,
+                loss_weights=self.loss_weights,
+                target_columns=target_columns,
+                metrics=self.metrics,
+                # class_weight=self.class_weight,
+                # metrics=fix_metrics(self.metrics),
+                # skip_compile=any([self.skip_compile, resume_from_epoch > 0]),
+                # ignore_callbacks=self.ignore_callbacks,
+                save_train_prediction_history=self.save_train_pred_history,
+                save_val_prediction_history=self.save_val_pred_history,
+                model_checkpoints=self.model_checkpoints,
+                # use_tensorboard=self.use_tensorboard,
+                save_learning_rate=self.save_learning_rate,
+                # reduce_lr_on_plateau=self.reduce_lr_on_plateau,
+                # rule_out_logger=self.rule_out_logger,
+                unfreeze_after_epoch=self.unfreeze_after_epoch
+            )
+            return wrapped_model
         else:
             return Model(
                 model,
@@ -371,17 +424,19 @@ class Experiment(NamedTuple):
                 random_state=self.random_state
             )
 
-    def load_model(self, path):
+    def load_model(self, path, target_columns):
         def _load():
             model_type = path.split('.')[-1]
             if model_type == 'sklearn':
-                # trunk-ignore(bandit/B301)
                 return pd.read_pickle(path)
-            elif model_type == 'keras':
+            elif model_type in ['keras', 'tf']:
                 return keras.models.load_model(filepath=path)
+            elif model_type == 'pt':
+                return torch.load(path)
             raise TypeError(f'Unexpected model type {model_type}')
 
-        return self._wrap_model(_load(), verbose=0)
+        return self._wrap_model(
+            _load(), target_columns=target_columns, verbose=0)
 
     def asdict(self):
         return callable_to_string(self._asdict())
@@ -502,6 +557,8 @@ def reset_random_generators(new_seed):
     tf.keras.backend.clear_session()
     np.random.seed(new_seed)
     tf.random.set_seed(new_seed)
+    random.seed(new_seed)
+    torch.manual_seed(new_seed)
 
 
 def _history_to_dataframe(history, data):

@@ -1597,20 +1597,24 @@ def _make_scaar_index(index, days_before=1, days_after=7):
         read_csv(
             'ESC_TROP_SWEDEHEART_DAT221_sc_angiopci_pop1.csv',
             parse_dates=['INTERDAT'],
-            usecols=['INTERDAT', 'SID_pseudo', 'MCEID_pseudo', 'Alias'])
+            usecols=['INTERDAT', 'SID_pseudo', 'MCEID_pseudo', 'Alias',
+                     'EVENT'])
         .rename(columns={'INTERDAT': 'angio_date'})
         .dropna(how='all')
     )
 
-    scaar_index = scaar.join(index.admission_date, how='inner', on='Alias')
+    scaar_index = scaar.join(
+        index[['admission_date', 'id']],
+        how='inner',
+        on='Alias'
+    )
     dt = (scaar_index.angio_date - scaar_index.admission_date.dt.floor('D')
           ).dt.total_seconds() / (3600*24)
     scaar_index['distance'] = dt.abs()
     scaar_index = (
         scaar_index[(dt <= days_after) & (dt >= -days_before)]
         .sort_values(by=['Alias', 'distance'])
-        .groupby('Alias')
-        .first()
+        .set_index('Alias')
         .drop(columns=['distance'])
     )
     return scaar_index
@@ -1648,15 +1652,20 @@ def _make_occlusion_and_presentation(index):
         .join(sc_segment, on='SID_pseudo')
         .fillna(False)
         .drop(columns=['SID_pseudo'])
+        .groupby('Alias')
+        .any()
     )
 
 
 def _make_stenosis(index):
     log.debug('Gathering data on stenosis')
+    stenosis_levels = [
+        '0-29%', '30-49%', '50-69%', '70-89%', '90-99%', '100%'
+    ]
 
     def collate_degrees_of_stenosis(s):
         return (
-            pd.concat([(s == x).rename(x) for x in ['90-99%', '100%']], axis=1)
+            pd.concat([(s == x).rename(x) for x in stenosis_levels], axis=1)
             .groupby(level='SID_pseudo')
             .any()
         )
@@ -1687,14 +1696,20 @@ def _make_stenosis(index):
         .fillna(False)
         .T.groupby(level='stenosis')  # groupby(axis=1) is deprecated
         .any().T
-        .rename(columns={'100%': 'stenosis_100%', '90-99%': 'stenosis_90-99%'})
     )
-
-    return (
+    stenosis = (
         index[['SID_pseudo']]
         .join(stenosis, on='SID_pseudo')
-        .fillna(False)
         .drop(columns=['SID_pseudo'])
+        .groupby('Alias')
+        .any()
+        .fillna(False)
+    )
+    max_stenosis = stenosis[reversed(stenosis_levels)].idxmax(axis=1)
+    return (
+        pd.get_dummies(max_stenosis)
+        .loc[:, stenosis_levels]
+        .rename(columns={x: f'stenosis_{x}' for x in stenosis_levels})
     )
 
 
@@ -1714,8 +1729,50 @@ def _make_acs_indication(index):
     return (
         index[['SID_pseudo']]
         .join(acs_indication, on='SID_pseudo')
-        .fillna(False)
         .drop(columns=['SID_pseudo'])
+        .groupby('Alias')
+        .any()
+        .fillna(False)
+    )
+
+
+def _make_cabg(scaar_index):
+    # Figure out if there was a CABG within 7 days of admission or
+    # angiography. The scaar_index can have multiple angiographies for each
+    # patient.
+    log.debug('Gathering CABG data')
+    angio = (
+        read_csv(
+            'ESC_TROP_SWEDEHEART_DAT221_sc_angiopci_pop1.csv',
+            usecols=['Alias', 'SID_pseudo', 'INTERDAT', 'EVENT', 'CABG'],
+            parse_dates=['INTERDAT'])
+        .join(
+            scaar_index[['angio_date', 'admission_date']],
+            on='Alias',
+            how='left')
+        .sort_values(by=['Alias', 'INTERDAT'])
+        .dropna(subset=['admission_date'])
+    )
+    dt = (angio.INTERDAT - angio.angio_date).dt.days
+    cabg_angio = (
+        angio[(dt >= 0) & (dt <= 7)]
+        .groupby('Alias')
+        .CABG.any()
+        .rename('cabg_within_7_days_of_angio')
+    )
+    dt = (angio.INTERDAT - angio.admission_date.dt.floor('1D')).dt.days
+    cabg_admission = (
+        angio[(dt >= 0) & (dt <= 7)]
+        .groupby('Alias')
+        .CABG.any()
+        .rename('cabg_within_7_days_of_admission')
+    )
+
+    return (
+        pd.DataFrame(index=scaar_index.index)
+        .join([cabg_angio, cabg_admission])
+        .groupby('Alias')
+        .any()
     )
 
 
@@ -1752,13 +1809,24 @@ def _make_rikshia_i21_tnt_cabg_stemi(scaar_index):
         .rename('prior_cabg')
     )
     stemi = (
-        (rikshia.INFARCTTYPE == 'STEMI').rename('stemi')
+        (rikshia.INFARCTTYPE == 'STEMI').rename('stemi_rikshia')
     )
 
     return (
         pd.DataFrame(index=scaar_index.index)
         .join([i21, tnt, cabg, stemi])
-        .fillna({'prior_cabg': False})
+        .fillna({
+            'prior_cabg': False,
+            'i21_rikshia': False,
+            'stemi_rikshia': False,
+        })
+        .groupby('Alias')
+        .agg({
+            'prior_cabg': 'any',
+            'i21_rikshia': 'any',
+            'stemi_rikshia': 'any',
+            'tnt_rikshia': 'max'
+        })
     )
 
 
@@ -1801,6 +1869,8 @@ def _make_melior_tnt(index):
     return (
         index.join(tnt_max, on='id', how='left')[['tnt', 'tnt_date']]
         .rename(columns={'tnt': 'tnt_melior', 'tnt_date': 'tnt_melior_date'})
+        .groupby('Alias')
+        .max()
     )
 
 
@@ -1817,12 +1887,46 @@ def _make_sos_i21(index):
         .groupby('Alias')
         .any()
     )
-    return sos
+    return sos.reindex(index.index).groupby('Alias').any()
+
+
+def _make_sectra_angio(index):
+    log.debug("Loading sectra files")
+    sectra = load_sectra()
+
+    log.debug("Finding angiographies")
+    angiography_codes = ['37300', '39648', '39600']
+    sectra_angio = (
+        sectra
+        .loc[sectra.sectra_code.isin(angiography_codes), :]
+        .join(index.admission_date, how='inner', on='Alias')
+    )
+    dt = (sectra_angio.sectra_date -
+          sectra_angio.admission_date).dt.total_seconds() / (3600 * 24)
+    sectra_angio = (
+        sectra_angio[(dt >= -1) & (dt <= 7)]
+        .sort_values(by=['Alias', 'sectra_date'])
+        .groupby('Alias')
+        .agg({'sectra_date': 'first', 'answer': '\n\n'.join})
+    )
+    sectra_angio['has_angio'] = True
+    return (
+        pd.DataFrame(index=index.index)
+        .join(sectra_angio)
+        .fillna({'answer': 'N/A', 'has_angio': False})
+    )
 
 
 def make_omi_table(index):
     log.debug('Making index from scaar register')
     scaar_index = _make_scaar_index(index)
+    pci_performed = (
+        scaar_index
+        .EVENT.isin(['PCI', 'PCIADHOC'])
+        .rename('pci_performed')
+        .groupby('Alias')
+        .any()
+    )
     omi = index.join(
         [
             _make_occlusion_and_presentation(scaar_index),
@@ -1830,24 +1934,38 @@ def make_omi_table(index):
             _make_acs_indication(scaar_index),
             _make_rikshia_i21_tnt_cabg_stemi(scaar_index),
             _make_melior_tnt(index),
-            _make_sos_i21(index)
+            _make_sos_i21(index),
+            _make_cabg(scaar_index),
+            pci_performed,
+            _make_sectra_angio(index)
         ]
     ).fillna({
         'occlusion_less_than_3_months_old': False,
+        'acute_presentation': False,
         'no_occlusion_suspected_thrombosis': False,
         'suspected_thrombosis': False,
-        'acute_presentation': False,
         'stenosis_100%': False,
         'stenosis_90-99%': False,
+        'stenosis_70-89%': False,
+        'stenosis_50-69%': False,
+        'stenosis_30-49%': False,
+        'stenosis_0-29%': False,
         'acs_indication': False,
         'i21_rikshia': False,
-        'i21_sos': False,
         'prior_cabg': False,
-        'stemi': False
+        'stemi_rikshia': False,
+        'i21_sos': False,
+        'pci_performed': False,
+        'cabg_within_7_days_of_angio': False,
+        'cabg_within_7_days_of_admission': False
     })
     omi['tnt'] = omi[['tnt_melior', 'tnt_rikshia']].max(axis=1)
     omi['i21'] = omi.i21_rikshia | omi.i21_sos
     omi['stenosis_over_90%'] = omi['stenosis_100%'] | omi['stenosis_90-99%']
+    omi['stenosis_under_70%'] = ~omi[[
+        'stenosis_70-89%', 'stenosis_90-99%', 'stenosis_100%']].any(axis=1)
+    omi['stenosis_70-99%'] = omi[[
+        'stenosis_70-89%', 'stenosis_90-99%']].any(axis=1)
 
     return omi
 
